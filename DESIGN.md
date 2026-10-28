@@ -76,22 +76,20 @@ Next season … (won league 1? → carry on, or start a new career)
 
 A live label next to the slider explains what the rating means, based on the league bands (§6). Within each league's band of 20:
 
-| Position in band | Label | Example (League 1, 81–99) |
+| Position in band | Label | Example (League 1, 80–99) |
 |---|---|---|
-| Bottom quarter | "Relegation battle — League N" | 81–85 |
-| Lower-middle | "Lower half — League N" | 86–90 |
-| Upper-middle | "Upper half — League N" | 91–95 |
-| Top quarter | "Title contender — League N" | 96–99 |
+| Bottom quarter | "Relegation battle — League N" | 80–84 |
+| Lower-middle | "Lower half — League N" | 85–89 |
+| Upper-middle | "Upper half — League N" | 90–94 |
+| Top quarter | "Title contender — League N" | 95–99 |
 
-Examples: **85** → *"Relegation battle — League 1"* · **14** → *"Upper half — League 5"* · **99** → *"Title favourite — League 1"*.
-
-Ratings 0 and 99 are allowed for the player's club only (AI clubs stay within 1–98, so a 99 club is always the strongest).
+Examples: **85** → *"Lower half — League 1"* · **14** → *"Upper half — League 5"* · **99** → *"Title contender — League 1"* (strongest club in the game at the start).
 
 ---
 
 ## 4. Team model 🟢 NOW
 
-Each club has three stats, each **1–99**:
+Each club has three stats, each **0–99**:
 
 | Stat | Effect in matches |
 |---|---|
@@ -133,7 +131,7 @@ All matches on a matchday are simulated minute by minute at the same time. Only 
 
 ## 6. Leagues, promotion & relegation 🟢 NOW
 
-- **5 leagues × 20 clubs = 100 clubs.** 38 matchdays per season (home and away). At 1–5 minutes per match, a season takes about 40 minutes to 3+ hours of coding time.
+- **5 leagues × 20 clubs = 100 clubs.** No club is ever rated 100; ratings run 0–99. 38 matchdays per season (home and away). At 1–5 minutes per match, a season takes about 40 minutes to 3+ hours of coding time.
 - Rankings: points (3 win, 1 draw), then goal difference, then goals scored.
 
 **Movement between leagues (same at every boundary):**
@@ -150,18 +148,28 @@ That's 3 up and 3 down at each boundary. League 1 has no promotion (1st is champ
 
 | League | Rating band | Band average |
 |---|---|---|
-| League 1 | 81–100 | ~90 |
-| League 2 | 61–80 | ~70 |
-| League 3 | 41–60 | ~50 |
-| League 4 | 21–40 | ~30 |
-| League 5 | 1–20 | ~10 |
+| League 1 | 80–99 | ~90 |
+| League 2 | 60–79 | ~70 |
+| League 3 | 40–59 | ~50 |
+| League 4 | 20–39 | ~30 |
+| League 5 | 0–19 | ~10 |
 
-The overall average across all 100 clubs is **50**, and stays 50 every season (§7).
+### Starting world
+
+At the start of every career, **each rating from 0 to 99 is used exactly once**:
+
+1. The player's club takes the rating they chose.
+2. The remaining 99 ratings are **shuffled randomly** across the 99 AI clubs.
+3. Clubs are placed into leagues by rating: the top 20 in League 1, and so on.
+
+So each league starts with exactly one club on each rating in its band, and every career starts with a different world (which AI club is strong changes each time). A player choosing 99 starts as the strongest club; a player choosing 85 has fourteen League 1 clubs above them.
+
+The overall average starts at **49.5** and stays there every season (§7). After the first season, ratings move freely and are no longer unique.
 
 The bands make movement feel real:
 - A league 5 club on 14 needs to get up to about 20 to challenge for promotion.
 - A league 4 club slipping below 20 is in a relegation fight.
-- A promoted club arrives near the bottom of its new league (the top of L2 ≈ 80 ≈ the bottom of L1), as in real life.
+- A promoted club arrives near the bottom of its new league (the top of L2 ≈ 79 ≈ the bottom of L1), as in real life.
 
 ---
 
@@ -188,8 +196,8 @@ gain = 10
 ```
 
 Then all AI gains are **adjusted so that total gain = total decline exactly**. This guarantees:
-- The overall average stays **exactly 50**, every season.
-- Ratings never run away: plateau + cap at 99, never several clubs on 100.
+- The overall average stays **exactly 49.5** (its starting value), every season.
+- Ratings never run away: plateau + cap at 99; no club ever reaches 100.
 - **No bottlenecks:** the band pull stops league 2 filling with 80+ clubs while league 1 has clubs below 80.
 
 ### Your club's gains
@@ -211,7 +219,7 @@ There are **no difficulty modes**: the starting rating is the difficulty.
 
 ### Tuning targets (checked by the balance tool)
 
-- The overall average stays at 50 ± 0 after 100+ simulated seasons
+- The overall average stays at 49.5 after 100+ simulated seasons
 - No league's average drifts more than ±3 from its band average
 - Fewer than 2 clubs above 95 at any time; none at 99 for long
 - Promoted clubs finish in the bottom half of their new league about 70% of the time
@@ -397,8 +405,9 @@ In rough priority order:
 | Only three stats, no squad management | Keeps it glanceable; the point allocation *is* the game |
 | 5 leagues × 20 clubs | Realistic league sizes |
 | Top 2 up, play-offs 3rd–6th, bottom 3 down | Mirrors real English football |
-| Rating bands of 20 per league, global average fixed at 50 | Simple, predictable balance; promoted clubs naturally land near the bottom |
-| Gains normalised to equal decline | Average guaranteed to stay at 50; no inflation |
+| Rating bands of 20 per league, global average fixed at 49.5 | Simple, predictable balance; promoted clubs naturally land near the bottom |
+| Gains normalised to equal decline | Average guaranteed to stay at 49.5; no inflation |
+| Starting ratings 0–99 each used once, AI ratings shuffled | Even spread in every league, no club on 100, and a different world every career |
 | Rubber banding + band pull for AI clubs | Prevents runaway clubs and league bottlenecks |
 | Player gains from finishing position only | Climbing has to be earned; several seasons per league |
 | Starting rating 0–99 replaces league choice and difficulty | One simple choice; players pick their own challenge, from "win every week" to "rise from nothing" |
