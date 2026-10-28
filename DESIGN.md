@@ -67,7 +67,8 @@ Next season … (won league 1? → carry on, or start a new career)
 
 | Option | Values | Notes |
 |---|---|---|
-| Starting rating | 0–99 (slider) | Your club's team rating. Decides your league and your expected finish. **This replaces difficulty**: want it hard? Start low. Want to win every week? Start at 99 |
+| Starting rating | 0–99 (slider) | Your club's team rating. Decides your league and your expected finish. Want it hard? Start low. Want to win every week? Start at 99 |
+| Difficulty | Easy / Medium / Hard | A small hidden boost to your club each season: Easy +4 · Medium +2 · Hard none (§7) |
 | Stat split | Optional | Defaults to an even split (attack = defence = chemistry = rating). Can be shifted, e.g. more attack, less defence, as long as the average stays at the chosen rating |
 | Match duration | 1–5 real minutes | Length of one 90-minute match; can be changed later |
 | Club name | Generated, editable | See §10 |
@@ -179,6 +180,7 @@ The bands make movement feel real:
 
 1. **Decline:** every club, including yours, loses **10** rating (ageing, players leaving).
 2. **Gains:** clubs regain rating based on **how they finished compared with what was expected**. The average gain is **+10**.
+3. **Ratings carry forward** into the next season for every club, so clubs rise and fall over the years like real life.
 
 ### Expected position
 
@@ -190,39 +192,80 @@ At the start of each season, every league's 20 clubs are ranked by rating. That 
 performance = expectedPosition − actualPosition     (positive = did better than expected)
 
 gain = 10
-     + 0.5 × performance     reward over-achievers, punish under-achievers
+     + 1.0 × performance     same multiplier up and down, for every club
+     + promotion bonus       +3 if promoted, +2 extra for winning the league
      + noise                  AI clubs only: small random variation
      × plateau                gains shrink as rating approaches 99
 ```
 
+Because clubs in a league are spread about one rating point per table position, the rule reads simply:
+
+> **Every place you finish above expectation = +1 rating. Every place below = −1.**
+
+The multiplier is **the same up and down**, so luck cancels out over several seasons: lucky and unlucky years even out, and only real over-performance builds up.
+
 Examples (at the start of a career, when each rating is used exactly once):
 
-| Club | Expected | Finished | Performance | Gain | Net after −10 decline |
-|---|---|---|---|---|---|
-| Rating 99 (League 1) | 1st | 10th | −9 | +5.5 | **−4.5** |
-| Rating 90 (League 1) | 10th | 12th | −2 | +9 | **−1** |
-| Rating 9 (League 5) | 11th | 8th | +3 | +11.5 | **+1.5** |
-| Rating 0 (League 5) | 20th | 10th | +10 | +15 | **+5** |
-| Rating 99 (League 1) | 1st | 1st | 0 | +10 | **0** |
-
-So the 99 club finishing 10th is punished more than the 90 club finishing 12th, and the 0 club finishing 10th is rewarded more than the 9 club finishing 8th.
+| Club | Expected | Finished | Performance | Net change |
+|---|---|---|---|---|
+| Rating 99 (League 1) | 1st | 10th | −9 | **−9** |
+| Rating 90 (League 1) | 10th | 12th | −2 | **−2** |
+| Rating 9 (League 5) | 11th | 8th | +3 | **+3** |
+| Rating 0 (League 5) | 20th | 10th | +10 | **+10** |
+| Rating 99 (League 1) | 1st | 1st | 0 | **0** |
 
 **Why this works well:**
-- **It balances itself.** In any league, the expected and actual positions are both 1–20, so the performance scores always add up to zero. Before the plateau and caps, the average gain is exactly +10 without any adjustment.
+- **It balances itself.** In any league, the expected and actual positions are both 1–20, so the performance scores always add up to zero.
 - **It's a natural rubber band.** An over-achiever rises, then is expected to do better next season, so it has to keep over-achieving to keep rising. No club runs away.
-- **The top is hard to hold.** A club expected to win can't over-achieve, so winning only maintains its rating, and any slip costs it. A 99 club only stays at 99 by winning every year.
-- **Climbing has to be earned.** Rising from the bottom of a league takes several seasons of beating expectations.
+- **The top is hard to hold.** A club expected to win can't over-achieve, so winning only maintains its rating, and any slip costs it.
+- **Finishing where expected means standing still.** Progress comes from beating expectations.
+
+### Where the player's skill comes in
+
+Your one decision is **how to split your gain** across attack, defence and chemistry (AI clubs split theirs by style: attacking, defensive or balanced). The split matters because goals depend on **your attack against their defence** and **their attack against your defence**: if you're conceding too many, defence points help more than an even spread.
+
+Worked example: a club starting at 0 whose good allocation is worth about 5 places a season.
+
+| Season | League | Expected | Finish | Change | Rating |
+|---|---|---|---|---|---|
+| 1 | L5 | 20th | 15th | +5 | 5 |
+| 2 | L5 | ~16th | ~11th | +5 | 10 |
+| 3 | L5 | ~11th | ~6th | +5 | 15 |
+| 4 | L5 | ~5th | 2nd ✅ promoted | +3 +3 bonus | 21 |
+| 5 | L4 | 20th | 15th | +5 | 26 |
+
+About **3–4 seasons per league** (plus the difficulty boost below).
+
+### Difficulty: a small hidden boost 🟢 NOW
+
+Each season your club gets a small extra boost, **paid for by every AI club losing a tiny hidden amount**, so the total rating in the game never changes:
+
+| Difficulty | Your boost per season | Each of the 99 AI clubs loses |
+|---|---|---|
+| Easy | +4 (3.96) | 0.04 |
+| Medium | +2 (1.98) | 0.02 |
+| Hard | none | none |
+
+- Ratings are stored with decimals but **shown as whole numbers**, so the AI drain is invisible.
+- The boost alone is slow (on medium, about 50 seasons from 0 to 99), so it never replaces good decisions. It just tilts things gently in your favour.
+- If your club is capped at 99, the unused boost is not taken from the AI clubs.
+
+### Keeping the total constant
+
+Total rating across all 100 clubs is **fixed**: the overall average stays **exactly 49.5** every season.
+
+- Performance scores already sum to zero within each league.
+- **Everything else** (promotion bonuses, plateau, caps at 0 and 99, AI noise, band pull, the difficulty boost) is balanced by a final **normalisation step**: the leftover amount is spread across the AI clubs as a tiny adjustment.
+- The player's club is never normalised, so its rating depends only on results and difficulty.
 
 ### Extra AI-only adjustments
 
-- **Band pull:** if an AI club drifts outside its current league's band, it is pulled back towards it (promoted clubs get a lift, relegated clubs drift down). This stops bottlenecks, e.g. league 2 filling with 80+ clubs while league 1 has clubs below 80.
-- **Normalisation:** after plateau and caps, AI gains are adjusted slightly so that total gain = total decline exactly. The overall average stays **exactly 49.5** every season.
+- **Band pull:** if an AI club drifts outside its current league's band, it is pulled back towards it. This stops bottlenecks, e.g. league 2 filling with 80+ clubs while league 1 has clubs below 80.
+- **Small random variation** each season, so AI clubs don't move mechanically.
 
-Your club gets neither, so its progress depends only on results. Your gain is given as points to allocate across the three stats (3 points ≈ +1 rating), and you can't go above 99.
+Your gain is given as points to allocate across the three stats (3 points ≈ +1 rating), and you can't go above 99.
 
-The 0.5 multiplier is a starting value, tuned with the balance tool.
-
-There are **no difficulty modes**: the starting rating is the difficulty.
+All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned with the balance tool.
 
 ### Tuning targets (checked by the balance tool)
 
@@ -230,7 +273,9 @@ There are **no difficulty modes**: the starting rating is the difficulty.
 - No league's average drifts more than ±3 from its band average
 - Fewer than 2 clubs above 95 at any time; none at 99 for long
 - Promoted clubs finish in the bottom half of their new league about 70% of the time
-- A player club starting at the bottom of a band takes 2–4 seasons to win promotion on average
+- The total rating across all clubs is identical (to 2 decimal places) before and after every season
+- A **smart** simulated player (fixes weaknesses) gains about 4–6 places a season over expectation; an **even-split** player roughly holds position; a **careless** player sinks
+- A smart player on medium takes 3–4 seasons per league on average; a careless player can never climb from 0 to 99
 - A player club starting at 99 wins league 1 most seasons, but not every season
 
 ---
@@ -418,8 +463,11 @@ In rough priority order:
 | Band pull for AI clubs | Prevents league bottlenecks |
 | Gains based on finish compared with expected position (rating rank in league) | Over-achievers rewarded, under-achievers punished; self-balancing; the top is hard to hold |
 | No band pull for the player's club | Climbing has to be earned; several seasons per league |
-| Starting rating 0–99 replaces league choice and difficulty | One simple choice; players pick their own challenge, from "win every week" to "rise from nothing" |
-| Same decline (−10) for the player as for AI clubs | No difficulty modes needed |
+| Starting rating 0–99 replaces league choice | One simple choice; players pick their own challenge, from "win every week" to "rise from nothing" |
+| Same decline (−10) for the player as for AI clubs | Everyone plays by the same rules |
+| Performance multiplier 1.0, equal up and down | Each place above/below expectation = ±1 rating; luck cancels out over time |
+| Difficulty = hidden player boost (Easy +4 / Medium +2 / Hard 0) paid for by tiny AI drain | Gentle help without breaking the fixed total |
+| Total rating fixed; normalisation across AI clubs | Average stays 49.5 forever; no inflation |
 | Football first; other sports only after it's finished | Keeps version 1 small |
 | Unbeaten-run tracker in status bar: **rejected** | Unnecessary; records page covers it |
 | Pause when VS Code closes | You never miss matches; no catch-up simulation |
