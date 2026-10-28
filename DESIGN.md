@@ -178,42 +178,49 @@ The bands make movement feel real:
 ### Every club, every season
 
 1. **Decline:** every club, including yours, loses **10** rating (ageing, players leaving).
-2. **Gains:** clubs regain rating. AI clubs average **+10**.
+2. **Gains:** clubs regain rating based on **how they finished compared with what was expected**. The average gain is **+10**.
 
-### AI club gains
+### Expected position
 
-For each AI club:
+At the start of each season, every league's 20 clubs are ranked by rating. That rank is each club's **expected position**: the highest-rated club is expected to finish 1st, the lowest 20th. Ranks are recalculated each season, so a newly promoted club is usually expected near the bottom of its new league, and a relegated club near the top of its new one.
+
+### Performance gain (all clubs, including yours)
 
 ```
+performance = expectedPosition − actualPosition     (positive = did better than expected)
+
 gain = 10
-     + rubberBand     weaker clubs within the league gain a little more,
-                      top clubs a little less (about ±3 from bottom to top)
-     + bandPull       if the club is outside its current league's band,
-                      pull it back towards the band (promoted clubs get a lift,
-                      relegated clubs drift down)
-     + noise          small random variation so seasons differ
-     × plateau        gains shrink as rating approaches 99
+     + 0.5 × performance     reward over-achievers, punish under-achievers
+     + noise                  AI clubs only: small random variation
+     × plateau                gains shrink as rating approaches 99
 ```
 
-Then all AI gains are **adjusted so that total gain = total decline exactly**. This guarantees:
-- The overall average stays **exactly 49.5** (its starting value), every season.
-- Ratings never run away: plateau + cap at 99; no club ever reaches 100.
-- **No bottlenecks:** the band pull stops league 2 filling with 80+ clubs while league 1 has clubs below 80.
+Examples (at the start of a career, when each rating is used exactly once):
 
-### Your club's gains
+| Club | Expected | Finished | Performance | Gain | Net after −10 decline |
+|---|---|---|---|---|---|
+| Rating 99 (League 1) | 1st | 10th | −9 | +5.5 | **−4.5** |
+| Rating 90 (League 1) | 10th | 12th | −2 | +9 | **−1** |
+| Rating 9 (League 5) | 11th | 8th | +3 | +11.5 | **+1.5** |
+| Rating 0 (League 5) | 20th | 10th | +10 | +15 | **+5** |
+| Rating 99 (League 1) | 1st | 1st | 0 | +10 | **0** |
 
-Your gains come **only from where you finish**: no rubber banding or band pull, which would make climbing automatic. You get them as points to allocate across the three stats (3 points ≈ +1 rating). The same plateau applies, so your club can't exceed 99.
+So the 99 club finishing 10th is punished more than the 90 club finishing 12th, and the 0 club finishing 10th is rewarded more than the 9 club finishing 8th.
 
-| Finish | Gain (rating) |
-|---|---|
-| 1st | +16 |
-| Mid-table | +10 |
-| Last | +4 |
-| Promotion bonus | +2 |
+**Why this works well:**
+- **It balances itself.** In any league, the expected and actual positions are both 1–20, so the performance scores always add up to zero. Before the plateau and caps, the average gain is exactly +10 without any adjustment.
+- **It's a natural rubber band.** An over-achiever rises, then is expected to do better next season, so it has to keep over-achieving to keep rising. No club runs away.
+- **The top is hard to hold.** A club expected to win can't over-achieve, so winning only maintains its rating, and any slip costs it. A 99 club only stays at 99 by winning every year.
+- **Climbing has to be earned.** Rising from the bottom of a league takes several seasons of beating expectations.
 
-(Gains scale linearly by finishing position; numbers are starting values.)
+### Extra AI-only adjustments
 
-Even winning the league gives a net gain of only about **+6 a season**. Climbing a band of 20 therefore takes **several seasons per league**, and a bad season sends you backwards. A club starting at 99 stays near the top only by keeping on winning.
+- **Band pull:** if an AI club drifts outside its current league's band, it is pulled back towards it (promoted clubs get a lift, relegated clubs drift down). This stops bottlenecks, e.g. league 2 filling with 80+ clubs while league 1 has clubs below 80.
+- **Normalisation:** after plateau and caps, AI gains are adjusted slightly so that total gain = total decline exactly. The overall average stays **exactly 49.5** every season.
+
+Your club gets neither, so its progress depends only on results. Your gain is given as points to allocate across the three stats (3 points ≈ +1 rating), and you can't go above 99.
+
+The 0.5 multiplier is a starting value, tuned with the balance tool.
 
 There are **no difficulty modes**: the starting rating is the difficulty.
 
@@ -336,7 +343,7 @@ src/
   core/            shared, sport-agnostic, no VS Code imports
     rng.ts         seeded random numbers
     league.ts      fixtures, tables, play-offs, promotion/relegation
-    ratings.ts     decline, gains, rubber banding, band pull, normalisation
+    ratings.ts     decline, expected position, performance gains, band pull, normalisation
     career.ts      player club, starting rating, points
     records.ts     trophies, history, records
   sports/
@@ -408,8 +415,9 @@ In rough priority order:
 | Rating bands of 20 per league, global average fixed at 49.5 | Simple, predictable balance; promoted clubs naturally land near the bottom |
 | Gains normalised to equal decline | Average guaranteed to stay at 49.5; no inflation |
 | Starting ratings 0–99 each used once, AI ratings shuffled | Even spread in every league, no club on 100, and a different world every career |
-| Rubber banding + band pull for AI clubs | Prevents runaway clubs and league bottlenecks |
-| Player gains from finishing position only | Climbing has to be earned; several seasons per league |
+| Band pull for AI clubs | Prevents league bottlenecks |
+| Gains based on finish compared with expected position (rating rank in league) | Over-achievers rewarded, under-achievers punished; self-balancing; the top is hard to hold |
+| No band pull for the player's club | Climbing has to be earned; several seasons per league |
 | Starting rating 0–99 replaces league choice and difficulty | One simple choice; players pick their own challenge, from "win every week" to "rise from nothing" |
 | Same decline (−10) for the player as for AI clubs | No difficulty modes needed |
 | Football first; other sports only after it's finished | Keeps version 1 small |
