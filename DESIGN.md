@@ -38,6 +38,7 @@ Everything else runs by itself: fixtures, matches, commentary, tables, scorers, 
 ```
 New career
   └─ choose starting rating (0–99) → sets your league and expected finish
+  └─ choose difficulty (easy / medium / hard)
   └─ choose match duration, optionally adjust the Attack / Defence / Chemistry split
         │
         ▼
