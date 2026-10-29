@@ -90,6 +90,53 @@ export interface SetupView {
   duration: Duration;
 }
 
+export interface PlayoffTieView {
+  high: TeamBadge;
+  low: TeamBadge;
+  /** Leg scores, lower seed's home leg first, each as "home–away". */
+  legs: string[];
+  winner?: string;
+}
+
+export interface PlayoffView {
+  tier: number;
+  semis: PlayoffTieView[];
+  final?: { home: TeamBadge; away: TeamBadge; result?: string; winner?: string };
+  winner?: string;
+}
+
+export type SeasonOutcome = 'champion' | 'promoted' | 'playoffWinner' | 'playoffs' | 'relegated' | null;
+
+export interface SeasonEndView {
+  season: number;
+  tier: number;
+  newTier: number;
+  position: number;
+  expected: number;
+  outcome: SeasonOutcome;
+  headline: string;
+  table: TableView;
+  playoffs?: PlayoffView;
+  report: {
+    record: string;
+    points: number;
+    goalsFor: number;
+    goalsAgainst: number;
+    avgFor: number;
+    avgAgainst: number;
+    bestRun: string;
+    worstRun: string;
+    topScorer?: string;
+    verdict: string;
+  };
+  decline: { byStat: Record<StatKey, number>; ratingBefore: number; ratingAfter: number; hardest: StatKey };
+  points: { total: number; base: number; performance: number; bonus: number; boosted: boolean };
+  /** Stats after the decline (unrounded) and how many points each can still take. */
+  stats: Record<StatKey, number>;
+  room: Record<StatKey, number>;
+  tolerance: number;
+}
+
 export interface GameView {
   screen: 'game';
   header: HeaderView;
@@ -99,6 +146,8 @@ export interface GameView {
   fixtures: FixtureView[];
   club: ClubView;
   waiting: 'seasonOver' | null;
+  playoffs: PlayoffView[];
+  seasonEnd: SeasonEndView | null;
 }
 
 export type View = { screen: 'setup'; setup: SetupView } | GameView;
@@ -108,6 +157,7 @@ export type ToHost =
   | { type: 'startCareer'; rating: number; difficulty: Difficulty; duration: Duration; name: string; split?: Record<StatKey, number> }
   | { type: 'suggestName' }
   | { type: 'togglePause' }
-  | { type: 'setDuration'; duration: Duration };
+  | { type: 'setDuration'; duration: Duration }
+  | { type: 'allocate'; allocation: Record<StatKey, number> };
 
 export type ToWebview = { type: 'view'; view: View } | { type: 'suggestedName'; name: string };

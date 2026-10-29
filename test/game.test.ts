@@ -117,3 +117,31 @@ describe('game clock', () => {
     expect(game.live).toBeNull();
   });
 });
+
+describe('season end view', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('reports the season and lets the player allocate exactly their points', () => {
+    const { game } = setup();
+    game.duration = '30s';
+    game.start({ rating: 30, difficulty: 'easy', seed: 9 });
+    vi.advanceTimersByTime(60 * 60 * 1000);
+    const v = buildView(game, () => '');
+    if (v.screen !== 'game' || !v.seasonEnd) throw new Error('expected season end');
+    const e = v.seasonEnd;
+    expect(e.table.rows).toHaveLength(20);
+    expect(e.report.record).toMatch(/^\d+W \d+D \d+L$/);
+    expect(e.report.verdict.length).toBeGreaterThan(20);
+    const d = e.decline.byStat;
+    expect(d.attack + d.defence + d.chemistry).toBeCloseTo(30);
+    expect(e.room.attack + e.room.defence + e.room.chemistry).toBeGreaterThanOrEqual(e.points.total);
+    expect(e.playoffs?.semis).toHaveLength(2);
+
+    expect(() => game.allocate({ attack: e.points.total + 1, defence: 0, chemistry: 0 })).toThrow();
+    const third = Math.floor(e.points.total / 3);
+    game.allocate({ attack: third, defence: third, chemistry: e.points.total - 2 * third });
+    expect(game.career!.history).toHaveLength(1);
+    expect(buildView(game, () => '').screen).toBe('game');
+  });
+});

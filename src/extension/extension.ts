@@ -70,6 +70,15 @@ export function activate(context: vscode.ExtensionContext): void {
       case 'setDuration':
         void config().update('matchDuration', message.duration, vscode.ConfigurationTarget.Global);
         return;
+      case 'allocate':
+        try {
+          game!.allocate(message.allocation);
+        } catch (err) {
+          // The webview enforces the rules; a stale or invalid allocation just re-sends the view.
+          console.warn('Sideline: allocation rejected', err);
+          refresh();
+        }
+        return;
     }
   }
 

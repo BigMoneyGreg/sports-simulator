@@ -58,13 +58,15 @@ export interface PlayoffTie {
   low: number;
   /** First-leg score at the lower seed's ground: [low, high]. */
   leg1?: [number, number];
+  /** Second-leg score at the higher seed's ground: [high, low], with any extra time or penalties. */
+  leg2?: { score: [number, number]; note?: string };
   winner?: number;
 }
 
 export interface Playoff {
   tier: number;
   semis: [PlayoffTie, PlayoffTie];
-  final?: { home: number; away: number; winner?: number };
+  final?: { home: number; away: number; score?: [number, number]; note?: string; winner?: number };
   winner?: number;
 }
 
@@ -321,6 +323,8 @@ function drawPlayoffs(s: Season): Playoff[] {
 function recordPlayoff(s: Season, fixture: Fixture, outcome: MatchOutcome): void {
   const p = s.playoffs.find((x) => x.tier === fixture.tier)!;
   if (fixture.kind === 'playoffFinal') {
+    p.final!.score = [outcome.homeGoals, outcome.awayGoals];
+    p.final!.note = knockoutNote(outcome);
     p.final!.winner = outcome.winner === 'home' ? fixture.home : fixture.away;
     p.winner = p.final!.winner;
     return;
@@ -329,6 +333,7 @@ function recordPlayoff(s: Season, fixture: Fixture, outcome: MatchOutcome): void
   if (fixture.kind === 'playoffSemi1') {
     tie.leg1 = [outcome.homeGoals, outcome.awayGoals];
   } else {
+    tie.leg2 = { score: [outcome.homeGoals, outcome.awayGoals], note: knockoutNote(outcome) };
     tie.winner = outcome.winner === 'home' ? fixture.home : fixture.away;
     if (p.semis.every((t) => t.winner !== undefined)) {
       // The better-placed semi-final winner is the nominal home side at the neutral final.
@@ -337,6 +342,12 @@ function recordPlayoff(s: Season, fixture: Fixture, outcome: MatchOutcome): void
       p.final = pos(a) < pos(b) ? { home: a, away: b } : { home: b, away: a };
     }
   }
+}
+
+function knockoutNote(outcome: MatchOutcome): string | undefined {
+  if (outcome.penalties) return `(${outcome.penalties[0]}–${outcome.penalties[1]} pens)`;
+  if (outcome.extraTime) return '(aet)';
+  return undefined;
 }
 
 /** Plays the next round instantly (AI-only rounds, balance tool, tests). */

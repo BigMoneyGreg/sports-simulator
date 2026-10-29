@@ -1,5 +1,5 @@
 import { ratingLabel } from '../core/league';
-import type { Difficulty, Duration, FixtureView, GameView, LiveMatchView, StatKey, TableView, TeamBadge, ToHost, ToWebview, View } from '../shared/view';
+import type { Difficulty, Duration, FixtureView, GameView, LiveMatchView, PlayoffView, SeasonEndView, StatKey, TableView, TeamBadge, ToHost, ToWebview, View } from '../shared/view';
 
 declare function acquireVsCodeApi(): { postMessage(m: ToHost): void; getState(): unknown; setState(s: unknown): void };
 
@@ -155,7 +155,16 @@ function updateSetupRating(): void {
 // ---------------------------------------------------------------------------
 // Game
 
+const STATS: StatKey[] = ['attack', 'defence', 'chemistry'];
+const STAT_LABEL: Record<StatKey, string> = { attack: 'Attack', defence: 'Defence', chemistry: 'Chemistry' };
+const alloc = { season: 0, attack: 0, defence: 0, chemistry: 0 };
+
 function renderGame(v: GameView): void {
+  if (v.seasonEnd) {
+    app.innerHTML = `${headerHtml(v)}${seasonEndHtml(v.seasonEnd)}`;
+    paintSwatches();
+    return;
+  }
   const tabs: [Tab, string][] = [
     ['match', 'Match'],
     ['table', 'Table'],
@@ -186,8 +195,11 @@ function panelHtml(v: GameView): string {
   switch (ui.tab) {
     case 'match':
       return matchHtml(v);
-    case 'table':
-      return tableHtml(v.tables, ui.tableTier ?? v.playerTier);
+    case 'table': {
+      const tier = ui.tableTier ?? v.playerTier;
+      const playoff = v.playoffs.find((p) => p.tier === tier);
+      return tableHtml(v.tables, tier) + (playoff ? playoffHtml(playoff) : '');
+    }
     case 'fixtures':
       return fixturesHtml(v.fixtures);
     case 'club':
@@ -217,9 +229,11 @@ function scoreboard(m: LiveMatchView): string {
     </div>`;
 }
 
-function tableHtml(tables: TableView[], tier: number): string {
+function tableHtml(tables: TableView[], tier: number, withChips = true): string {
   const t = tables[tier - 1];
-  const chips = tables.map((x) => `<button type="button" class="${x.tier === tier ? 'on' : ''}" data-tier="${x.tier}">L${x.tier}</button>`).join('');
+  const chips = withChips
+    ? `<div class="seg chips">${tables.map((x) => `<button type="button" class="${x.tier === tier ? 'on' : ''}" data-tier="${x.tier}">L${x.tier}</button>`).join('')}</div>`
+    : '';
   const rows = t.rows
     .map(
       (r) => `<tr class="${r.zone ?? ''} ${r.isPlayer ? 'me' : ''}">
@@ -227,10 +241,82 @@ function tableHtml(tables: TableView[], tier: number): string {
       <td>${r.played}</td><td>${r.won}</td><td>${r.drawn}</td><td>${r.lost}</td><td>${r.gd > 0 ? '+' : ''}${r.gd}</td><td class="pts">${r.points}</td></tr>`,
     )
     .join('');
-  return `<div class="seg chips">${chips}</div>
+  return `${chips}
     <table class="league"><thead><tr><th></th><th></th><th title="Played">P</th><th title="Won">W</th><th title="Drawn">D</th><th title="Lost">L</th><th title="Goal difference">GD</th><th title="Points">Pts</th></tr></thead>
     <tbody>${rows}</tbody></table>
     <p class="legend small"><span class="key promotion"></span>Promotion <span class="key playoff"></span>Play-offs <span class="key relegation"></span>Relegation</p>`;
+}
+
+function playoffHtml(p: PlayoffView): string {
+  const tie = (t: PlayoffView['semis'][number]) => `<li><span>${swatch(t.low)}${esc(t.low.short)} v ${swatch(t.high)}${esc(t.high.short)}</span>
+      <span class="muted">${t.legs.map(esc).join(', ') || 'to play'}</span>${t.winner ? `<span class="win">${esc(t.winner)} through</span>` : ''}</li>`;
+  const final = p.final
+    ? `<li><span>Final: ${swatch(p.final.home)}${esc(p.final.home.short)} v ${swatch(p.final.away)}${esc(p.final.away.short)}</span>
+      <span class="muted">${p.final.result ? esc(p.final.result) : 'to play'}</span>${p.final.winner ? `<span class="win">${esc(p.final.winner)} promoted</span>` : ''}</li>`
+    : '';
+  return `<h3 class="sub">League ${p.tier} play-offs</h3><ul class="bracket">${p.semis.map(tie).join('')}${final}</ul>`;
+}
+
+function seasonEndHtml(e: SeasonEndView): string {
+  if (alloc.season !== e.season) Object.assign(alloc, { season: e.season, attack: 0, defence: 0, chemistry: 0 });
+  const spent = STATS.reduce((t, k) => t + alloc[k], 0);
+  const left = e.points.total - spent;
+  const after = (k: StatKey) => e.stats[k] + alloc[k];
+  const mean = STATS.reduce((t, k) => t + after(k), 0) / 3;
+  const weak = STATS.filter((k) => mean - after(k) > e.tolerance);
+  const r = e.report;
+  const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0');
+  const breakdown = [
+    `Base ${e.points.base}`,
+    `${e.points.performance >= 0 ? 'Beat' : 'Missed'} expectation (${ordinal(e.expected)} → ${ordinal(e.position)}) ${signed(e.points.performance)}`,
+    e.points.bonus ? `Finishing ${ordinal(e.position)} ${signed(e.points.bonus)}` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const statRow = (k: StatKey) => `<div class="alloc-row">
+      <span>${STAT_LABEL[k]}</span>
+      <span class="muted small">−${Math.round(e.decline.byStat[k])}</span>
+      <button type="button" class="step" data-alloc="${k}" data-delta="-5" ${alloc[k] < 1 ? 'disabled' : ''} aria-label="Take 5 from ${STAT_LABEL[k]}">−5</button>
+      <button type="button" class="step" data-alloc="${k}" data-delta="-1" ${alloc[k] < 1 ? 'disabled' : ''} aria-label="Take 1 from ${STAT_LABEL[k]}">−</button>
+      <strong class="${weak.includes(k) ? 'bad' : ''}">${Math.round(after(k))}</strong>
+      <button type="button" class="step" data-alloc="${k}" data-delta="1" ${left < 1 || alloc[k] >= e.room[k] ? 'disabled' : ''} aria-label="Add 1 to ${STAT_LABEL[k]}">+</button>
+      <button type="button" class="step" data-alloc="${k}" data-delta="5" ${left < 1 || alloc[k] >= e.room[k] ? 'disabled' : ''} aria-label="Add 5 to ${STAT_LABEL[k]}">+5</button>
+      <span class="muted small added">${alloc[k] ? `+${alloc[k]}` : ''}</span>
+    </div>`;
+  return `<div class="season-end">
+    <h2 class="headline ${e.outcome ?? ''}">${esc(e.headline)}</h2>
+    <p class="muted small">Season ${e.season} · League ${e.tier}${e.newTier !== e.tier ? ` → League ${e.newTier} next season` : ''}</p>
+
+    <h3 class="sub">Season report</h3>
+    <dl class="report">
+      <dt>Record</dt><dd>${esc(r.record)} · ${r.points} pts</dd>
+      <dt>Scored</dt><dd>${r.goalsFor} <span class="muted">(league avg ${r.avgFor})</span></dd>
+      <dt>Conceded</dt><dd>${r.goalsAgainst} <span class="muted">(league avg ${r.avgAgainst})</span></dd>
+      <dt>Best run</dt><dd>${esc(r.bestRun)}</dd>
+      <dt>Worst run</dt><dd>${esc(r.worstRun)}</dd>
+      ${r.topScorer ? `<dt>Top scorer</dt><dd>${esc(r.topScorer)}</dd>` : ''}
+    </dl>
+    <p class="verdict">${esc(r.verdict)}</p>
+
+    <h3 class="sub">Decline</h3>
+    <p class="small">Every club loses about 10 a season. Yours: ${STATS.map((k) => `${STAT_LABEL[k]} −${Math.round(e.decline.byStat[k])}`).join(' · ')}.
+      Rating ${Math.round(e.decline.ratingBefore)} → ${Math.round(e.decline.ratingAfter)}.</p>
+
+    <h3 class="sub">Strengthen: ${e.points.total} points</h3>
+    <p class="muted small">Rating gain ${esc(breakdown)}${e.points.boosted ? ' · plus your difficulty boost' : ''}. Each point of gain = 3 points to spend; 1 point = +1 to a stat.</p>
+    <div class="alloc">${STATS.map(statRow).join('')}</div>
+    <div class="row alloc-actions">
+      <span class="${left === 0 ? '' : 'strong'}">${left} left</span>
+      <button type="button" class="link" id="allocEven">Even split</button>
+      <button type="button" class="link" id="allocClear">Clear</button>
+    </div>
+    ${weak.length ? `<p class="hint bad">${weak.map((k) => STAT_LABEL[k]).join(' and ')} ${weak.length > 1 ? 'lag' : 'lags'} behind the rest: opponents will exploit it.</p>` : ''}
+    <button type="button" id="confirmAlloc" class="primary" ${left === 0 ? '' : 'disabled'}>Start season ${e.season + 1}</button>
+
+    <h3 class="sub">Final table</h3>
+    ${tableHtml([e.table], 1, false)}
+    ${e.playoffs ? playoffHtml(e.playoffs) : ''}
+  </div>`;
 }
 
 function fixturesHtml(fixtures: FixtureView[]): string {
@@ -280,6 +366,30 @@ app.addEventListener('click', (e) => {
     ui.tableTier = Number(button.dataset.tier);
     saveUi();
     render();
+  } else if (button.dataset.alloc && view?.screen === 'game' && view.seasonEnd) {
+    const e = view.seasonEnd;
+    const k = button.dataset.alloc as StatKey;
+    const left = e.points.total - STATS.reduce((t, s) => t + alloc[s], 0);
+    const delta = Number(button.dataset.delta);
+    alloc[k] = Math.max(0, Math.min(alloc[k] + Math.min(delta, left), e.room[k]));
+    render();
+  } else if (button.id === 'allocEven' && view?.screen === 'game' && view.seasonEnd) {
+    const e = view.seasonEnd;
+    STATS.forEach((k) => (alloc[k] = 0));
+    let left = e.points.total;
+    for (let guard = 0; left > 0 && guard < 400; guard++) {
+      const k = STATS[guard % 3];
+      if (alloc[k] < e.room[k]) {
+        alloc[k]++;
+        left--;
+      }
+    }
+    render();
+  } else if (button.id === 'allocClear') {
+    STATS.forEach((k) => (alloc[k] = 0));
+    render();
+  } else if (button.id === 'confirmAlloc') {
+    send({ type: 'allocate', allocation: { attack: alloc.attack, defence: alloc.defence, chemistry: alloc.chemistry } });
   } else if (button.id === 'pause') {
     send({ type: 'togglePause' });
   } else if (button.id === 'reroll') {

@@ -531,3 +531,114 @@ table.league {
     transition: width 0.4s ease;
   }
 }
+
+/* Season end */
+
+.sub {
+  margin: 14px 0 6px;
+  font-size: 0.95em;
+  font-weight: 600;
+}
+
+.headline {
+  margin: 12px 0 2px;
+  font-size: 1.2em;
+}
+
+.headline.champion,
+.headline.promoted,
+.headline.playoffWinner {
+  color: var(--win);
+}
+
+.headline.relegated {
+  color: var(--loss);
+}
+
+.report {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  margin: 0;
+}
+
+.report dt {
+  color: var(--vscode-descriptionForeground);
+}
+
+.report dd {
+  margin: 0;
+}
+
+.verdict {
+  padding: 6px 8px;
+  border-left: 3px solid var(--accent);
+  background: var(--vscode-textBlockQuote-background);
+}
+
+.alloc-row {
+  display: grid;
+  grid-template-columns: 1fr 26px repeat(2, 26px) 28px repeat(2, 26px) 26px;
+  align-items: center;
+  gap: 3px;
+  margin: 4px 0;
+}
+
+.alloc-row strong {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.step {
+  padding: 1px 0;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--vscode-button-secondaryBackground, transparent);
+  color: var(--vscode-button-secondaryForeground, inherit);
+}
+
+.step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.added {
+  text-align: right;
+}
+
+.alloc-actions {
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.strong {
+  font-weight: 600;
+}
+
+.link {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--vscode-textLink-foreground);
+}
+
+.bracket {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bracket li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 8px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.bracket .win {
+  width: 100%;
+  font-size: 0.9em;
+  color: var(--win);
+}

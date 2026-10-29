@@ -1,10 +1,10 @@
-import { leagueRounds, type Career } from '../core/career';
-import { rating } from '../core/club';
+import { leagueRounds, type Career, type Playoff } from '../core/career';
+import { MAX_STAT, rating, STATS } from '../core/club';
 import { recordResult, sortTable, zone, type Fixture, type TableRow } from '../core/league';
 import { commentary, matchClock } from '../sports/football/commentary';
-import { outcome, type SideKey } from '../sports/football/match';
+import { outcome, TUNING, type SideKey } from '../sports/football/match';
 import { surname, townName } from '../sports/football/names';
-import type { FixtureView, GameView, LiveMatchView, TableView, TeamBadge, View } from '../shared/view';
+import type { FixtureView, GameView, LiveMatchView, PlayoffView, SeasonEndView, StatKey, TableView, TeamBadge, View } from '../shared/view';
 import type { Game } from './game';
 
 const COMMENTARY_LINES = 40;
@@ -44,8 +44,124 @@ export function buildView(game: Game, suggestedName: () => string): View {
       expected: season.expected[me.id],
     },
     waiting: career.pending ? 'seasonOver' : null,
+    playoffs: season.playoffs.map((p) => playoffView(career, p)),
+    seasonEnd: career.pending ? buildSeasonEnd(career, tables[tier - 1]) : null,
   };
   return view;
+}
+
+function playoffView(career: Career, p: Playoff): PlayoffView {
+  const name = (id: number | undefined) => (id === undefined ? undefined : career.clubs[id].name);
+  const score = (x: [number, number], note?: string) => `${x[0]}–${x[1]}${note ? ` ${note}` : ''}`;
+  const legs = (tie: Playoff['semis'][number]) => [tie.leg1 && score(tie.leg1), tie.leg2 && score(tie.leg2.score, tie.leg2.note)].filter((x): x is string => !!x);
+  return {
+    tier: p.tier,
+    semis: p.semis.map((tie) => ({ high: badge(career, tie.high), low: badge(career, tie.low), legs: legs(tie), winner: name(tie.winner) })),
+    final: p.final && {
+      home: badge(career, p.final.home),
+      away: badge(career, p.final.away),
+      result: p.final.score && score(p.final.score, p.final.note),
+      winner: name(p.final.winner),
+    },
+    winner: name(p.winner),
+  };
+}
+
+const STAT_NAMES: Record<StatKey, string> = { attack: 'Attack', defence: 'Defence', chemistry: 'Chemistry' };
+
+function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
+  const end = career.pending!;
+  const s = career.season;
+  const me = career.clubs[career.playerClubId];
+  const league = s.leagues[end.tier - 1];
+  const row = league.table.find((r) => r.clubId === me.id)!;
+  const avgFor = league.table.reduce((t, r) => t + r.goalsFor, 0) / league.table.length;
+  const avgAgainst = avgFor;
+
+  // Runs across league matches, in order.
+  const results = s.playerMatches.filter((m) => m.kind === 'league').map((m) => (m.goalsFor > m.goalsAgainst ? 'W' : m.goalsFor === m.goalsAgainst ? 'D' : 'L'));
+  const longest = (ok: (r: string) => boolean) => {
+    let best = 0;
+    let cur = 0;
+    for (const r of results) {
+      cur = ok(r) ? cur + 1 : 0;
+      best = Math.max(best, cur);
+    }
+    return best;
+  };
+  const unbeaten = longest((r) => r !== 'L');
+  const wins = longest((r) => r === 'W');
+  const winless = longest((r) => r !== 'W');
+  const bestRun = wins >= 3 ? `${wins} wins in a row` : `${unbeaten} unbeaten`;
+  const worstRun = winless >= 2 ? `${winless} without a win` : 'never went two without a win';
+
+  const scorer = me.squad
+    .map((p) => ({ name: p.name, goals: s.scorers[p.id] ?? 0 }))
+    .sort((a, b) => b.goals - a.goals)[0];
+
+  const decline = end.declineByStat;
+  const hardest = [...STATS].sort((a, b) => decline[b] - decline[a])[0];
+  const stats = { attack: me.attack, defence: me.defence, chemistry: me.chemistry };
+  const room = Object.fromEntries(STATS.map((k) => [k, Math.max(0, Math.floor(MAX_STAT - me[k] + 1e-9))])) as Record<StatKey, number>;
+
+  const forGap = row.goalsFor - avgFor;
+  const againstGap = row.goalsAgainst - avgAgainst;
+  let verdict: string;
+  if (againstGap > 3 && againstGap >= -forGap) {
+    verdict = `You conceded ${row.goalsAgainst}, league average ${Math.round(avgAgainst)}. Defence was your weakest area.`;
+  } else if (forGap < -3) {
+    verdict = `You scored ${row.goalsFor}, league average ${Math.round(avgFor)}. Attack was your weakest area.`;
+  } else if (forGap > 3 && againstGap < -3) {
+    verdict = `You scored ${row.goalsFor} and conceded ${row.goalsAgainst}: strong at both ends.`;
+  } else {
+    verdict = `You scored ${row.goalsFor} and conceded ${row.goalsAgainst}, close to the league average of ${Math.round(avgFor)}.`;
+  }
+
+  const headlines: Record<NonNullable<SeasonEndView['outcome']>, string> = {
+    champion: end.tier === 1 ? 'Champions of League 1!' : `League ${end.tier} champions!`,
+    promoted: `${end.position === 1 ? 'Champions' : 'Promoted'}! Up to League ${end.newTier}.`,
+    playoffWinner: `Play-off winners! Up to League ${end.newTier}.`,
+    playoffs: `Play-off heartbreak. ${ordinal(end.position)} in League ${end.tier}.`,
+    relegated: `Relegated to League ${end.newTier}.`,
+  };
+  const headline = end.outcome ? headlines[end.outcome] : `${ordinal(end.position)} in League ${end.tier}.`;
+
+  const ratingAfter = rating(me);
+  const myPlayoff = s.playoffs.find((p) => p.tier === end.tier);
+  return {
+    season: end.season,
+    tier: end.tier,
+    newTier: end.newTier,
+    position: end.position,
+    expected: end.expected,
+    outcome: end.outcome,
+    headline,
+    table,
+    playoffs: myPlayoff && playoffView(career, myPlayoff),
+    report: {
+      record: `${row.won}W ${row.drawn}D ${row.lost}L`,
+      points: row.points,
+      goalsFor: row.goalsFor,
+      goalsAgainst: row.goalsAgainst,
+      avgFor: Math.round(avgFor),
+      avgAgainst: Math.round(avgAgainst),
+      bestRun,
+      worstRun,
+      topScorer: scorer && scorer.goals > 0 ? `${scorer.name} (${scorer.goals})` : undefined,
+      verdict: `${verdict} Losing players hit your ${STAT_NAMES[hardest].toLowerCase()} hardest (−${Math.round(decline[hardest])}).`,
+    },
+    decline: { byStat: decline, ratingBefore: ratingAfter + end.decline, ratingAfter, hardest },
+    points: { total: end.points, base: 10, performance: end.performance, bonus: end.bonus, boosted: end.boost > 0 },
+    stats,
+    room,
+    tolerance: TUNING.weaknessTolerance,
+  };
+}
+
+function ordinal(n: number): string {
+  const sfx = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (sfx[(v - 20) % 10] ?? sfx[v] ?? sfx[0]);
 }
 
 function badge(career: Career, clubId: number): TeamBadge {
