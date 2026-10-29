@@ -327,7 +327,7 @@ All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned wi
 
 - **Header:** club name, league, position, form (last 5 results as W/D/L dots), ▶/⏸ button
 - **Club tab:** rating, this season's goals scored and conceded against the league average (the only clue to the drain), rival, trophies, records, history
-- **Live match:** scoreboard (crests, score, clock) and a match report like a real game summary: goals prominent, cards small and greyed, half-time and full-time markers. No running commentary
+- **Live match:** scoreboard (crests, score, clock) and a match report like a real game summary: goals prominent, cards small and greyed, half-time and full-time markers, newest first. No running commentary
 - **Tabs:** Match · Table · Fixtures · Club (stats, trophies, history)
 - **Table:** promotion, play-off and relegation places highlighted
 - **Rival:** one club in your league is your rival; derby matches are flagged
@@ -551,6 +551,7 @@ In rough priority order:
 | AI clubs keep a fixed style shape, 5 beyond the free lean | AI stats otherwise drifted apart every season, widening gaps within leagues (too many thrashings); a fixed shape keeps AI equally strong for their rating |
 | AI ceiling above 93 | Rank-based expectation can't pull back a club far ahead of the rest; without it 4–6 AI clubs sat above 95 |
 | AI promotion investment (+4) | Promoted clubs finished in the bottom half 91% of the time against ~78% in the real Premier League |
+| M8 visuals: match report newest-first, compact scoreboard, own league marked on table chips, legend shows only that table's zones (Champions in L1) | Latest event always in view; the box often lives in a small corner of the screen; clear which league is yours |
 
 ## 17. Name ✅
 

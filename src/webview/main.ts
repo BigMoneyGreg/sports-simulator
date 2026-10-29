@@ -238,7 +238,12 @@ function panelParts(v: GameView): string[] {
     case 'table': {
       const tier = ui.tableTier ?? v.playerTier;
       const playoff = v.playoffs.find((p) => p.tier === tier);
-      const chips = `<div class="seg chips">${v.tables.map((x) => `<button type="button" class="${x.tier === tier ? 'on' : ''}" data-tier="${x.tier}">L${x.tier}</button>`).join('')}</div>`;
+      const chips = `<div class="seg chips">${v.tables
+        .map((x) => {
+          const mine = x.tier === v.playerTier;
+          return `<button type="button" class="${x.tier === tier ? 'on' : ''} ${mine ? 'mine' : ''}" data-tier="${x.tier}"${mine ? ' title="Your league"' : ''}>L${x.tier}</button>`;
+        })
+        .join('')}</div>`;
       return [chips, tableHtml(v.tables, tier, false), playoff ? playoffHtml(playoff) : ''];
     }
     case 'fixtures':
@@ -252,6 +257,7 @@ function matchParts(v: GameView): string[] {
   if (v.waiting === 'seasonOver') return [`<p class="notice">The season is over. Choose your summer focus.</p>`];
   const m = v.match;
   if (!m) return [`<p class="muted">Next match about to kick off…</p>`];
+  // Newest first, so the latest event is always in view.
   const items = m.timeline;
   const event = (t: TimelineView) => {
     const icon = t.kind === 'goal' ? '<span class="ball" aria-label="Goal">⚽</span>' : `<span class="card ${t.kind}" aria-label="${t.kind === 'red' ? 'Red' : 'Yellow'} card"></span>`;
@@ -261,7 +267,7 @@ function matchParts(v: GameView): string[] {
     t.kind === 'break'
       ? `<li class="break"><span>${esc(t.clock)}</span><span>${esc(t.text)}</span></li>`
       : `<li class="${t.kind}"><span class="home">${t.side === 'home' ? event(t) : ''}</span><span class="min">${esc(t.clock)}</span><span class="away">${t.side === 'away' ? event(t) : ''}</span></li>`;
-  return [scoreboard(m), `<div class="card feed-card">${items.length ? `<ol class="report-feed">${items.map(row).join('')}</ol>` : '<p class="muted small center">No goals yet.</p>'}</div>`];
+  return [scoreboard(m), `<div class="card feed-card">${items.length ? `<ol class="report-feed">${[...items].reverse().map(row).join('')}</ol>` : '<p class="muted small center">No goals yet.</p>'}</div>`];
 }
 
 function scoreboard(m: LiveMatchView): string {
@@ -290,7 +296,14 @@ function tableHtml(tables: TableView[], tier: number, withChips = true): string 
   return `${chips}
     <div class="card flush"><table class="league"><thead><tr><th></th><th></th><th title="Played">P</th><th title="Won">W</th><th title="Drawn">D</th><th title="Lost">L</th><th title="Goal difference">GD</th><th title="Points">Pts</th></tr></thead>
     <tbody>${rows}</tbody></table></div>
-    <p class="legend small"><span class="key promotion"></span>Promotion <span class="key playoff"></span>Play-offs <span class="key relegation"></span>Relegation</p>`;
+    ${legendHtml(t)}`;
+}
+
+/** Keys only the zones this table has: the top league crowns a champion, the bottom one relegates nobody. */
+function legendHtml(t: TableView): string {
+  const labels: Record<string, string> = { champion: 'Champions', promotion: 'Promotion', playoff: 'Play-offs', relegation: 'Relegation' };
+  const zones = [...new Set(t.rows.map((r) => r.zone).filter((z) => z !== null))];
+  return `<p class="legend small">${zones.map((z) => `<span class="key ${z}"></span>${labels[z]}`).join(' ')}</p>`;
 }
 
 function playoffHtml(p: PlayoffView): string {
