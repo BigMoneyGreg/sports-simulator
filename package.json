@@ -5,7 +5,7 @@
   "icon": "media/icon.png",
   "version": "0.1.0",
   "publisher": "sports-simulator",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/BigMoneyGreg/sideline.git"
