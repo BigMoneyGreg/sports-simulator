@@ -1,0 +1,72 @@
+{
+  "name": "sideline",
+  "displayName": "Sideline — Sport Simulator for Your Sidebar",
+  "description": "A football management sim that plays itself in your sidebar while you code.",
+  "version": "0.1.0",
+  "publisher": "sideline",
+  "license": "UNLICENSED",
+  "private": true,
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "football",
+    "soccer",
+    "sport",
+    "sports",
+    "manager",
+    "league",
+    "game",
+    "idle",
+    "simulation"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "type": "webview",
+          "id": "sideline.view",
+          "name": "Sideline"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "sideline.togglePause",
+        "title": "Sideline: Pause / Play"
+      },
+      {
+        "command": "sideline.open",
+        "title": "Sideline: Open"
+      },
+      {
+        "command": "sideline.resetCareer",
+        "title": "Sideline: Reset Career"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "balance": "npx tsx tools/balance.ts",
+    "package": "npx @vscode/vsce package --no-dependencies",
+    "test:integration": "npm run build && node test/integration/run.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "@types/vscode": "1.90.0",
+    "esbuild": "0.28.2",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7"
+  }
+}
