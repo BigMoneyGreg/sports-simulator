@@ -1,7 +1,7 @@
 {
   "name": "sports-simulator",
   "displayName": "Sports Simulator",
-  "description": "A football management sim that plays itself in your sidebar while you code.",
+  "description": "An international football sim that plays itself in your sidebar while you code: leagues, cups and a World Championship.",
   "icon": "media/icon.png",
   "version": "0.1.0",
   "publisher": "bigdevgreg",
@@ -24,6 +24,9 @@
     "sports",
     "manager",
     "league",
+    "international",
+    "countries",
+    "cup",
     "game",
     "idle",
     "simulation"

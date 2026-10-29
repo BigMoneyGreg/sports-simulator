@@ -1,6 +1,6 @@
 # Sports Simulator
 
-> A football management sim that lives in a small box in your VS Code sidebar. You pick how good your club is, and it plays every match, table and season on its own while you code.
+> An international football sim that lives in a small box in your VS Code sidebar. You pick a country and where it starts, and it plays every match, table, cup and season on its own while you code.
 
 **Status legend**
 
@@ -15,11 +15,11 @@
 
 Football management with almost nothing to manage. Your only decisions are:
 
-1. **Which league you start in:** League 1 to 5, starting mid-table (rated in the middle of that league's band)
+1. **Which country you are, and which league it starts in:** any of FIFA's ~210 nations, in League 1 to 5 (its usual level by default), starting mid-table
 2. **How long a match lasts:** 30 seconds, 2 or 5 real minutes
 3. **Where to focus each summer:** attack, defence or balanced
 
-Everything else runs by itself: fixtures, matches, commentary, tables, scorers, play-offs, promotion and relegation, and the other 99 clubs rising and falling. You glance at it between tasks, react at the end of each season, and build a club history worth keeping.
+Everything else runs by itself: fixtures, matches, commentary, tables, scorers, play-offs, promotion and relegation, the Nations Cup and the World Championship, and the other 99 nations rising and falling. You glance at it between tasks, react at the end of each season, and build a club history worth keeping.
 
 ### Design principles
 
@@ -72,7 +72,7 @@ Next season … (won league 1? → carry on, or start a new career)
 | Difficulty | Easy / Medium / Hard | *A helpful boost each season* · *A subtle boost each season* · *No extra season boost*: Easy +10, Medium +5, Hard 0 (§7) |
 | Style | Attacking · Balanced · Defensive | Attacking starts attack 5 above the rating and defence 5 below (within the free lean); defensive the reverse |
 | Match duration | 30 sec · 2 min · 5 min | Length of one 90-minute match; can be changed any time from the ⏱ button in the box. Default 2 min |
-| Club name | Generated, editable | See §10 |
+| Country | Search box over every nation, A–Z | Sets the league picker to its usual level (marked *Usual*); any league can be picked. See §10 |
 
 ### Starting position
 
@@ -136,7 +136,7 @@ All matches on a matchday are simulated minute by minute at the same time. Only 
 
 ## 6. Leagues, promotion & relegation 🟢 NOW
 
-- **5 leagues × 20 clubs = 100 clubs.** No club is ever rated 100; ratings run 0–99. 38 matchdays per season (home and away). A season takes about 25 minutes (30s matches), 40 minutes (1 min), 80 minutes (2 min) or 3+ hours (5 min) of coding time.
+- **5 leagues × 20 nations = 100 teams.** "Club" in the code means any team. No club is ever rated 100; ratings run 0–99. 38 matchdays per season (home and away). A season takes about 25 minutes (30s matches), 40 minutes (1 min), 80 minutes (2 min) or 3+ hours (5 min) of coding time.
 - Rankings: points (3 win, 1 draw), then goal difference, then goals scored.
 
 **Movement between leagues (same at every boundary):**
@@ -163,11 +163,24 @@ That's 3 up and 3 down at each boundary. League 1 has no promotion (1st is champ
 
 At the start of every career, **each rating from 0 to 99 is used exactly once**:
 
-1. The player's club takes the rating they chose.
-2. The remaining 99 ratings are **shuffled randomly** across the 99 AI clubs.
-3. Clubs are placed into leagues by rating: the top 20 in League 1, and so on.
+1. The player's nation takes a random mid-table rating in the league they picked (§3).
+2. The other 99 nations keep the **world order** (§10), strongest first, and take the remaining ratings in that order, **shuffled within starting pots**:
 
-So each league starts with exactly one club on each rating in its band, and every career starts with a different world (which AI club is strong changes each time). A player choosing 99 starts as the strongest club; a player choosing 85 has fourteen League 1 clubs above them.
+| World order | Pot | Can start in |
+|---|---|---|
+| 1–8, 9–16 | two pots of 8 | League 1 |
+| **17–24** | swing pot | **League 1 or 2** |
+| 25–36 | core | League 2 |
+| **37–44** | swing pot | **League 2 or 3** |
+| 45–56 | core | League 3 |
+| **57–64** | swing pot | **League 3 or 4** |
+| 65–76 | core | League 4 |
+| **77–84** | swing pot | **League 4 or 5** |
+| 85–92, 93–100 | two pots of 8 | League 5 |
+
+3. Nations are placed into leagues by rating: the top 20 in League 1, and so on.
+
+So each league starts with exactly one team on each rating in its band, big nations are always near the top, and who starts as favourite changes every career. If the player starts England in League 5, everyone below England moves up a place to fill the gap. A nation from outside the world order takes the place of the 100th.
 
 The overall average starts at **49.5** and stays there every season (§7). After the first season, ratings move freely and are no longer unique.
 
@@ -175,6 +188,22 @@ The bands make movement feel real:
 - A league 5 club on 14 needs to get up to about 20 to challenge for promotion.
 - A league 4 club slipping below 20 is in a relegation fight.
 - A promoted club arrives near the bottom of its new league (the top of L2 ≈ 79 ≈ the bottom of L1), as in real life.
+
+### Cups 🟢 NOW
+
+Cups never change ratings: only league finishes feed the summer (§7). They bring trophies, records and stories. Each has its own place in the **Cups** tab, viewable whether or not you're in it, with the draw, results, groups and past winners.
+
+**Nations Cup, every season.** The top 64 of last season's final standings (season 1: the starting order), seeded 1–64.
+- Round of 64: seeds 1–32 each drawn against one of 33–64. Later rounds are drawn at random.
+- Round of 64, 32 and 16: one match, the lower seed at home (a chance of an upset), extra time and penalties if level.
+- Quarter- and semi-finals: two legs, the better seed at home second. Final: one match at a neutral ground.
+- Eight cup matchdays sit between league rounds (after matchdays 4, 9, 14, 19, 24, 29, 33 and 37), so the final comes before the last league round.
+
+**World Championship, every fourth summer** (seasons 4, 8, 12…), after the play-offs and before the summer decision.
+- Leagues 1 and 2 of the season just finished (40 nations), seeded by final position into five pots of 8. Each of 8 groups of 5 takes one nation from each pot, so the top 8 are always apart.
+- Groups play once each (5 matchdays, one team resting each time) at neutral venues; points, goal difference, goals scored.
+- The top two in each group go through. Round of 16: A1 v B2, C1 v D2, E1 v F2, G1 v H2, then B1 v A2, D1 v C2, F1 v E2, H1 v G2, so teams from the same group can only meet again in the final. One-off neutral matches to the final.
+- The last edition stays in the Cups tab until the next.
 
 ---
 
@@ -326,11 +355,11 @@ All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned wi
 ### Sidebar box (Explorer view, bottom-left by default)
 
 - **Header:** club name, league, position, form (last 5 results as W/D/L dots), ▶/⏸ button
-- **Club tab:** rating, this season's goals scored and conceded against the league average (the only clue to the drain), rival, trophies, records, history
+- **Team tab:** rating, this season's goals scored and conceded against the league average (the only clue to the drain), rival, trophies, records, history
 - **Live match:** scoreboard (crests, score, clock) and a match report like a real game summary: goals prominent, cards small and greyed, half-time and full-time markers, newest first. No running commentary
-- **Tabs:** Match · Table · Fixtures · Club (stats, trophies, history)
+- **Tabs:** Match · Table · Fixtures · Cups · Team (stats, trophies, history)
 - **Table:** promotion, play-off and relegation places highlighted
-- **Rival:** one club in your league is your rival; derby matches are flagged
+- **Rival:** one team in your league is your rival, shown on the Team tab
 
 ### Status bar
 
@@ -389,33 +418,15 @@ Screen contents:
 
 ---
 
-## 10. Club naming 🟢 NOW
+## 10. Nations 🟢 NOW
 
-**Rule: no real club names, ever.**
+The game uses real nations, not clubs: country names, flags and colours are free to use, and everyone can follow how teams they know are doing. In the game: no federation crests, nicknames or competition names (no "World Cup" or "FIFA"), and no real players.
 
-Real club names, nicknames, crests and kits are trademarks. Close imitations of famous clubs (*"Manchester FC"*, *"Liverpool Town"*) are also off-limits. Many small towns have real non-league clubs, so "real town + suffix" often copies a real club by accident.
-
-### Approach
-
-1. **Fictional towns:** built from real place-name pieces (*Ash-, Brad-, Holt-, Kings-, -by, -ford, -wick, -ton, -bridge, -ham, -field*) into plausible towns that **don't exist**, e.g. *Ashminster, Holtbury, Draybridge, Kingsworth*. (The original examples Ashby, Holtwick and Kingsbridge all turned out to be real places.)
-2. **Suffixes:** *United, City, Town, Rovers, Athletic, Wanderers, Albion, County, Rangers*, plus *FC* or *AFC*.
-3. **Checked against real clubs:** every one of the 100 names is checked against club lists for the English pyramid (Premier League down through non-league), the Scottish, Welsh and Northern Irish leagues, and major European clubs. Towns are preferably not real UK places at all.
-4. **Blocklist:** the same club list is built into the name generator, so it can never produce a real club.
-5. **Fixed world:** one curated set of 100 clubs, each with generated colours and a 3-letter code (ASH, HOL…), so the world feels consistent across careers.
-6. **Your club:** a generated name you can edit at setup (the blocklist doesn't apply to names you type yourself).
-
-**How the names were checked (M4, Oct 2026).** Towns were generated from prefix + ending pieces, then a town was rejected if it:
-- appears in Wikipedia's lists of football clubs in England (down through non-league), Scotland, Wales or Northern Ireland, or its lists of towns and cities in England, Wales, Scotland (burghs), Northern Ireland and the UK;
-- has a Wikipedia page of exactly that title (which catches almost every real UK village, and many abroad);
-- is one letter away from any real club or place on those lists, or two letters from the town of any EFL, Scottish league, top Welsh/NI or major European club (this caught e.g. *Brenford*, *Selford*, *Tadcester*).
-
-1,868 candidates → 387 with no Wikipedia page → 316 clean → 100 hand-picked for the world, 216 kept for generating your club's name. The real-club list (2,816 names) and famous towns are built into the generator (`src/sports/football/data/blocklist.ts`). `npx tsx tools/check-names.ts --online` re-runs the checks.
-
-Players get generated names from a mixed pool of first names and surnames (English, Scottish, Irish, Welsh, West African, French, Iberian, Italian, Nordic, Dutch, Polish and more), with no repeated surname in a squad.
-
-### User renaming 🔵 LATER
-
-Rename any club locally (edit button, or import/export a names file). Anyone who wants real names can add them on their own machine. The extension never ships them.
+- **Playable nations:** FIFA's members (~210), leaving out any currently banned from international football (Russia). Following FIFA's list keeps the choice neutral: Kosovo, Palestine and Chinese Taipei are in because FIFA has them; England, Scotland, Wales and Northern Ireland are separate.
+- **World order:** the 100 nations in the world, ordered by hand on football standing: titles and history, consistency over the last decade, and current form. It is checked against the world ranking but not copied from it, so Italy and Germany stay high through a bad spell and a short hot streak doesn't lift a minnow. Reviewed against the ranking of 7 October 2026. The list is `WORLD_ORDER` in `src/sports/football/data/nations.ts`.
+- **Badges:** two or three flag colours in diagonal bands (France, Italy, Germany… get three). The first colour tints the header, so it is never black or white.
+- **Codes and short names:** three-letter codes (BRA, ENG, JPN); long names have a short form for narrow spaces (*Bosnia*, *N. Ireland*, *USA*).
+- **Players:** generated everyday names from the nation's region, about 40 pools (English, Scottish, Latin American, West African, Japanese, Arabic…). Some nations mix in a second pool for about a quarter of the squad (France, England, Netherlands…). Surnames don't repeat in a squad until a pool runs out, as with Kims and Nguyens. Name combinations that would produce famous real players are left out of the pools.
 
 ---
 
@@ -485,10 +496,13 @@ Each milestone finishes in a working state.
 | **M6** | Season loop UI | Play-offs, end-of-season screen, season report, decline, point allocation |
 | **M7** | Polish | Full-time overlay, form dots, rival/derby, trophy cabinet, history, records, copy summary, settings |
 | **M8** | Personal trial | Use it daily for two weeks; fix what's boring, annoying or unrealistic |
+| **M8b** | Nations and cups | Real nations replace fictional clubs; Nations Cup and World Championship (§6, §10) |
 
 **M8 progress (29 Oct 2026):** trial under way and going well. Done so far: two-stat model and summer focus, league picker, no rating numbers, badge colour picker, responsive box (header-only at its narrowest), Start next season button, games played in the header, and a visual pass (live table arrows, goal flash, sticky header, fixtures scroll, form tooltips). Marketplace groundwork: icon, README with screenshots and how to play, `vsce package` works (61 KB). MIT licence chosen and added.
 
-**Before publishing (M9):** done: GitHub repo renamed to `sports-simulator`; Marketplace publisher **bigdevgreg** created and set in package.json. Still to do: force-push the cleaned history (`git push --force-with-lease origin main`) and delete the `backup-before-email-rewrite` branch; make the GitHub repo public (README screenshots load from it); bump the version; `npx @vscode/vsce package` and upload the `.vsix` by hand at marketplace.visualstudio.com/manage (no Azure DevOps token needed). Updates: bump the version, package, upload with **Update**.
+**M8b (29 Oct 2026):** decided during the trial, before publishing: clubs became nations (relatable everywhere, and players can follow teams they know) and both cups were added.
+
+**Before publishing (M9):** done: GitHub repo renamed to `sports-simulator`; Marketplace publisher **bigdevgreg** created and set in package.json; cleaned history force-pushed and the backup branch deleted. Still to do: try the nations and cups build (fn+F5); make the GitHub repo public (README screenshots load from it); bump the version; `npx @vscode/vsce package` and upload the `.vsix` by hand at marketplace.visualstudio.com/manage (no Azure DevOps token needed). Updates: bump the version, package, upload with **Update**.
 
 ---
 
@@ -496,15 +510,12 @@ Each milestone finishes in a working state.
 
 In rough priority order:
 
-1. **League cups:** a knockout cup per league running alongside the league season, with upsets against bigger clubs
-2. **European competition:** for top league 1 finishers; group stage + knockouts against clubs from fictional foreign leagues
-3. **Player lifecycle:** ageing, retirement, youth players, star transfers (still automatic)
-4. **User renaming:** rename clubs locally, import/export name files
-5. **Other sports in the same extension** (after football is finished): sport choice at setup, separate career per sport, keywords for each sport so it shows up in search
+1. **Continental championships:** in the years between World Championships, by confederation
+2. **Player lifecycle:** ageing, retirement, youth players (still automatic)
+3. **Other sports in the same extension** (after football is finished): sport choice at setup, separate career per sport, keywords for each sport so it shows up in search
    - **Rugby union:** bonus points, tries/conversions/penalties commentary
    - **Cricket:** most different (formats, overs, innings, draws in multi-day games); highest effort
-6. **Hall of Fame:** archive of past careers
-7. **Publishing:** Marketplace listing, icon, screenshots, README
+4. **Hall of Fame:** archive of past careers
 
 ## 15. Ideas ⚪
 
@@ -566,6 +577,10 @@ In rough priority order:
 | Summer explanation behind "How does summer work?"; Club tab hides records that don't exist yet | Keeps the choice and its button in view; no columns of dashes |
 | MIT licence | Permissive and the norm for VS Code extensions; anyone can learn from or fork it |
 | Publisher `bigdevgreg`; publish by uploading the `.vsix` by hand | "BigMoneyGreg" was rejected as suspicious by the Marketplace; a token needs an Azure DevOps organisation, which asked for an Azure subscription |
+| Real nations replace fictional clubs | Relatable worldwide, and players can follow how teams they know are doing; clubs' names are trademarks, countries' aren't |
+| World order by football standing, shuffled within pots of 8 (swing pots across each league line) | A single ranking table over-rates hot streaks; pots keep big nations near the top while every career starts differently |
+| Any nation, any starting league (defaulting to its usual one) | People want to play as their own country, and some want a long climb |
+| Nations Cup (top 64, every season) and World Championship (Leagues 1–2, every 4th summer); no effect on ratings | Real-feeling moments beyond the league, without touching the balance tuning |
 
 ## 17. Name ✅
 
