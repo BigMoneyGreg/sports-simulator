@@ -16,7 +16,7 @@
 Football management with almost nothing to manage. Your only decisions are:
 
 1. **How good your club is at the start:** a rating from 0 to 99, which also decides your league and how hard it is
-2. **How long a match lasts:** 1–5 real minutes
+2. **How long a match lasts:** 30 seconds, 1, 2 or 5 real minutes
 3. **Where to spend points:** attack, defence or chemistry, at the end of each season
 
 Everything else runs by itself: fixtures, matches, commentary, tables, scorers, play-offs, promotion and relegation, and the other 99 clubs rising and falling. You glance at it between tasks, react at the end of each season, and build a club history worth keeping.
@@ -71,7 +71,7 @@ Next season … (won league 1? → carry on, or start a new career)
 | Starting rating | 0–99 (slider) | Your club's team rating. Decides your league and your expected finish. Want it hard? Start low. Want to win every week? Start at 99 |
 | Difficulty | Easy / Medium / Hard | A hidden boost to your club each season: Easy +10 · Medium +5 · Hard +2 (§7) |
 | Stat split | Optional | Defaults to an even split (attack = defence = chemistry = rating). Can be shifted, e.g. more attack, less defence, as long as the average stays at the chosen rating |
-| Match duration | 1–5 real minutes | Length of one 90-minute match; can be changed later |
+| Match duration | 30s · 1 min · 2 min · 5 min | Length of one 90-minute match; can be changed any time. Default 2 min. At 30s, commentary shows key events only (goals, cards) so it stays readable |
 | Club name | Generated, editable | See §10 |
 
 ### Rating label
@@ -133,7 +133,7 @@ All matches on a matchday are simulated minute by minute at the same time. Only 
 
 ## 6. Leagues, promotion & relegation 🟢 NOW
 
-- **5 leagues × 20 clubs = 100 clubs.** No club is ever rated 100; ratings run 0–99. 38 matchdays per season (home and away). At 1–5 minutes per match, a season takes about 40 minutes to 3+ hours of coding time.
+- **5 leagues × 20 clubs = 100 clubs.** No club is ever rated 100; ratings run 0–99. 38 matchdays per season (home and away). A season takes about 25 minutes (30s matches), 40 minutes (1 min), 80 minutes (2 min) or 3+ hours (5 min) of coding time.
 - Rankings: points (3 win, 1 draw), then goal difference, then goals scored.
 
 **Movement between leagues (same at every boundary):**
@@ -391,7 +391,7 @@ Rename any club locally (edit button, or import/export a names file). Anyone who
 
 ## 11. Settings 🟢 NOW
 
-- Match duration (1–5 minutes)
+- Match duration (30s / 1 / 2 / 5 minutes)
 - Full-time pop-up on/off
 - Status bar score on/off
 - Reset career (with confirmation)
