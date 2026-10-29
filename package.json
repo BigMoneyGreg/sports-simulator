@@ -58,13 +58,11 @@
           "type": "string",
           "enum": [
             "30s",
-            "1m",
             "2m",
             "5m"
           ],
           "enumDescriptions": [
-            "30 seconds (key events only in commentary)",
-            "1 minute",
+            "30 seconds",
             "2 minutes",
             "5 minutes"
           ],

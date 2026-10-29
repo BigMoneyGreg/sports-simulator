@@ -1,4 +1,4 @@
-import { ratingLabel } from '../core/league';
+import { band } from '../core/league';
 import {
   DURATION_LABELS,
   type Difficulty,
@@ -42,6 +42,7 @@ const ui: UiState = { tab: 'match', tableTier: null, ...((vscode.getState() as P
 let view: View | null = null;
 
 const setup = {
+  league: 3,
   rating: 50,
   difficulty: 'medium' as Difficulty,
   duration: '2m' as Duration,
@@ -94,6 +95,19 @@ function paintSwatches(): void {
 
 const MAX_LEAN = 15;
 
+const LEAGUE_TEXT: Record<number, string> = {
+  1: 'The top flight.',
+  2: 'One step from the top.',
+  3: 'The middle of the pyramid.',
+  4: 'Lower league football.',
+  5: 'The bottom of the pyramid: a long climb.',
+};
+
+/** Middle of the league's rating band: 10th of 20 at the start. */
+function midRating(tier: number): number {
+  return band(tier).min + 10;
+}
+
 function leanLimit(): number {
   return Math.min(MAX_LEAN, setup.rating, 99 - setup.rating);
 }
@@ -105,6 +119,7 @@ function renderSetup(v: SetupView): void {
   }
   setup.tolerance = v.tolerance;
   setup.rendered = true;
+  delete app.dataset.mode;
   const seg = <T extends string>(name: string, options: [T, string][], value: T) =>
     `<div class="seg" role="radiogroup" data-name="${name}">${options
       .map(([val, label]) => `<button type="button" role="radio" aria-checked="${val === value}" class="${val === value ? 'on' : ''}" data-value="${val}">${esc(label)}</button>`)
@@ -112,16 +127,15 @@ function renderSetup(v: SetupView): void {
   app.innerHTML = `
   <div class="setup card">
     <h2>New career</h2>
-    <p class="muted">Pick how good your club is. Every match plays on its own; once a season you decide where to strengthen: attack or defence.</p>
+    <p class="muted">Pick a league to start in. Every match plays on its own; each summer you decide where to strengthen: attack or defence.</p>
 
     <label class="field">Club name
       <span class="row"><input id="name" type="text" maxlength="40" value="${esc(setup.name)}"><button type="button" id="reroll" class="icon" title="Suggest another name" aria-label="Suggest another name">↻</button></span>
     </label>
 
-    <label class="field">Starting rating <strong id="ratingValue">${setup.rating}</strong>
-      <input id="rating" type="range" min="0" max="99" value="${setup.rating}">
-      <span id="ratingLabel" class="hint">${esc(ratingLabel(setup.rating))}</span>
-    </label>
+    <div class="field">League ${seg('league', [1, 2, 3, 4, 5].map((t) => [String(t), `L${t}`] as [string, string]), String(setup.league))}
+      <span class="hint">${esc(LEAGUE_TEXT[setup.league])} You start mid-table: rated ${setup.rating}, expected 10th of 20.</span>
+    </div>
 
     <div class="field">Difficulty ${seg('difficulty', [['easy', 'Easy'], ['medium', 'Medium'], ['hard', 'Hard']], setup.difficulty)}
       <span class="hint">${esc({ easy: 'A big hidden boost every season: climb fast.', medium: 'A few seasons in each league.', hard: 'A long grind to the top.' }[setup.difficulty])}</span>
@@ -162,11 +176,6 @@ function updateLean(): void {
           : 'Defensive: tighter games, fewer goals at both ends.';
 }
 
-function updateSetupRating(): void {
-  document.getElementById('ratingValue')!.textContent = String(setup.rating);
-  document.getElementById('ratingLabel')!.textContent = ratingLabel(setup.rating);
-  updateLean();
-}
 
 // ---------------------------------------------------------------------------
 // Game
@@ -191,25 +200,44 @@ function renderOverlay(ft: FullTimeView | null): void {
   (overlay.firstElementChild as HTMLElement).style.animationDuration = `${ft.ms}ms`;
 }
 
+/** Last HTML written to each region, so unchanged regions are left alone. */
+const written = new WeakMap<Element, string>();
+
+/**
+ * Writes each part into its own region, touching only the ones that changed.
+ * The box updates every match-minute; rewriting everything would replace a
+ * button between mouse-down and mouse-up and swallow the click.
+ */
+function patch(container: HTMLElement, parts: string[]): void {
+  if (container.children.length !== parts.length) {
+    container.innerHTML = parts.map(() => '<div class="part"></div>').join('');
+  }
+  parts.forEach((html, i) => {
+    const region = container.children[i];
+    if (written.get(region) !== html) {
+      region.innerHTML = html;
+      written.set(region, html);
+    }
+  });
+}
+
 function renderGame(v: GameView): void {
   renderOverlay(v.seasonEnd ? null : v.fullTime);
-  if (v.seasonEnd) {
-    app.innerHTML = `${headerHtml(v)}${seasonEndHtml(v.seasonEnd)}`;
-    paintSwatches();
-    return;
+  if (app.dataset.mode !== 'game') {
+    app.innerHTML = '<div id="top"></div><div id="main"></div>';
+    app.dataset.mode = 'game';
   }
+  patch(document.getElementById('top')!, [headerHtml(v)]);
   const tabs: [Tab, string][] = [
     ['match', 'Match'],
     ['table', 'Table'],
     ['fixtures', 'Fixtures'],
     ['club', 'Club'],
   ];
-  app.innerHTML = `
-    ${headerHtml(v)}
-    <nav class="tabs" role="tablist">${tabs
-      .map(([id, label]) => `<button type="button" role="tab" aria-selected="${ui.tab === id}" class="${ui.tab === id ? 'on' : ''}" data-tab="${id}">${label}</button>`)
-      .join('')}</nav>
-    <section class="panel">${panelHtml(v)}</section>`;
+  const nav = `<nav class="tabs" role="tablist">${tabs
+    .map(([id, label]) => `<button type="button" role="tab" aria-selected="${ui.tab === id}" class="${ui.tab === id ? 'on' : ''}" data-tab="${id}">${label}</button>`)
+    .join('')}</nav>`;
+  patch(document.getElementById('main')!, v.seasonEnd ? [seasonEndHtml(v.seasonEnd)] : [nav, ...panelParts(v)]);
   paintSwatches();
 }
 
@@ -230,26 +258,28 @@ function headerHtml(v: GameView): string {
   </header>`;
 }
 
-function panelHtml(v: GameView): string {
+/** The active tab's content, split into regions that update independently. */
+function panelParts(v: GameView): string[] {
   switch (ui.tab) {
     case 'match':
-      return matchHtml(v);
+      return matchParts(v);
     case 'table': {
       const tier = ui.tableTier ?? v.playerTier;
       const playoff = v.playoffs.find((p) => p.tier === tier);
-      return tableHtml(v.tables, tier) + (playoff ? playoffHtml(playoff) : '');
+      const chips = `<div class="seg chips">${v.tables.map((x) => `<button type="button" class="${x.tier === tier ? 'on' : ''}" data-tier="${x.tier}">L${x.tier}</button>`).join('')}</div>`;
+      return [chips, tableHtml(v.tables, tier, false), playoff ? playoffHtml(playoff) : ''];
     }
     case 'fixtures':
-      return fixturesHtml(v.fixtures);
+      return [fixturesHtml(v.fixtures)];
     case 'club':
-      return clubHtml(v);
+      return [clubHtml(v)];
   }
 }
 
-function matchHtml(v: GameView): string {
-  if (v.waiting === 'seasonOver') return `<p class="notice">The season is over. Your points are waiting to be allocated.</p>`;
+function matchParts(v: GameView): string[] {
+  if (v.waiting === 'seasonOver') return [`<p class="notice">The season is over. Choose your summer focus.</p>`];
   const m = v.match;
-  if (!m) return `<p class="muted">Next match about to kick off…</p>`;
+  if (!m) return [`<p class="muted">Next match about to kick off…</p>`];
   const items = m.timeline;
   const event = (t: TimelineView) => {
     const icon = t.kind === 'goal' ? '<span class="ball" aria-label="Goal">⚽</span>' : `<span class="card ${t.kind}" aria-label="${t.kind === 'red' ? 'Red' : 'Yellow'} card"></span>`;
@@ -259,8 +289,7 @@ function matchHtml(v: GameView): string {
     t.kind === 'break'
       ? `<li class="break"><span>${esc(t.clock)}</span><span>${esc(t.text)}</span></li>`
       : `<li class="${t.kind}"><span class="home">${t.side === 'home' ? event(t) : ''}</span><span class="min">${esc(t.clock)}</span><span class="away">${t.side === 'away' ? event(t) : ''}</span></li>`;
-  return `${scoreboard(m)}
-    <div class="card feed-card">${items.length ? `<ol class="report-feed">${items.map(row).join('')}</ol>` : '<p class="muted small center">No goals yet.</p>'}</div>`;
+  return [scoreboard(m), `<div class="card feed-card">${items.length ? `<ol class="report-feed">${items.map(row).join('')}</ol>` : '<p class="muted small center">No goals yet.</p>'}</div>`];
 }
 
 function scoreboard(m: LiveMatchView): string {
@@ -487,6 +516,10 @@ app.addEventListener('click', (e) => {
     const group = button.closest('.seg')!.getAttribute('data-name')!;
     const value = button.dataset.value!;
     if (group === 'difficulty') setup.difficulty = value as Difficulty;
+    if (group === 'league') {
+      setup.league = Number(value);
+      setup.rating = midRating(setup.league);
+    }
     if (group === 'duration') setup.duration = value as Duration;
     setup.name = (document.getElementById('name') as HTMLInputElement).value;
     setup.rendered = false;
@@ -496,10 +529,7 @@ app.addEventListener('click', (e) => {
 
 app.addEventListener('input', (e) => {
   const input = e.target as HTMLInputElement;
-  if (input.id === 'rating') {
-    setup.rating = Number(input.value);
-    updateSetupRating();
-  } else if (input.id === 'lean') {
+  if (input.id === 'lean') {
     setup.lean = Number(input.value);
     updateLean();
   } else if (input.id === 'name') {

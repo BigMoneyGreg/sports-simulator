@@ -2,9 +2,9 @@
 // The webview only displays what it is sent; all game logic stays in the host.
 
 /** '10s' is a testing speed, only offered when running from source (F5). */
-export type Duration = '10s' | '30s' | '1m' | '2m' | '5m';
-export const DURATIONS: Duration[] = ['30s', '1m', '2m', '5m'];
-export const DURATION_LABELS: Record<Duration, string> = { '10s': '10s', '30s': '30s', '1m': '1 min', '2m': '2 min', '5m': '5 min' };
+export type Duration = '10s' | '30s' | '2m' | '5m';
+export const DURATIONS: Duration[] = ['30s', '2m', '5m'];
+export const DURATION_LABELS: Record<Duration, string> = { '10s': '10 sec', '30s': '30 sec', '2m': '2 min', '5m': '5 min' };
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type StatKey = 'attack' | 'defence';
 export type Focus = 'attack' | 'balanced' | 'defence';

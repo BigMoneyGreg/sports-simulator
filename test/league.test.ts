@@ -317,3 +317,13 @@ describe('summer focus', () => {
     expect(c.clubs[0].defence - before.defence + c.clubs[0].attack - before.attack).toBe(points);
   });
 });
+
+describe('league picker', () => {
+  it('starts the player mid-table in whichever league they choose', () => {
+    for (const tier of [1, 2, 3, 4, 5]) {
+      const c = newCareer({ rating: band(tier).min + 10, difficulty: 'medium', seed: tier }, footballSport);
+      expect(c.season.leagues[tier - 1].clubIds).toContain(c.playerClubId);
+      expect(c.season.expected[c.playerClubId]).toBe(10);
+    }
+  });
+});

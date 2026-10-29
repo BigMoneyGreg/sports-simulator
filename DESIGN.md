@@ -15,8 +15,8 @@
 
 Football management with almost nothing to manage. Your only decisions are:
 
-1. **How good your club is at the start:** a rating from 0 to 99, which also decides your league and how hard it is
-2. **How long a match lasts:** 30 seconds, 1, 2 or 5 real minutes
+1. **Which league you start in:** League 1 to 5, starting mid-table (rated in the middle of that league's band)
+2. **How long a match lasts:** 30 seconds, 2 or 5 real minutes
 3. **Where to focus each summer:** attack, defence or balanced
 
 Everything else runs by itself: fixtures, matches, commentary, tables, scorers, play-offs, promotion and relegation, and the other 99 clubs rising and falling. You glance at it between tasks, react at the end of each season, and build a club history worth keeping.
@@ -37,7 +37,7 @@ Everything else runs by itself: fixtures, matches, commentary, tables, scorers, 
 
 ```
 New career
-  └─ choose starting rating (0–99) → sets your league and expected finish
+  └─ choose a league (1–5) → you start mid-table: rated band minimum + 10, expected 10th
   └─ choose difficulty (easy / medium / hard)
   └─ choose match duration, optionally lean attacking or defensive
         │
@@ -68,18 +68,17 @@ Next season … (won league 1? → carry on, or start a new career)
 
 | Option | Values | Notes |
 |---|---|---|
-| Starting rating | 0–99 (slider) | Your club's team rating. Decides your league and your expected finish. Want it hard? Start low. Want to win every week? Start at 99 |
+| League | 1–5 (buttons) | Where you start. Your rating is the middle of that league's band (League 1 → 90, League 3 → 50, League 5 → 10), so you're expected to finish 10th of 20. Replaced the 0–99 slider in M8: one simple, readable choice |
 | Difficulty | Easy / Medium / Hard | A hidden boost to your club each season: Easy +10 · Medium +5 · Hard +2 (§7) |
 | Style | Optional | Defaults to balanced (attack = defence = rating). A slider leans up to 15 either way, e.g. attack 55 / defence 45 at rating 50. Up to ±5 is free; beyond that the weak side is exploited (§4) |
-| Match duration | 30s · 1 min · 2 min · 5 min | Length of one 90-minute match; can be changed any time from the box. Default 2 min |
+| Match duration | 30s · 2 min · 5 min | Length of one 90-minute match; can be changed any time from the box. Default 2 min |
 | Club name | Generated, editable | See §10 |
 
-### Rating label
+### Starting position
 
-A live label next to the slider explains what the rating means, based on the league bands (§6). Within each league's band of 20:
+The engine still takes a rating from 0 to 99 (balance tool and tests use the full range). The setup screen offers only the five mid-table starts.
 
-| Position in band | Label | Example (League 1, 80–99) |
-|---|---|---|
+---|---|---|
 | Bottom quarter | "Relegation battle — League N" | 80–84 |
 | Lower-middle | "Lower half — League N" | 85–89 |
 | Upper-middle | "Upper half — League N" | 90–94 |
@@ -91,7 +90,7 @@ Examples: **85** → *"Lower half — League 1"* · **14** → *"Upper half — 
 
 ## 4. Team model 🟢 NOW
 
-Each club has three stats, each **0–99**:
+Each club has two stats, each **0–99**:
 
 | Stat | Effect in matches |
 |---|---|
@@ -422,7 +421,7 @@ Rename any club locally (edit button, or import/export a names file). Anyone who
 
 ## 11. Settings 🟢 NOW
 
-- Match duration (30s / 1 / 2 / 5 minutes), also switchable from the ⏱ button in the box. Running from source (F5) adds a 10-second speed for testing
+- Match duration (30 seconds / 2 / 5 minutes), also switchable from the ⏱ button in the box. Running from source (F5) adds a 10-second speed for testing
 - Full-time overlay on/off
 - Status bar score on/off
 - Reset career (with confirmation)
@@ -524,7 +523,7 @@ In rough priority order:
 | Band pull for AI clubs | Prevents league bottlenecks |
 | Gains based on finish compared with expected position (rating rank in league) | Over-achievers rewarded, under-achievers punished; self-balancing; the top is hard to hold |
 | No band pull for the player's club | Climbing has to be earned; several seasons per league |
-| Starting rating 0–99 replaces league choice | One simple choice; players pick their own challenge, from "win every week" to "rise from nothing" |
+| ~~Starting rating 0–99 replaces league choice~~ (reversed in M8: league picker) | One simple choice; players pick their own challenge, from "win every week" to "rise from nothing" |
 | Same decline (−10) for the player as for AI clubs | Everyone plays by the same rules |
 | Performance multiplier 1.0, equal up and down | Each place above/below expectation = ±1 rating; luck cancels out over time |
 | Difficulty = hidden player boost (Easy +10 / Medium +5 / Hard +2) paid for by tiny AI drain | A full 0→99 climb can be quick or a grind; total rating unchanged |
@@ -533,6 +532,8 @@ In rough priority order:
 | Renamed from Sideline to Sports Simulator | *Sideline - Live Sports Scores* already exists on the Marketplace; the plain name says what it is |
 | Football first; other sports only after it's finished | Keeps version 1 small |
 | Unbeaten-run tracker in status bar: **rejected** | Unnecessary; records page covers it |
+| League picker (start mid-table) instead of a 0–99 rating | Simpler: choose where to start, not a number |
+| Match lengths 30s · 2 min · 5 min | Three clearly different paces; 1 minute dropped |
 | Pause when VS Code closes | You never miss matches; no catch-up simulation |
 | Fictional club names only, checked against real club lists | Avoid trademark issues; renaming handled locally later |
 | Engine runs in extension host | Game and status bar keep running without the sidebar open |

@@ -59,6 +59,12 @@ input:focus-visible {
   color: var(--vscode-errorForeground);
 }
 
+/* Regions patched independently; they don't affect layout. */
+
+.part {
+  display: contents;
+}
+
 /* Cards */
 
 .card {

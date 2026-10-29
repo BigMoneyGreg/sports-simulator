@@ -30,7 +30,6 @@ export const SAVE_VERSION = 2;
 export const MINUTE_MS: Record<Duration, number> = {
   '10s': 10_000 / 90,
   '30s': 30_000 / 90,
-  '1m': 60_000 / 90,
   '2m': 120_000 / 90,
   '5m': 300_000 / 90,
 };
