@@ -169,3 +169,21 @@ describe('effective strength', () => {
     expect(lopsided.defence).toBeCloseTo(50 - t - 5 - 5 * TUNING.weaknessPenalty);
   });
 });
+
+describe('match report timeline', () => {
+  it('lists only goals, cards and whistles, oldest first', async () => {
+    const { timeline } = await import('../src/sports/football/commentary');
+    const rng = new Rng(8);
+    const home = sheet(1, 50);
+    const away = sheet(2, 50);
+    for (let i = 0; i < 30; i++) {
+      const m = playMatch(home, away, {}, rng);
+      const items = timeline(m, { playerName: () => 'Jo Bloggs' });
+      expect(items.every((t) => ['goal', 'yellow', 'red', 'break'].includes(t.kind))).toBe(true);
+      expect(items.filter((t) => t.kind === 'goal')).toHaveLength(m.home.goals + m.away.goals);
+      expect(items.at(-1)).toMatchObject({ kind: 'break', clock: 'FT' });
+      expect(items.find((t) => t.clock === 'HT')).toBeDefined();
+      for (const g of items.filter((t) => t.kind === 'goal')) expect(g.score).toMatch(/^\d+–\d+$/);
+    }
+  });
+});

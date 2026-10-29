@@ -25,9 +25,12 @@ export function activate(context: vscode.ExtensionContext): void {
   };
 
   const sidebar = new SidebarProvider(context.extensionUri, (message) => handle(message));
+  // Running from source (F5) adds a 10-second speed for testing; it's never written to settings.
+  const devMode = context.extensionMode === vscode.ExtensionMode.Development;
+  const durations: Duration[] = devMode ? ['10s', ...DURATIONS] : DURATIONS;
 
   const refresh = () => {
-    sidebar.post({ type: 'view', view: buildView(game!, () => suggestedName, { fullTimeOverlay: config().get('fullTimeOverlay', true) }) });
+    sidebar.post({ type: 'view', view: buildView(game!, () => suggestedName, { fullTimeOverlay: config().get('fullTimeOverlay', true), durations }) });
     const text = statusText(game!);
     const seasonOver = !!game!.career?.pending;
     statusBar.update(config().get('statusBarScore', true) || seasonOver ? text : null);
@@ -60,8 +63,7 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       case 'startCareer': {
         const name = message.name.trim().slice(0, 40) || suggestedName;
-        void config().update('matchDuration', message.duration, vscode.ConfigurationTarget.Global);
-        game!.duration = message.duration;
+        setDuration(message.duration);
         game!.start({ rating: message.rating, difficulty: message.difficulty, split: message.split, clubName: name, seed: (Date.now() ^ (Math.random() * 2 ** 31)) >>> 0 });
         return;
       }
@@ -69,7 +71,8 @@ export function activate(context: vscode.ExtensionContext): void {
         game!.togglePause();
         return;
       case 'setDuration':
-        void config().update('matchDuration', message.duration, vscode.ConfigurationTarget.Global);
+        setDuration(message.duration);
+        refresh();
         return;
       case 'copy':
         void vscode.env.clipboard.writeText(message.text).then(() => vscode.window.setStatusBarMessage('Sports Simulator: summary copied', 2000));
@@ -90,6 +93,12 @@ export function activate(context: vscode.ExtensionContext): void {
         }
         return;
     }
+  }
+
+  function setDuration(d: Duration): void {
+    if (!durations.includes(d)) return;
+    game!.setDuration(d);
+    if (DURATIONS.includes(d)) void config().update('matchDuration', d, vscode.ConfigurationTarget.Global);
   }
 
   async function newCareer(): Promise<void> {

@@ -71,7 +71,7 @@ Next season … (won league 1? → carry on, or start a new career)
 | Starting rating | 0–99 (slider) | Your club's team rating. Decides your league and your expected finish. Want it hard? Start low. Want to win every week? Start at 99 |
 | Difficulty | Easy / Medium / Hard | A hidden boost to your club each season: Easy +10 · Medium +5 · Hard +2 (§7) |
 | Style | Optional | Defaults to balanced (attack = defence = rating). A slider leans up to 15 either way, e.g. attack 55 / defence 45 at rating 50. Up to ±5 is free; beyond that the weak side is exploited (§4) |
-| Match duration | 30s · 1 min · 2 min · 5 min | Length of one 90-minute match; can be changed any time. Default 2 min. At 30s, commentary shows key events only (goals, cards) so it stays readable |
+| Match duration | 30s · 1 min · 2 min · 5 min | Length of one 90-minute match; can be changed any time from the box. Default 2 min |
 | Club name | Generated, editable | See §10 |
 
 ### Rating label
@@ -274,21 +274,15 @@ League 1's top 3 get nothing (there's nowhere higher to go), and League 5's bott
 
 Estimates, to be confirmed by the balance tool. "Smart" = good allocation worth about 5 places a season; "average" = even split, no real edge. The last few points to 99 are the slowest, because once you're the highest-rated club you're expected to win and can't beat expectations.
 
-**Measured by the balance tool (M3)**, 4 careers each, from rating 0:
+**Measured by the balance tool (M8, two-stat model)**, 4 careers each, from rating 0:
 
-| Difficulty | Smart (fixes weaknesses) | Even split | Careless |
+| Difficulty | Smart (fixes the drained side) | Even split | Careless |
 |---|---|---|---|
-| Easy (+10) | 6–8 seasons | 6–13 seasons | — |
-| Medium (+5) | 10–14 seasons | 11–36 seasons | — |
-| Hard (+2) | 9–11 seasons | 21–68 seasons | never |
+| Easy (+10) | 6–7 seasons | 6–8 seasons | — |
+| Medium (+5) | 7–10 seasons | 9–35 seasons | — |
+| Hard (+2) | 10–20 seasons | 22–41 seasons | never |
 
-Smart play is worth about **+3 places a season** from low starts, tapering to ~0 near the top (you can't beat "expected 1st"); about +2 on average. Even split roughly holds (−0.3); careless sinks (−5).
-
-| Difficulty | Smart player | Average player | Smart player, real time at 3-min matches |
-|---|---|---|---|
-| Easy (+10) | ~5–6 seasons | ~9–11 seasons | ~10–12 hours |
-| Medium (+5) | ~7–9 seasons | ~16–20 seasons | ~14–18 hours |
-| Hard (+2) | ~12–14 seasons | ~40 seasons | ~24–28 hours |
+Reading the season report is worth about **+3 places a season** from low starts, tapering to ~0 near the top (you can't beat "expected 1st"); about +1.4 on average. Even split roughly holds (+0.1); careless sinks (−4). 25 of 26 balance targets met; the miss is the original "+4–6 places" guess for smart play, which match luck caps.
 
 At 1-minute matches (a season ≈ 40 minutes), a smart medium climb is about **5–6 hours**.
 
@@ -333,7 +327,7 @@ All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned wi
 ### Sidebar box (Explorer view, bottom-left by default)
 
 - **Header:** club name, league, position, form (last 5 results as W/D/L dots), ▶/⏸ button
-- **Live match:** score, match clock, scrolling commentary feed
+- **Live match:** scoreboard (crests, score, clock) and a match report like a real game summary: goals prominent, cards small and greyed, half-time and full-time markers. No running commentary
 - **Tabs:** Match · Table · Fixtures · Club (stats, trophies, history)
 - **Table:** promotion, play-off and relegation places highlighted
 - **Rival:** one club in your league is your rival; derby matches are flagged
@@ -427,7 +421,7 @@ Rename any club locally (edit button, or import/export a names file). Anyone who
 
 ## 11. Settings 🟢 NOW
 
-- Match duration (30s / 1 / 2 / 5 minutes)
+- Match duration (30s / 1 / 2 / 5 minutes), also switchable from the ⏱ button in the box. Running from source (F5) adds a 10-second speed for testing
 - Full-time overlay on/off
 - Status bar score on/off
 - Reset career (with confirmation)

@@ -1,8 +1,10 @@
 // Messages and view snapshots shared by the extension host and the webview.
 // The webview only displays what it is sent; all game logic stays in the host.
 
-export type Duration = '30s' | '1m' | '2m' | '5m';
+/** '10s' is a testing speed, only offered when running from source (F5). */
+export type Duration = '10s' | '30s' | '1m' | '2m' | '5m';
 export const DURATIONS: Duration[] = ['30s', '1m', '2m', '5m'];
+export const DURATION_LABELS: Record<Duration, string> = { '10s': '10s', '30s': '30s', '1m': '1 min', '2m': '2 min', '5m': '5 min' };
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type StatKey = 'attack' | 'defence';
 export type Zone = 'champion' | 'promotion' | 'playoff' | 'relegation' | null;
@@ -13,22 +15,28 @@ export interface TeamBadge {
   colours: [string, string];
 }
 
-export interface CommentaryView {
+/** One line of the match report. */
+export interface TimelineView {
   clock: string;
+  kind: 'goal' | 'yellow' | 'red' | 'break';
+  side?: 'home' | 'away';
   text: string;
-  kind: 'goal' | 'card' | 'red' | 'chance' | 'whistle' | 'info';
-  mine?: boolean;
+  score?: string;
 }
 
 export interface LiveMatchView {
   competition: string;
+  /** e.g. "MD 7/38" for league matches. */
+  round?: string;
+  /** Town names for the scoreboard. */
+  homeTown: string;
+  awayTown: string;
   home: TeamBadge & { goals: number; isPlayer: boolean };
   away: TeamBadge & { goals: number; isPlayer: boolean };
   clock: string;
   finished: boolean;
   aggregate?: string;
-  commentary: CommentaryView[];
-  scorers: { home: string[]; away: string[] };
+  timeline: TimelineView[];
   derby: boolean;
 }
 
@@ -94,6 +102,8 @@ export interface TableView {
 
 export interface FixtureView {
   label: string;
+  /** Opponent's name without the club suffix. */
+  town: string;
   derby?: boolean;
   opponent: TeamBadge;
   home: boolean;
@@ -113,6 +123,8 @@ export interface ClubView {
   season: number;
   expected: number;
   rival?: TeamBadge;
+  /** Set when attack and defence are far enough apart that the weak side is exploited. */
+  weakSide?: StatKey;
   cabinet: CabinetView;
   records: RecordsView;
   history: HistoryRowView[];
@@ -126,6 +138,9 @@ export interface HeaderView {
   paused: boolean;
   season: number;
   round: string;
+  duration: Duration;
+  /** Speeds the header button cycles through. */
+  durations: Duration[];
 }
 
 export interface SetupView {
@@ -133,6 +148,7 @@ export interface SetupView {
   duration: Duration;
   /** How far attack and defence can lean apart for free. */
   tolerance: number;
+  durations: Duration[];
 }
 
 export interface PlayoffTieView {

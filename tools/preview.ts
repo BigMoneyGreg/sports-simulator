@@ -113,7 +113,7 @@ const vars = Object.entries(theme)
 writeFileSync(
   join(out, 'index.html'),
   `<!DOCTYPE html><html><head><meta charset="utf-8">
-<style>html { ${vars} --vscode-font-family: -apple-system, BlinkMacSystemFont, sans-serif; --vscode-font-size: 13px; background: ${theme.background}; } body { width: 280px; border-right: 1px dashed #555; } .ft-card { animation: none !important; }</style>
+<style>html { ${vars} --vscode-font-family: -apple-system, BlinkMacSystemFont, sans-serif; --vscode-font-size: 13px; background: ${theme.background}; } body { width: 280px; } .ft-card { animation: none !important; } .ft-layer { width: 284px; right: auto; }</style>
 <link rel="stylesheet" href="../../media/sidebar.css"></head>
 <body><div id="app"></div>
 <script src="views.js"></script>

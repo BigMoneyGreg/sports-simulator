@@ -2,22 +2,24 @@ import { leagueRounds, type Career, type Playoff, type SeasonRecord } from '../c
 import { emptyRecords, topScorers } from '../core/records';
 import { MAX_STAT, rating, STATS } from '../core/club';
 import { recordResult, sortTable, zone, type Fixture, type TableRow } from '../core/league';
-import { commentary, matchClock } from '../sports/football/commentary';
+import { matchClock, timeline } from '../sports/football/commentary';
 import { outcome, TUNING, type SideKey } from '../sports/football/match';
 import { surname, townName } from '../sports/football/names';
+import { DURATIONS, type Duration } from '../shared/view';
 import type { CabinetView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, StatKey, TableView, TeamBadge, View } from '../shared/view';
 import { fullTimePause } from './game';
 import type { Game } from './game';
 
-const COMMENTARY_LINES = 40;
-
 export interface ViewOptions {
   fullTimeOverlay: boolean;
+  durations?: Duration[];
 }
 
 export function buildView(game: Game, suggestedName: () => string, options: ViewOptions = { fullTimeOverlay: true }): View {
   const career = game.career;
-  if (!career) return { screen: 'setup', setup: { suggestedName: suggestedName(), duration: game.duration, tolerance: TUNING.weaknessTolerance } };
+  if (!career) {
+    return { screen: 'setup', setup: { suggestedName: suggestedName(), duration: game.duration, tolerance: TUNING.weaknessTolerance, durations: options.durations ?? DURATIONS } };
+  }
   const me = career.clubs[career.playerClubId];
   const season = career.season;
   const tier = season.leagues.find((l) => l.clubIds.includes(me.id))!.tier;
@@ -35,6 +37,8 @@ export function buildView(game: Game, suggestedName: () => string, options: View
       paused: game.paused,
       season: season.number,
       round: roundLabel(career),
+      duration: game.duration,
+      durations: options.durations ?? DURATIONS,
     },
     match: buildMatch(game),
     tables,
@@ -49,6 +53,7 @@ export function buildView(game: Game, suggestedName: () => string, options: View
       season: season.number,
       expected: season.expected[me.id],
       rival: career.rival !== null && career.rival !== undefined ? badge(career, career.rival) : undefined,
+      weakSide: Math.abs(me.attack - me.defence) / 2 > TUNING.weaknessTolerance ? (me.attack < me.defence ? 'attack' : 'defence') : undefined,
       cabinet: cabinet(career.history),
       records: recordsView(career),
       history: [...career.history].reverse().map(historyRow),
@@ -296,24 +301,17 @@ function buildMatch(game: Game): LiveMatchView | null {
     const other = career.clubs[side === 'home' ? fixture.away : fixture.home];
     return (club.squad.find((p) => p.id === id) ?? other.squad.find((p) => p.id === id))?.name ?? 'Unknown';
   };
-  const mySide: SideKey = fixture.home === career.playerClubId ? 'home' : 'away';
-  const lines = commentary(match, { teamName: (s) => career.clubs[s === 'home' ? fixture.home : fixture.away].name, playerName }, game.duration === '30s');
-  const scorers = { home: [] as string[], away: [] as string[] };
-  for (const e of match.events) {
-    if (e.type !== 'goal') continue;
-    const owner = e.ownGoal ? (e.side === 'home' ? 'away' : 'home') : e.side;
-    const name = surname(playerName(owner, e.playerId));
-    scorers[e.side].push(`${name} ${e.minute}${e.added ? `+${e.added}` : ''}'${e.ownGoal ? ' (og)' : ''}`);
-  }
   const view: LiveMatchView = {
     competition: competition(fixture),
+    round: fixture.kind === 'league' ? roundLabel(career) : undefined,
+    homeTown: townName(career.clubs[fixture.home].name),
+    awayTown: townName(career.clubs[fixture.away].name),
     home: { ...badge(career, fixture.home), goals: match.home.goals, isPlayer: fixture.home === career.playerClubId },
     away: { ...badge(career, fixture.away), goals: match.away.goals, isPlayer: fixture.away === career.playerClubId },
     clock: matchClock(match),
     finished: match.period === 'done',
     derby: isDerby(career, fixture),
-    commentary: lines.slice(-COMMENTARY_LINES).reverse().map((l) => ({ clock: l.clock, text: l.text, kind: l.kind, mine: l.side === mySide })),
-    scorers,
+    timeline: timeline(match, { playerName }),
   };
   if (match.knockout && fixture.kind === 'playoffSemi2') {
     const [h, a] = match.knockout.aggregate;
@@ -384,7 +382,8 @@ function buildFixtures(career: Career, game: Game): FixtureView[] {
 
 function fixtureView(career: Career, label: string, f: Pick<Fixture, 'home' | 'away'>, played: Career['season']['playerMatches'][number] | undefined, current: boolean): FixtureView {
   const home = f.home === career.playerClubId;
-  const view: FixtureView = { label, opponent: badge(career, home ? f.away : f.home), home, current, derby: isDerby(career, f) || undefined };
+  const opponent = badge(career, home ? f.away : f.home);
+  const view: FixtureView = { label, opponent, town: townName(opponent.name), home, current, derby: isDerby(career, f) || undefined };
   if (played) {
     view.result = `${played.goalsFor}–${played.goalsAgainst}${played.penalties ? ` (${played.penalties[0]}–${played.penalties[1]} p)` : ''}`;
     const won = played.won ?? played.goalsFor > played.goalsAgainst;

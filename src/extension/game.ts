@@ -26,6 +26,7 @@ export const SAVE_VERSION = 1;
 
 /** Real milliseconds per match-minute. */
 export const MINUTE_MS: Record<Duration, number> = {
+  '10s': 10_000 / 90,
   '30s': 30_000 / 90,
   '1m': 60_000 / 90,
   '2m': 120_000 / 90,
@@ -34,7 +35,7 @@ export const MINUTE_MS: Record<Duration, number> = {
 
 /** How long the full-time result stays up before the next matchday. */
 export function fullTimePause(duration: Duration): number {
-  return duration === '30s' ? 3000 : 5000;
+  return duration === '10s' ? 1500 : duration === '30s' ? 3000 : 5000;
 }
 
 export interface LiveRound {
