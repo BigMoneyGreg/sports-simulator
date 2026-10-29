@@ -1,9 +1,9 @@
 {
-  "name": "sideline",
-  "displayName": "Sideline — Sport Simulator for Your Sidebar",
+  "name": "sports-simulator",
+  "displayName": "Sports Simulator",
   "description": "A football management sim that plays itself in your sidebar while you code.",
   "version": "0.1.0",
-  "publisher": "sideline",
+  "publisher": "sports-simulator",
   "license": "UNLICENSED",
   "private": true,
   "engines": {
@@ -32,29 +32,29 @@
       "explorer": [
         {
           "type": "webview",
-          "id": "sideline.view",
-          "name": "Sideline"
+          "id": "sportsSimulator.view",
+          "name": "Sports Simulator"
         }
       ]
     },
     "commands": [
       {
-        "command": "sideline.togglePause",
-        "title": "Sideline: Pause / Play"
+        "command": "sportsSimulator.togglePause",
+        "title": "Sports Simulator: Pause / Play"
       },
       {
-        "command": "sideline.open",
-        "title": "Sideline: Open"
+        "command": "sportsSimulator.open",
+        "title": "Sports Simulator: Open"
       },
       {
-        "command": "sideline.resetCareer",
-        "title": "Sideline: Reset Career"
+        "command": "sportsSimulator.resetCareer",
+        "title": "Sports Simulator: Reset Career"
       }
     ],
     "configuration": {
-      "title": "Sideline",
+      "title": "Sports Simulator",
       "properties": {
-        "sideline.matchDuration": {
+        "sportsSimulator.matchDuration": {
           "type": "string",
           "enum": [
             "30s",
@@ -71,12 +71,12 @@
           "default": "2m",
           "description": "Real time one 90-minute match takes."
         },
-        "sideline.fullTimeOverlay": {
+        "sportsSimulator.fullTimeOverlay": {
           "type": "boolean",
           "default": true,
-          "description": "Show the full-time result over the Sideline box for a few seconds after your match."
+          "description": "Show the full-time result over the Sports Simulator box for a few seconds after your match."
         },
-        "sideline.statusBarScore": {
+        "sportsSimulator.statusBarScore": {
           "type": "boolean",
           "default": true,
           "description": "Show your live score in the status bar."

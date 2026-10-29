@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import type { ToHost, ToWebview } from '../shared/view';
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
-  static readonly viewId = 'sideline.view';
+  static readonly viewId = 'sportsSimulator.view';
   private view: vscode.WebviewView | undefined;
 
   constructor(
@@ -45,7 +45,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="${style}">
-<title>Sideline</title>
+<title>Sports Simulator</title>
 </head>
 <body>
 <div id="app"></div>

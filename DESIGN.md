@@ -1,4 +1,4 @@
-# Sideline — Sport Simulator for Your Sidebar
+# Sports Simulator
 
 > A football management sim that lives in a small box in your VS Code sidebar. You pick how good your club is, and it plays every match, table and season on its own while you code.
 
@@ -359,11 +359,11 @@ For your club's matches only. A result card **slides over the sidebar box itself
 
 ### End-of-season screen
 
-This is the **only thing in Sideline that asks for your attention**, because it needs a decision.
+This is the **only thing in Sports Simulator that asks for your attention**, because it needs a decision.
 
 - When the season ends (after the play-offs), **the game waits**. Nothing continues until you've allocated your points.
-- The end-of-season screen opens **inside the Sideline box**.
-- If the box is hidden or collapsed, **one VS Code notification** appears: *"Season 4 over — 3rd in League 4. Allocate your points"*, with an **Open Sideline** button. This is the only VS Code notification Sideline ever shows.
+- The end-of-season screen opens **inside the Sports Simulator box**.
+- If the box is hidden or collapsed, **one VS Code notification** appears: *"Season 4 over — 3rd in League 4. Allocate your points"*, with an **Open Sports Simulator** button. This is the only VS Code notification Sports Simulator ever shows.
 - The status bar shows `⚽ Season over — allocate points` until you do.
 
 Screen contents:
@@ -535,6 +535,7 @@ In rough priority order:
 | Difficulty = hidden player boost (Easy +10 / Medium +5 / Hard +2) paid for by tiny AI drain | A full 0→99 climb can be quick or a grind; total rating unchanged |
 | Staggered top/bottom bonus: +6/+4/+2 and −2/−4/−6, none for L1 top 3 or L5 bottom 3 | Rewards finishing higher; always sums to zero |
 | Total rating fixed; normalisation across AI clubs | Average stays 49.5 forever; no inflation |
+| Renamed from Sideline to Sports Simulator | *Sideline - Live Sports Scores* already exists on the Marketplace; the plain name says what it is |
 | Football first; other sports only after it's finished | Keeps version 1 small |
 | Unbeaten-run tracker in status bar: **rejected** | Unnecessary; records page covers it |
 | Pause when VS Code closes | You never miss matches; no catch-up simulation |
@@ -551,13 +552,16 @@ In rough priority order:
 
 ## 17. Name ✅
 
-**Sideline — Sport Simulator for Your Sidebar**
+**Sports Simulator**
 
-- **Name:** Sideline (short, works across sports, fits the status bar)
-- **Marketplace display name:** `Sideline — Sport Simulator for Your Sidebar`
+- **Name:** Sports Simulator. It says what it is, which helps people find it in search, and it covers rugby and cricket later
+- **Marketplace display name:** `Sports Simulator`
+- **IDs:** extension `sports-simulator`; commands, settings and storage under `sportsSimulator.*`
 - **Keywords:** `football, soccer, sport, sports, manager, league, game, idle, simulation` (add `rugby`, `cricket` when those sports arrive)
 - **Avoid** the phrase "Football Manager" anywhere (SEGA trademark)
 
-Checked (Oct 2026): no VS Code extension or game titled "Sideline" found. Near-misses: *Beyond the Sideline Football* (American football sim announced 2014), *Sideline Labs* (a mobile game developer), *Sideline Manager* (a rugby referee tool, not a game).
+Checked (Oct 2026): no VS Code Marketplace extension named "Sports Simulator" or "Sport Simulator".
 
-Rejected: **Matchday Manager** (an existing PC football management game by Lucky Conker Games; "Matchday" is crowded on mobile) and **Sport Simulator** on its own (too generic to stand out or be remembered; kept as the subtitle instead).
+Previously **Sideline — Sport Simulator for Your Sidebar**, renamed during M8 because the Marketplace already has *Sideline - Live Sports Scores*. Also free at the time: Dugout, Touchline, Pitchside, Final Whistle.
+
+Rejected: **Matchday Manager** (an existing PC football management game by Lucky Conker Games; "Matchday" is crowded on mobile) and **Sideline** (taken on the Marketplace, see above).

@@ -87,7 +87,7 @@ function renderSetup(suggestedName: string, duration: Duration): void {
   app.innerHTML = `
   <div class="setup">
     <h2>New career</h2>
-    <p class="muted">Pick how good your club is. Sideline plays every match on its own; once a season you decide where to strengthen.</p>
+    <p class="muted">Pick how good your club is. Sports Simulator plays every match on its own; once a season you decide where to strengthen.</p>
 
     <label class="field">Club name
       <span class="row"><input id="name" type="text" maxlength="40" value="${esc(setup.name)}"><button type="button" id="reroll" class="icon" title="Suggest another name" aria-label="Suggest another name">↻</button></span>

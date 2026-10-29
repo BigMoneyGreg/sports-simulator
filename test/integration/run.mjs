@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '../..');
 const bin = process.env.VSCODE_BIN ?? '/Applications/Visual Studio Code.app/Contents/MacOS/Code';
-const profile = mkdtempSync(join(tmpdir(), 'sideline-it-'));
+const profile = mkdtempSync(join(tmpdir(), 'sports-simulator-it-'));
 const result = spawnSync(
   bin,
   [

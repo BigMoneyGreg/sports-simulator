@@ -1,8 +1,8 @@
 import type * as vscode from 'vscode';
 import type { SavedGame } from './game';
 
-const KEY = 'sideline.career';
-const ARCHIVE_KEY = 'sideline.archive';
+const KEY = 'sportsSimulator.career';
+const ARCHIVE_KEY = 'sportsSimulator.archive';
 
 /** What's kept of a finished career (a full Hall of Fame comes later). */
 export interface ArchivedCareer {

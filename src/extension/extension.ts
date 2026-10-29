@@ -18,7 +18,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const nameRng = new Rng(Date.now() >>> 0);
   let suggestedName = suggestClubName(nameRng);
 
-  const config = () => vscode.workspace.getConfiguration('sideline');
+  const config = () => vscode.workspace.getConfiguration('sportsSimulator');
   const duration = (): Duration => {
     const value = config().get<string>('matchDuration', '2m');
     return (DURATIONS as string[]).includes(value) ? (value as Duration) : '2m';
@@ -40,9 +40,9 @@ export function activate(context: vscode.ExtensionContext): void {
       if (sidebar.visible) return;
       const pos = ordinal(end.position);
       void vscode.window
-        .showInformationMessage(`Season ${end.season} over — ${pos} in League ${end.tier}. Allocate your points`, 'Open Sideline')
+        .showInformationMessage(`Season ${end.season} over — ${pos} in League ${end.tier}. Allocate your points`, 'Open Sports Simulator')
         .then((choice) => {
-          if (choice) void vscode.commands.executeCommand('sideline.open');
+          if (choice) void vscode.commands.executeCommand('sportsSimulator.open');
         });
     },
   });
@@ -72,20 +72,20 @@ export function activate(context: vscode.ExtensionContext): void {
         void config().update('matchDuration', message.duration, vscode.ConfigurationTarget.Global);
         return;
       case 'copy':
-        void vscode.env.clipboard.writeText(message.text).then(() => vscode.window.setStatusBarMessage('Sideline: summary copied', 2000));
+        void vscode.env.clipboard.writeText(message.text).then(() => vscode.window.setStatusBarMessage('Sports Simulator: summary copied', 2000));
         return;
       case 'newCareer':
         void newCareer();
         return;
       case 'resetCareer':
-        void vscode.commands.executeCommand('sideline.resetCareer');
+        void vscode.commands.executeCommand('sportsSimulator.resetCareer');
         return;
       case 'allocate':
         try {
           game!.allocate(message.allocation);
         } catch (err) {
           // The webview enforces the rules; a stale or invalid allocation just re-sends the view.
-          console.warn('Sideline: allocation rejected', err);
+          console.warn('Sports Simulator: allocation rejected', err);
           refresh();
         }
         return;
@@ -104,15 +104,15 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     statusBar,
     vscode.window.registerWebviewViewProvider(SidebarProvider.viewId, sidebar),
-    vscode.commands.registerCommand('sideline.open', () => vscode.commands.executeCommand(`${SidebarProvider.viewId}.focus`)),
-    vscode.commands.registerCommand('sideline.togglePause', () => game!.togglePause()),
-    vscode.commands.registerCommand('sideline.resetCareer', async () => {
-      const answer = await vscode.window.showWarningMessage('Reset your Sideline career? Your club, history and trophies will be lost.', { modal: true }, 'Reset career');
+    vscode.commands.registerCommand('sportsSimulator.open', () => vscode.commands.executeCommand(`${SidebarProvider.viewId}.focus`)),
+    vscode.commands.registerCommand('sportsSimulator.togglePause', () => game!.togglePause()),
+    vscode.commands.registerCommand('sportsSimulator.resetCareer', async () => {
+      const answer = await vscode.window.showWarningMessage('Reset your Sports Simulator career? Your club, history and trophies will be lost.', { modal: true }, 'Reset career');
       if (answer === 'Reset career') game!.reset();
     }),
     vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration('sideline.matchDuration')) game!.setDuration(duration());
-      if (e.affectsConfiguration('sideline')) refresh();
+      if (e.affectsConfiguration('sportsSimulator.matchDuration')) game!.setDuration(duration());
+      if (e.affectsConfiguration('sportsSimulator')) refresh();
     }),
   );
   refresh();

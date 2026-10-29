@@ -1,4 +1,4 @@
-# Sideline — Sport Simulator for Your Sidebar
+# Sports Simulator
 
 A football management sim that lives in a small box in your VS Code sidebar. Pick how good your club is, and it plays every match, table and season on its own while you code. Once a season, you decide where to strengthen: attack, defence or chemistry.
 
@@ -27,4 +27,4 @@ npm run check-names    # re-checks club names against real clubs (add -- --onlin
 npm run preview        # renders the webview with sample states in dist/preview/
 ```
 
-Press **F5** in VS Code ("Run Sideline") to try it in an Extension Development Host; the Sideline box appears in the Explorer.
+Press **F5** in VS Code ("Run Sports Simulator") to try it in an Extension Development Host; the Sports Simulator box appears in the Explorer.

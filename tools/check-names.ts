@@ -26,7 +26,7 @@ async function online(): Promise<void> {
   for (let i = 0; i < towns.length; i += 50) {
     const batch = towns.slice(i, i + 50);
     const url = `https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&titles=${encodeURIComponent(batch.join('|'))}`;
-    const res = await fetch(url, { headers: { 'User-Agent': 'SidelineNameCheck/0.1 (dev tool)' } });
+    const res = await fetch(url, { headers: { 'User-Agent': 'SportsSimulatorNameCheck/0.1 (dev tool)' } });
     if (!res.ok) throw new Error(`Wikipedia returned ${res.status}`);
     const data = (await res.json()) as { query: { pages: { title: string; missing?: boolean }[] } };
     for (const page of data.query.pages) if (!page.missing) problems.push(`${page.title}: has a Wikipedia page (may be a real place)`);

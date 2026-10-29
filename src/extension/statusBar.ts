@@ -4,9 +4,9 @@ export class StatusBar implements vscode.Disposable {
   private readonly item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
 
   constructor() {
-    this.item.command = 'sideline.open';
-    this.item.tooltip = 'Sideline: open';
-    this.item.name = 'Sideline';
+    this.item.command = 'sportsSimulator.open';
+    this.item.tooltip = 'Sports Simulator: open';
+    this.item.name = 'Sports Simulator';
   }
 
   update(text: string | null): void {

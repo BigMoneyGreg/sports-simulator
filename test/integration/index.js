@@ -3,16 +3,16 @@ const vscode = require('vscode');
 const assert = require('assert');
 
 exports.run = async function run() {
-  const ext = vscode.extensions.all.find((e) => e.packageJSON.name === 'sideline');
+  const ext = vscode.extensions.all.find((e) => e.packageJSON.name === 'sports-simulator');
   assert.ok(ext, 'extension found');
   await ext.activate();
   assert.ok(ext.isActive, 'extension active');
   const commands = await vscode.commands.getCommands(true);
-  for (const c of ['sideline.open', 'sideline.togglePause', 'sideline.resetCareer']) {
+  for (const c of ['sportsSimulator.open', 'sportsSimulator.togglePause', 'sportsSimulator.resetCareer']) {
     assert.ok(commands.includes(c), `command ${c} registered`);
   }
-  await vscode.commands.executeCommand('sideline.view.focus');
+  await vscode.commands.executeCommand('sportsSimulator.view.focus');
   await new Promise((r) => setTimeout(r, 1500));
-  if (global.__sidelineTestHook) await global.__sidelineTestHook(vscode, assert);
+  if (global.__sportsSimulatorTestHook) await global.__sportsSimulatorTestHook(vscode, assert);
   console.log('INTEGRATION OK');
 };
