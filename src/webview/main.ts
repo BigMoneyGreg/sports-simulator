@@ -466,9 +466,8 @@ function seasonEndHtml(e: SeasonEndView): string {
         ? `You fell short: expected ${ordinal(e.expected)}, finished ${ordinal(e.position)}. Less to build with this summer.`
         : `You finished where you were expected: ${ordinal(e.position)}.`;
   const FOCUS_TEXT: Record<Focus, [string, string]> = {
-    attack: ['Focus attack', 'Most of the work goes into scoring'],
-    balanced: ['Balanced', 'Shared evenly'],
-    defence: ['Focus defence', 'Most of the work goes into defending'],
+    attack: ['Rebuild attack', 'Most of the work goes into scoring'],
+    defence: ['Rebuild defence', 'Most of the work goes into defending'],
   };
   if (summer.season !== e.season) Object.assign(summer, { season: e.season, focus: null, sent: false });
   const option = (o: SeasonEndView['options'][number]) => `<button type="button" role="radio" aria-checked="${summer.focus === o.focus}" class="focus ${o.focus} ${summer.focus === o.focus ? 'on' : ''}" data-focus="${o.focus}"${summer.sent ? ' disabled' : ''}>
@@ -486,7 +485,6 @@ function seasonEndHtml(e: SeasonEndView): string {
       <dt>Record</dt><dd>${esc(r.record)} · ${r.points} pts</dd>
       <dt>Scored</dt><dd>${r.goalsFor} <span class="muted">(league avg ${r.avgFor})</span></dd>
       <dt>Conceded</dt><dd>${r.goalsAgainst} <span class="muted">(league avg ${r.avgAgainst})</span></dd>
-      <dt>Goals a game</dt><dd>${r.perGame} <span class="muted">in your matches (league ${r.leaguePerGame})</span></dd>
       <dt>Best run</dt><dd>${esc(r.bestRun)}</dd>
       <dt>Worst run</dt><dd>${esc(r.worstRun)}</dd>
       ${r.topScorer ? `<dt>Top scorer</dt><dd>${esc(r.topScorer)}</dd>` : ''}
@@ -497,10 +495,15 @@ function seasonEndHtml(e: SeasonEndView): string {
     <div class="card accent-card">
     <h3 class="sub first">Summer</h3>
     <p class="small">${esc(verdict)}</p>
+    <div class="clue">
+      <div class="clue-row"><span>Attack</span><strong>${ordinal(r.scoredRank)}</strong><span class="muted small">for goals scored</span></div>
+      <div class="clue-row"><span>Defence</span><strong>${ordinal(r.concededRank)}</strong><span class="muted small">for goals conceded</span></div>
+    </div>
     <details class="howto small"><summary>How does summer work?</summary>
-      <p class="muted">Players age and leave over the summer, and every team loses some strength. You won't be told whether it hit your attack or your defence: the goals are the clue. Lots at both ends suggests you lean attacking; tight, low-scoring games suggest you lean defensive.</p>
+      <p class="muted">Every summer players age and leave, and the squad loses strength, split at random between attack and defence. The higher you climb, the more you lose. You aren't told which side took the hit: your season is the clue. The side that ranked worse in the league is usually the one that dropped off.</p>
+      <p class="muted">Rebuild it: most of the summer's work goes there. Let one side fall too far behind and opponents exploit it, and at the top there's less room for a weak side.</p>
     </details>
-    <p class="small strong">Where should the summer's work go?</p>
+    <p class="small strong">Which side do you rebuild?</p>
     <div class="focus-row" role="radiogroup">${e.options.map(option).join('')}</div>
     <button type="button" id="nextSeason" class="primary"${summer.focus && !summer.sent ? '' : ' disabled'}>Start next season</button>
     ${e.canRetire ? '<p class="muted small center">Start next season to defend the title.</p>' : ''}
@@ -549,8 +552,8 @@ function clubHtml(v: GameView): string {
     <div class="club">${swatch(c, 'crest')}<div><div class="name">${esc(c.name)}</div><div class="muted small">${esc(c.short)} · League ${c.tier} · Season ${c.season} · ${esc(c.difficulty[0].toUpperCase() + c.difficulty.slice(1))}</div></div></div>
     <p class="expect">Expected to finish <strong>${ordinal(c.expected)}</strong> this season</p>
     <dl class="report">
-      <dt>Scored</dt><dd>${g.scored} <span class="muted">(league avg ${g.average})</span></dd>
-      <dt>Conceded</dt><dd>${g.conceded} <span class="muted">(league avg ${g.average})</span></dd>
+      <dt>Scored</dt><dd>${g.scored} · ${ordinal(g.scoredRank)} <span class="muted">(league avg ${g.average})</span></dd>
+      <dt>Conceded</dt><dd>${g.conceded} · ${ordinal(g.concededRank)} <span class="muted">(league avg ${g.average})</span></dd>
     </dl>
     <p class="muted small">After ${g.played} league match${g.played === 1 ? '' : 'es'} this season.</p>
     ${

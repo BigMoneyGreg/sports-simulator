@@ -1,4 +1,4 @@
-import { AI_STYLES, clamp, MAX_STAT, rating, shiftRating, STATS, statsFor, type Club, type Stat, type Style } from './club';
+import { AI_STYLES, clamp, MAX_STAT, MIN_STAT, rating, shiftRating, STATS, statsFor, type Club, type Stat, type Style } from './club';
 import {
   doubleRoundRobin,
   potShuffle,
@@ -13,13 +13,13 @@ import {
   type RoundKind,
   type TableRow,
 } from './league';
-import { applyDecline, bandPull, expectedPositions, normalise, positionBonus, RATING_TUNING, seasonGain, totalRating, type Difficulty } from './ratings';
+import { applyDecline, bandPull, declineFor, expectedPositions, normalise, positionBonus, RATING_TUNING, seasonGain, totalRating, type Difficulty } from './ratings';
 import { CHAMPIONSHIP_ENTRANTS, CHAMPIONSHIP_EVERY, CUP_ENTRANTS, cupFixtures, cupRun, cupStages, drawChampionship, drawCup, recordCupResult, type Cup, type CupId } from './cups';
 import { emptyRecords, recordMatch, recordSeasonGoals, type Records } from './records';
 import { Rng } from './rng';
 import type { GoalRecord, MatchOutcome, Player, SportModule, TeamSheet } from './sport';
 
-export const CAREER_VERSION = 5;
+export const CAREER_VERSION = 6;
 export const CLUB_COUNT = LEAGUE_COUNT * LEAGUE_SIZE;
 export const PLAYER_CLUB_ID = 0;
 
@@ -175,7 +175,7 @@ export interface Career {
   rng: number;
   difficulty: Difficulty;
   playerClubId: number;
-  /** Sum of all club ratings; fixed for the whole career. */
+  /** Sum of the AI clubs' ratings; fixed for the whole career. The player sits outside it. */
   totalRating: number;
   clubs: Club[];
   season: Season;
@@ -196,7 +196,7 @@ export interface Career {
 
 export function newCareer(options: CareerOptions, sport: SportDefinition): Career {
   const chosen = Math.round(options.rating);
-  if (chosen < 0 || chosen > MAX_STAT) throw new Error(`rating must be 0–99, got ${options.rating}`);
+  if (chosen < 0 || chosen > 99) throw new Error(`starting rating must be 0–99, got ${options.rating}`);
   const rng = new Rng(options.seed);
   const world = sport.world(rng, CLUB_COUNT, options.team);
   const identities = [world.player, ...world.others];
@@ -225,7 +225,7 @@ export function newCareer(options: CareerOptions, sport: SportDefinition): Caree
     rng: 0,
     difficulty: options.difficulty,
     playerClubId: PLAYER_CLUB_ID,
-    totalRating: totalRating(clubs),
+    totalRating: totalRating(clubs.filter((c) => !c.isPlayer)),
     clubs,
     season: newSeason(1, leagues, byRating.map((c) => c.id), clubs, rng),
     pending: null,
@@ -513,7 +513,7 @@ export function endSeason(career: Career): SeasonEnd {
     const gain = seasonGain(tier, s.expected[club.id], position[club.id], rating(club), rng.normal(0, RATING_TUNING.aiNoise));
     const promotedNow = newTierOf[club.id] < tier;
     const boost = promotedNow ? RATING_TUNING.promotedBoost : 0;
-    Object.assign(club, statsFor(clamp(rating(club) - RATING_TUNING.decline + gain + boost, 0, MAX_STAT), club.style));
+    Object.assign(club, statsFor(clamp(rating(club) - RATING_TUNING.decline + gain + boost, MIN_STAT, MAX_STAT), club.style));
     bandPull(club, newTierOf[club.id]);
   }
 
@@ -522,9 +522,9 @@ export function endSeason(career: Career): SeasonEnd {
   const tier = tierOf[me.id];
   const pos = position[me.id];
   const boost = RATING_TUNING.difficultyBoost[career.difficulty];
-  const gain = seasonGain(tier, s.expected[me.id], pos, rating(me), boost);
+  const gain = seasonGain(tier, s.expected[me.id], pos, rating(me), boost, true);
   const before = rating(me);
-  const declineByStat = applyDecline(me, rng);
+  const declineByStat = applyDecline(me, declineFor(before, true), rng);
   const decline = before - rating(me);
   let points = Math.round(gain * RATING_TUNING.pointsPerRating);
   if (points < 0) {
@@ -596,14 +596,14 @@ export function fillAllocation(club: Club, points: number, weights: Record<Stat,
   return out;
 }
 
-/** The player's one summer decision: which side to strengthen. */
-export type Focus = 'attack' | 'balanced' | 'defence';
-export const FOCUSES: readonly Focus[] = ['attack', 'balanced', 'defence'];
+/** The player's one summer decision: which side to rebuild after the decline. There's no safe middle. */
+export type Focus = 'attack' | 'defence';
+export const FOCUSES: readonly Focus[] = ['attack', 'defence'];
 
-/** Splits the points for a focus: `focusShare` towards the chosen side, or 50/50. */
+/** Splits the points for a focus: `focusShare` to the side being rebuilt, the rest to the other. */
 export function focusAllocation(club: Club, points: number, focus: Focus): Record<Stat, number> {
   const share = RATING_TUNING.focusShare;
-  const weights = focus === 'balanced' ? { attack: 1, defence: 1 } : focus === 'attack' ? { attack: share, defence: 1 - share } : { attack: 1 - share, defence: share };
+  const weights = focus === 'attack' ? { attack: share, defence: 1 - share } : { attack: 1 - share, defence: share };
   return fillAllocation(club, points, weights);
 }
 
@@ -623,7 +623,7 @@ export function allocatePoints(career: Career, allocation: Record<Stat, number>)
   const me = career.clubs[career.playerClubId];
   const spent = STATS.reduce((t, s) => t + allocation[s], 0);
   if (STATS.some((s) => !Number.isInteger(allocation[s]) || allocation[s] < 0 || me[s] + allocation[s] > MAX_STAT + 1e-9)) {
-    throw new Error('each stat takes a whole number of points and stays at 99 or below');
+    throw new Error(`each stat takes a whole number of points and stays at ${MAX_STAT} or below`);
   }
   if (spent !== pending.points) throw new Error(`allocate exactly ${pending.points} points, got ${spent}`);
   for (const s of STATS) me[s] += allocation[s];

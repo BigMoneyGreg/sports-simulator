@@ -1,7 +1,7 @@
 import { currentSlot, FOCUSES, focusAllocation, leagueRounds, type Career, type Playoff, type SeasonRecord, type Slot } from '../core/career';
 import { CHAMPIONSHIP_EVERY, CUP_NAMES, cupFixtures, cupRun, cupStages, stageLabel, stillIn, type Cup, type CupId, type CupTie } from '../core/cups';
 import { emptyRecords, topScorers } from '../core/records';
-import { LEAGUE_COUNT, LEAGUE_SIZE, recordResult, sortTable, zone, type Fixture, type TableRow } from '../core/league';
+import { goalRanks, LEAGUE_COUNT, LEAGUE_SIZE, recordResult, sortTable, zone, type Fixture, type TableRow } from '../core/league';
 import { matchClock, timeline } from '../sports/football/commentary';
 import { outcome, type SideKey } from '../sports/football/match';
 import { NATIONS, WORLD_ORDER } from '../sports/football/data/nations';
@@ -211,7 +211,8 @@ function playoffView(career: Career, p: Playoff): PlayoffView {
 function seasonGoals(table: TableRow[], clubId: number): ClubView['goals'] {
   const row = table.find((r) => r.clubId === clubId)!;
   const average = table.reduce((t, r) => t + r.goalsFor, 0) / table.length;
-  return { scored: row.goalsFor, conceded: row.goalsAgainst, average: Math.round(average), played: row.played };
+  const ranks = goalRanks(table, clubId);
+  return { scored: row.goalsFor, conceded: row.goalsAgainst, scoredRank: ranks.scored, concededRank: ranks.conceded, average: Math.round(average), played: row.played };
 }
 
 function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
@@ -272,8 +273,8 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
       goalsAgainst: row.goalsAgainst,
       avgFor: Math.round(avgFor),
       avgAgainst: Math.round(avgAgainst),
-      perGame: Math.round(((row.goalsFor + row.goalsAgainst) / row.played) * 10) / 10,
-      leaguePerGame: Math.round(((2 * avgFor) / row.played) * 10) / 10,
+      scoredRank: goalRanks(league.table, me.id).scored,
+      concededRank: goalRanks(league.table, me.id).conceded,
       bestRun,
       worstRun,
       topScorer: scorer && scorer.goals > 0 ? `${scorer.name} (${scorer.goals})` : undefined,

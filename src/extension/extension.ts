@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { fullHistory } from '../core/career';
+import { goalRanks } from '../core/league';
 import { startRating, styleSplit } from '../core/league';
 import { TUNING } from '../sports/football/match';
 import { Rng } from '../core/rng';
@@ -39,14 +40,14 @@ export function activate(context: vscode.ExtensionContext): void {
     changed: refresh,
     seasonOver: (end) => {
       if (sidebar.visible) return;
-      // The one notification: the result, the clue (goals v league average) and the summer choice.
+      // The one notification: the result, the clue (where scoring and conceding ranked) and the summer choice.
       const table = game!.career!.season.leagues[end.tier - 1].table;
       const me = table.find((r) => r.clubId === game!.career!.playerClubId)!;
-      const avg = Math.round(table.reduce((t, r) => t + r.goalsFor, 0) / table.length);
-      const choices = { 'Focus attack': 'attack', Balanced: 'balanced', 'Focus defence': 'defence' } as const;
+      const ranks = goalRanks(table, me.clubId);
+      const choices = { 'Rebuild attack': 'attack', 'Rebuild defence': 'defence' } as const;
       void vscode.window
         .showInformationMessage(
-          `Season ${end.season} over: ${ordinal(end.position)} in League ${end.tier}. Scored ${me.goalsFor}, conceded ${me.goalsAgainst} (league average ${avg}). Where to focus this summer?`,
+          `Season ${end.season} over: ${ordinal(end.position)} in League ${end.tier}. Scored ${me.goalsFor} (${ordinal(ranks.scored)} in the league), conceded ${me.goalsAgainst} (${ordinal(ranks.conceded)}). Which side do you rebuild?`,
           ...Object.keys(choices),
           'Open',
         )

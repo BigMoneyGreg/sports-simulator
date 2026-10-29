@@ -153,7 +153,7 @@ describe('season end view', () => {
     expect(JSON.stringify(v.club)).not.toMatch(/"attack"|"defence"|"rating"/);
     expect(e).not.toHaveProperty('decline');
     expect(v.club.goals.played).toBe(38);
-    expect(e.options.map((o) => o.focus)).toEqual(['attack', 'balanced', 'defence']);
+    expect(e.options.map((o) => o.focus)).toEqual(['attack', 'defence']);
     for (const o of e.options) expect(o.attack + o.defence).toBe(e.points.total);
     const focused = e.options[0];
     expect(focused.attack).toBeGreaterThan(focused.defence);

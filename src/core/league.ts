@@ -112,6 +112,18 @@ function apply(row: TableRow, scored: number, conceded: number): void {
   }
 }
 
+/**
+ * Where a club ranks in its league for goals scored (1 = most) and goals
+ * conceded (1 = fewest): the summer's clue to which side dropped off.
+ */
+export function goalRanks(table: TableRow[], clubId: number): { scored: number; conceded: number } {
+  const me = table.find((r) => r.clubId === clubId)!;
+  return {
+    scored: 1 + table.filter((r) => r.goalsFor > me.goalsFor).length,
+    conceded: 1 + table.filter((r) => r.goalsAgainst < me.goalsAgainst).length,
+  };
+}
+
 /** Points, then goal difference, then goals scored. */
 export function sortTable(table: TableRow[]): TableRow[] {
   return [...table].sort(

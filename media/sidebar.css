@@ -1025,9 +1025,25 @@ table.league {
 
 /* Summer focus choice */
 
+.clue {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 8px 0;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: var(--surface-2);
+}
+
+.clue-row {
+  display: grid;
+  grid-template-columns: 58px 36px 1fr;
+  align-items: baseline;
+}
+
 .focus-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 6px;
   margin-top: 8px;
 }

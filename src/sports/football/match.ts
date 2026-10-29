@@ -28,6 +28,12 @@ export const TUNING = {
   weaknessPenalty: 2,
   /** How far attack and defence can each sit from the rating before it costs anything. */
   weaknessTolerance: 5,
+  /**
+   * Above this rating, balance matters more: by `weaknessScaleTo` the penalty
+   * has doubled and the tolerance halved, so a 150 side can't carry a weak half.
+   */
+  weaknessScaleFrom: 99,
+  weaknessScaleTo: 150,
 };
 
 export type Period = 'first' | 'second' | 'et1' | 'et2' | 'done';
@@ -79,7 +85,9 @@ const CARD_WEIGHT: Record<string, number> = { GK: 0.4, DEF: 3, MID: 3, FWD: 1.5 
  */
 export function effectiveStats(team: Pick<TeamSheet, 'attack' | 'defence'>): { attack: number; defence: number } {
   const lean = Math.abs(team.attack - team.defence) / 2;
-  const penalty = TUNING.weaknessPenalty * Math.max(0, lean - TUNING.weaknessTolerance);
+  const level = (team.attack + team.defence) / 2;
+  const scale = 1 + Math.min(1, Math.max(0, (level - TUNING.weaknessScaleFrom) / (TUNING.weaknessScaleTo - TUNING.weaknessScaleFrom)));
+  const penalty = TUNING.weaknessPenalty * scale * Math.max(0, lean - TUNING.weaknessTolerance / scale);
   return { attack: team.attack - penalty, defence: team.defence - penalty };
 }
 

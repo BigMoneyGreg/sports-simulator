@@ -12,9 +12,9 @@ import {
   playSeason,
   type Career,
 } from '../src/core/career';
-import { rating, shiftRating, statsFor, type Club } from '../src/core/club';
-import { band, doubleRoundRobin, emptyTable, recordResult, sortTable, startRating, styleSplit, zone } from '../src/core/league';
-import { applyDecline, normalise, plateau, positionBonus, seasonGain, totalRating } from '../src/core/ratings';
+import { MAX_STAT, MIN_STAT, rating, shiftRating, statsFor, type Club } from '../src/core/club';
+import { band, doubleRoundRobin, emptyTable, goalRanks, recordResult, sortTable, startRating, styleSplit, zone } from '../src/core/league';
+import { applyDecline, declineFor, normalise, plateau, positionBonus, seasonGain, totalRating } from '../src/core/ratings';
 import { Rng } from '../src/core/rng';
 import { footballSport } from '../src/sports/football';
 
@@ -90,29 +90,39 @@ describe('ratings', () => {
     expect(positionBonus(5, 1)).toBe(6);
   });
 
-  it('flattens rises near 99 but not falls', () => {
+  it('flattens AI rises near 99 but not falls', () => {
     expect(plateau(50)).toBe(1);
     expect(plateau(99)).toBeCloseTo(0.3);
     expect(seasonGain(1, 10, 1, 95) - 10).toBeLessThan(9);
     expect(seasonGain(1, 1, 10, 95) - 10).toBe(-9);
   });
 
-  it('keeps stats within 0–99 and passes the excess to other stats', () => {
-    const club = { attack: 98, defence: 50 } as Club;
+  it('leaves the player unflattened, but takes more off them each summer as they climb', () => {
+    expect(seasonGain(1, 10, 1, 95, 0, true) - 10).toBe(9);
+    expect(declineFor(60, true)).toBe(10);
+    expect(declineFor(135, true)).toBeCloseTo(14);
+    expect(declineFor(135, false)).toBe(10);
+  });
+
+  it('keeps stats within the bounds and passes the excess to other stats', () => {
+    const club = { attack: MAX_STAT - 2, defence: 50 } as Club;
     const applied = shiftRating(club, 3);
-    expect(club.attack).toBe(99);
+    expect(club.attack).toBe(MAX_STAT);
     expect(applied).toBeCloseTo(3);
-    expect(rating(club)).toBeCloseTo(77);
-    expect(club.defence).toBeCloseTo(55);
+    expect(club.defence).toBeCloseTo(54);
+    const low = { attack: MIN_STAT + 1, defence: 0 } as Club;
+    shiftRating(low, -2);
+    expect(low.attack).toBe(MIN_STAT);
+    expect(low.defence).toBeCloseTo(-3);
   });
 
   it('gives styled clubs stats that still average the rating', () => {
-    for (const r of [0, 3, 50, 97, 99]) {
+    for (const r of [MIN_STAT, -10, 0, 50, 99, MAX_STAT - 3, MAX_STAT]) {
       for (const style of ['attacking', 'defensive', 'balanced'] as const) {
         const s = statsFor(r, style);
         expect((s.attack + s.defence) / 2).toBe(r);
-        expect(Math.min(s.attack, s.defence)).toBeGreaterThanOrEqual(0);
-        expect(Math.max(s.attack, s.defence)).toBeLessThanOrEqual(99);
+        expect(Math.min(s.attack, s.defence)).toBeGreaterThanOrEqual(MIN_STAT);
+        expect(Math.max(s.attack, s.defence)).toBeLessThanOrEqual(MAX_STAT);
       }
     }
   });
@@ -120,8 +130,9 @@ describe('ratings', () => {
   it('normalises the AI back to the target total without touching the player', () => {
     const clubs = Array.from({ length: 10 }, (_, id) => ({ id, attack: 50, defence: 50, isPlayer: id === 0 }) as Club);
     clubs[0].attack = 80;
-    normalise(clubs, 500);
-    expect(totalRating(clubs)).toBeCloseTo(500, 9);
+    clubs[3].attack = 70;
+    normalise(clubs, 450);
+    expect(totalRating(clubs.slice(1))).toBeCloseTo(450, 9);
     expect(clubs[0].attack).toBe(80);
   });
 });
@@ -134,7 +145,8 @@ describe('career', () => {
     const c = start(85);
     const ratings = c.clubs.map((cl) => rating(cl)).sort((a, b) => a - b);
     expect(ratings).toEqual(Array.from({ length: 100 }, (_, i) => i));
-    expect(c.totalRating).toBe(4950);
+    // The AI's own total, without the player.
+    expect(c.totalRating).toBe(4950 - 85);
     expect(rating(c.clubs[c.playerClubId])).toBe(85);
   });
 
@@ -206,19 +218,20 @@ describe('career', () => {
     }
   });
 
-  it('keeps the total rating fixed across many seasons, with the player allocating', () => {
+  it('keeps the AI total fixed across many seasons, whatever the player gains or loses', () => {
     const c = start(30, 7, 'easy');
     for (let season = 0; season < 6; season++) {
       playSeason(c, footballSport);
-      expect(c.pending!.decline).toBeCloseTo(10);
+      // 10 a summer, more once the player is high up.
+      expect(c.pending!.decline).toBeGreaterThanOrEqual(10 - 1e-9);
       const d = c.pending!.declineByStat;
-      expect(d.attack + d.defence).toBeCloseTo(20);
+      expect(d.attack + d.defence).toBeCloseTo(2 * c.pending!.decline);
       allocatePoints(c, evenSplit(c));
-      expect(totalRating(c.clubs)).toBeCloseTo(4950, 6);
+      expect(totalRating(c.clubs.filter((x) => !x.isPlayer))).toBeCloseTo(4950 - 30, 6);
       for (const club of c.clubs) {
         for (const s of ['attack', 'defence'] as const) {
-          expect(club[s]).toBeGreaterThanOrEqual(0);
-          expect(club[s]).toBeLessThanOrEqual(99);
+          expect(club[s]).toBeGreaterThanOrEqual(MIN_STAT);
+          expect(club[s]).toBeLessThanOrEqual(MAX_STAT);
         }
       }
     }
@@ -279,21 +292,36 @@ describe('career', () => {
   });
 });
 
+describe('goal ranks', () => {
+  it('ranks scoring from the most and conceding from the fewest, ties sharing a place', () => {
+    const table = emptyTable([1, 2, 3, 4]);
+    const set = (id: number, goalsFor: number, goalsAgainst: number) => Object.assign(table.find((r) => r.clubId === id)!, { goalsFor, goalsAgainst });
+    set(1, 40, 30);
+    set(2, 55, 50);
+    set(3, 40, 20);
+    set(4, 30, 45);
+    expect(goalRanks(table, 1)).toEqual({ scored: 2, conceded: 2 });
+    expect(goalRanks(table, 2)).toEqual({ scored: 1, conceded: 4 });
+    expect(goalRanks(table, 3)).toEqual({ scored: 2, conceded: 1 });
+  });
+});
+
 describe('allocation and decline', () => {
-  it('fills an allocation without passing 99 and spends every point it can', () => {
-    const club = { attack: 97.4, defence: 50 } as Club;
+  it('fills an allocation without passing the cap and spends every point it can', () => {
+    const club = { attack: MAX_STAT - 1.6, defence: 50 } as Club;
     const a = fillAllocation(club, 12, { attack: 1, defence: 0 });
     expect(a.attack).toBe(1);
     expect(a.attack + a.defence).toBe(12);
   });
 
-  it('lands the decline unevenly but always totals 20 stat points (10 rating)', () => {
+  it('splits the decline at random, each side taking a quarter to three quarters, always totalling the amount', () => {
     const rng = new Rng(4);
     let spread = 0;
     for (let i = 0; i < 200; i++) {
       const club = { attack: 60, defence: 50 } as Club;
-      const d = applyDecline(club, rng);
+      const d = applyDecline(club, 10, rng);
       expect(d.attack + d.defence).toBeCloseTo(20);
+      expect(Math.min(d.attack, d.defence)).toBeGreaterThanOrEqual(5 - 1e-9);
       spread += Math.abs(d.attack - d.defence);
     }
     expect(spread / 200).toBeGreaterThan(2);
@@ -301,17 +329,16 @@ describe('allocation and decline', () => {
 });
 
 describe('summer focus', () => {
-  it('splits 70/30 towards the chosen side, 50/50 when balanced', () => {
+  it('puts most of the points into the side being rebuilt', () => {
     const club = { attack: 50, defence: 50 } as Club;
-    expect(focusAllocation(club, 30, 'attack')).toEqual({ attack: 21, defence: 9 });
-    expect(focusAllocation(club, 30, 'defence')).toEqual({ attack: 9, defence: 21 });
-    expect(focusAllocation(club, 32, 'balanced')).toEqual({ attack: 16, defence: 16 });
+    expect(focusAllocation(club, 20, 'attack')).toEqual({ attack: 13, defence: 7 });
+    expect(focusAllocation(club, 20, 'defence')).toEqual({ attack: 7, defence: 13 });
     const odd = focusAllocation(club, 31, 'attack');
     expect(odd.attack + odd.defence).toBe(31);
   });
 
-  it('never pushes a stat past 99', () => {
-    const club = { attack: 95, defence: 60 } as Club;
+  it('never pushes a stat past the cap', () => {
+    const club = { attack: MAX_STAT - 4, defence: 60 } as Club;
     const a = focusAllocation(club, 30, 'attack');
     expect(a.attack).toBe(4);
     expect(a.defence).toBe(26);
@@ -371,9 +398,8 @@ describe('AI clubs', () => {
       const c = newCareer({ rating: 50, difficulty: 'medium', seed }, footballSport);
       for (const club of c.clubs.filter((x) => !x.isPlayer)) {
         styles[club.style]++;
-        const r = rating(club);
-        if (r >= 10 && r <= 89) expect(Math.abs(club.attack - club.defence)).toBeCloseTo(20);
-        expect(Math.sign(club.attack - club.defence) || 0).toBe(club.style === 'attacking' ? (r > 0 && r < 99 ? 1 : 0) : r > 0 && r < 99 ? -1 : 0);
+        expect(Math.abs(club.attack - club.defence)).toBeCloseTo(20);
+        expect(Math.sign(club.attack - club.defence)).toBe(club.style === 'attacking' ? 1 : -1);
       }
     }
     const total = styles.attacking + styles.defensive;

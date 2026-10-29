@@ -1,16 +1,21 @@
 import { band, LEAGUE_COUNT, LEAGUE_SIZE } from './league';
-import { MAX_STAT, rating, shiftRating, STATS, type Club, type Stat } from './club';
+import { MAX_STAT, MIN_STAT, rating, shiftRating, STATS, type Club, type Stat } from './club';
 import type { Rng } from './rng';
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
 /** Starting values from DESIGN.md §7; tuned by tools/balance.ts. */
 export const RATING_TUNING = {
+  /** Rating every club loses each summer, split at random between attack and defence. */
   decline: 10,
-  /** Standard deviation, per stat, of how unevenly the decline lands. */
-  declineSpread: 10,
-  /** Extra decline per point a stat sits above the club's rating (strong areas regress). */
-  declineRegression: 0.1,
+  /**
+   * The player's extra decline per rating point above `declineGrowthFrom`: big
+   * squads lose more stars, so each step towards 150 is harder than the last.
+   */
+  declineGrowth: 0.08,
+  declineGrowthFrom: 85,
+  /** The share of the decline that hits attack is drawn from this range; defence takes the rest. */
+  declineSplit: [0.25, 0.75] as [number, number],
   averageGain: 10,
   performanceMultiplier: 1.0,
   topBonus: [6, 4, 2],
@@ -18,7 +23,7 @@ export const RATING_TUNING = {
   difficultyBoost: { easy: 10, medium: 5, hard: 0 } as Record<Difficulty, number>,
   /** Standard deviation of the AI-only random variation, in rating points. */
   aiNoise: 1.5,
-  /** Net rises are scaled down linearly from this rating to plateauFloor at 99. */
+  /** AI only: net rises are scaled down linearly from this rating to plateauFloor at 99. */
   plateauStart: 85,
   plateauFloor: 0.3,
   /** Fraction of the distance outside its band an AI club is pulled back each season. */
@@ -30,12 +35,8 @@ export const RATING_TUNING = {
   promotedBoost: 4,
   /** Points the player allocates per point of rating gained (1 point = +1 to a stat). */
   pointsPerRating: 2,
-  /**
-   * Share of the summer's points that go to the side the player focuses on.
-   * 70/30 rather than 75/25: one season's goals are a noisy read, and at 75/25
-   * a misread swings the balance so far that reading results stopped paying.
-   */
-  focusShare: 0.7,
+  /** Share of the summer's points that go to the side the player rebuilds; the rest go to the other. */
+  focusShare: 0.65,
 };
 
 /** Rank by rating within a league: the highest-rated club is expected 1st. */
@@ -52,46 +53,51 @@ export function positionBonus(tier: number, position: number): number {
   return 0;
 }
 
-/** Share of a net rise a club keeps at this rating. */
+const PLATEAU_TOP = 99;
+
+/** AI only: share of a net rise a club keeps at this rating. */
 export function plateau(value: number): number {
   const { plateauStart, plateauFloor } = RATING_TUNING;
   if (value <= plateauStart) return 1;
-  return 1 - ((1 - plateauFloor) * (Math.min(value, MAX_STAT) - plateauStart)) / (MAX_STAT - plateauStart);
+  return 1 - ((1 - plateauFloor) * (Math.min(value, PLATEAU_TOP) - plateauStart)) / (PLATEAU_TOP - plateauStart);
+}
+
+/** The summer's decline for a club: the flat amount, plus more for a player club high up. */
+export function declineFor(currentRating: number, isPlayer: boolean): number {
+  const { decline, declineGrowth, declineGrowthFrom } = RATING_TUNING;
+  return decline + (isPlayer ? declineGrowth * Math.max(0, currentRating - declineGrowthFrom) : 0);
 }
 
 /**
- * Rating regained at the end of a season (on top of the decline):
+ * Rating regained at the end of a season (on top of the flat decline):
  * average gain + performance against expectation + top/bottom bonus + extra
- * (AI noise or the player's difficulty boost), with any net rise flattened
- * near 99.
+ * (AI noise or the player's difficulty boost). An AI club's net rise is
+ * flattened near 99; the player instead loses more as they climb (`declineFor`).
  */
-export function seasonGain(tier: number, expected: number, actual: number, currentRating: number, extra = 0): number {
+export function seasonGain(tier: number, expected: number, actual: number, currentRating: number, extra = 0, isPlayer = false): number {
   const performance = expected - actual;
   const gain = RATING_TUNING.averageGain + RATING_TUNING.performanceMultiplier * performance + positionBonus(tier, actual) + extra;
   const net = gain - RATING_TUNING.decline;
-  return RATING_TUNING.decline + (net > 0 ? net * plateau(currentRating) : net);
+  return RATING_TUNING.decline + (net > 0 && !isPlayer ? net * plateau(currentRating) : net);
 }
 
 /**
- * The season's decline: the club loses `decline` rating on average, but it
- * lands unevenly across stats (a key player leaves, the defence ages), a
- * little more on whichever stats are strongest. Returns what each stat lost.
+ * The season's decline, split at random between attack and defence: one
+ * summer the strikers leave, the next the back four ages. Returns what each
+ * stat lost.
  */
-export function applyDecline(club: Club, rng: Rng): Record<Stat, number> {
-  const { decline, declineSpread, declineRegression } = RATING_TUNING;
-  const mean = rating(club);
-  const raw = STATS.map((s) => rng.normal(0, declineSpread) + declineRegression * (club[s] - mean));
-  const centre = raw.reduce((t, x) => t + x, 0) / raw.length;
-  const amounts = raw.map((x) => Math.max(0, decline + x - centre));
-  const scale = (decline * STATS.length) / amounts.reduce((t, x) => t + x, 0);
+export function applyDecline(club: Club, amount: number, rng: Rng): Record<Stat, number> {
+  const [lo, hi] = RATING_TUNING.declineSplit;
+  const share = lo + (hi - lo) * rng.next();
   const before = { attack: club.attack, defence: club.defence };
+  // Both stats together lose `amount` of rating, i.e. twice that in stat points.
+  const loss = { attack: 2 * amount * share, defence: 2 * amount * (1 - share) };
   let shortfall = 0;
-  STATS.forEach((s, i) => {
-    const want = amounts[i] * scale;
-    const next = Math.max(0, club[s] - want);
-    shortfall += want - (club[s] - next);
+  for (const s of STATS) {
+    const next = Math.max(MIN_STAT, club[s] - loss[s]);
+    shortfall += loss[s] - (club[s] - next);
     club[s] = next;
-  });
+  }
   if (shortfall > 0) shiftRating(club, -shortfall / STATS.length);
   return { attack: before.attack - club.attack, defence: before.defence - club.defence };
 }
@@ -110,15 +116,16 @@ export function bandPull(club: Club, tier: number): void {
 }
 
 /**
- * Spreads whatever the total has drifted from `target` evenly across the AI
- * clubs, so the game's total rating never changes. The player is untouched.
+ * Spreads whatever the AI clubs' total has drifted from `target` evenly
+ * across them, so the AI world's total never changes. The player sits
+ * outside it: their gains and losses neither drain nor feed the AI.
  */
 export function normalise(clubs: Club[], target: number): void {
   const ai = clubs.filter((c) => !c.isPlayer);
   for (let pass = 0; pass < 20; pass++) {
-    const leftover = target - clubs.reduce((t, c) => t + rating(c), 0);
+    const leftover = target - totalRating(ai);
     if (Math.abs(leftover) < 1e-9) return;
-    const movable = ai.filter((c) => (leftover > 0 ? rating(c) < MAX_STAT : rating(c) > 0));
+    const movable = ai.filter((c) => (leftover > 0 ? rating(c) < MAX_STAT : rating(c) > MIN_STAT));
     if (movable.length === 0) return;
     const each = leftover / movable.length;
     for (const c of movable) shiftRating(c, each);

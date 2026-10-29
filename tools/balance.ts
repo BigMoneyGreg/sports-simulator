@@ -1,6 +1,7 @@
 /**
  * Headless balance check: simulates long careers and reports against the
- * realism targets (DESIGN.md §5) and rating targets (§7).
+ * realism targets (DESIGN.md §5), rating targets (§7) and how much reading
+ * the season pays.
  *
  *   npm run balance            full run (a few minutes)
  *   npm run balance -- --quick fewer seeds and seasons
@@ -26,27 +27,27 @@ type Strategy = (career: Career, rng: Rng) => Record<Stat, number>;
 
 const spend = (career: Career, focus: Focus) => focusAllocation(career.clubs[career.playerClubId], career.pending!.points, focus);
 
-/**
- * Reads the season like a player would: lots of goals at both ends means the
- * side leans attacking (shore up defence); tight, low-scoring games mean it
- * leans defensive (focus attack). Only acts on a clear signal.
- */
-const smart: Strategy = (career) => {
+/** Goals scored and conceded against the league average: below 1 means that side is the weaker. */
+function sides(career: Career): { attack: number; defence: number } {
   const table = career.season.leagues[career.pending!.tier - 1].table;
   const me = table.find((r) => r.clubId === career.playerClubId)!;
   const avg = table.reduce((t, r) => t + r.goalsFor, 0) / table.length;
-  const extraGoals = me.goalsFor + me.goalsAgainst - 2 * avg;
-  if (Math.abs(extraGoals) < 14) return spend(career, 'balanced');
-  return spend(career, extraGoals > 0 ? 'defence' : 'attack');
+  return { attack: me.goalsFor / avg, defence: avg / Math.max(1, me.goalsAgainst) };
+}
+
+/** Reads the season like a good player: rebuilds whichever side did worse against the league. */
+const reader: Strategy = (career) => {
+  const { attack, defence } = sides(career);
+  return spend(career, attack < defence ? 'attack' : 'defence');
 };
 
-/** Always balanced: never reads the results. */
-const even: Strategy = (career) => spend(career, 'balanced');
+/** An average player not paying attention: picks a side at random. */
+const coinFlip: Strategy = (career, rng) => spend(career, rng.next() < 0.5 ? 'attack' : 'defence');
 
-/** One-track: always focuses attack, whatever the results say. */
+/** One-track: always rebuilds attack, whatever the results say. */
 const careless: Strategy = (career) => spend(career, 'attack');
 
-const STRATEGIES = { smart, even, careless };
+const STRATEGIES = { reader, coinFlip, careless };
 type StrategyName = keyof typeof STRATEGIES;
 
 // ---------------------------------------------------------------------------
@@ -83,7 +84,8 @@ function newStats(): MatchStats {
 
 function recordMatches(career: Career, results: RoundResult[], stats: MatchStats): void {
   for (const { fixture, outcome } of results) {
-    if (fixture.kind !== 'league') continue;
+    // Realism is about the AI world: a player club far above it would skew the numbers.
+    if (fixture.kind !== 'league' || fixture.home === career.playerClubId || fixture.away === career.playerClubId) continue;
     const h = outcome.homeGoals;
     const a = outcome.awayGoals;
     stats.matches++;
@@ -125,7 +127,7 @@ function playSeasonWithStats(career: Career, stats?: MatchStats): void {
 // 1. Long world simulation: realism and rating targets
 
 function worldRun(): void {
-  console.log(`\n== World: ${SEEDS} careers x ${LONG_SEASONS} seasons (even-split player at 50, medium) ==`);
+  console.log(`\n== World: ${SEEDS} careers x ${LONG_SEASONS} seasons (reading player at 50, medium) ==`);
   const stats = newStats();
   let maxLeagueDrift = 0;
   let driftLeague = 0;
@@ -144,7 +146,8 @@ function worldRun(): void {
     let promotedLast: number[] = [];
     for (let season = 0; season < LONG_SEASONS; season++) {
       if (season === 0) leagueAverages.forEach((xs) => (xs.length = 0));
-      const before = totalRating(career.clubs);
+      const ai = career.clubs.filter((c) => !c.isPlayer);
+      const before = totalRating(ai);
       playSeasonWithStats(career, season < 20 ? stats : undefined);
 
       // Promoted clubs: where did they finish in their new league?
@@ -156,10 +159,10 @@ function worldRun(): void {
       }
       promotedLast = Object.values(career.pending!.promoted).flat().filter((id) => id !== career.playerClubId);
 
-      allocatePoints(career, even(career, rng));
-      const after = totalRating(career.clubs);
+      allocatePoints(career, reader(career, rng));
+      const after = totalRating(ai);
       maxTotalDrift = Math.max(maxTotalDrift, Math.abs(after - before));
-      maxAverageDrift = Math.max(maxAverageDrift, Math.abs(after / 100 - 49.5));
+      maxAverageDrift = Math.max(maxAverageDrift, Math.abs(after - career.totalRating) / ai.length);
 
       career.season.leagues.forEach((l, t) => {
         const avg = mean(l.clubIds.filter((id) => id !== career.playerClubId).map((id) => rating(career.clubs[id])));
@@ -196,9 +199,10 @@ function worldRun(): void {
   check('Comeback wins happen regularly', stats.comebacks / m > 0.05, pct(stats.comebacks / m));
 
   console.log('\n-- World ratings (§7) --');
-  check('Overall average stays at 49.5', maxAverageDrift < 0.005, `max drift ${maxAverageDrift.toExponential(1)}`);
-  check('Total rating identical before/after every season', maxTotalDrift < 0.005, `max drift ${maxTotalDrift.toExponential(1)}`);
-  check('No league average drifts more than ±3 from band (5-season avg)', maxLeagueDrift <= 3, `max ${fmt(maxLeagueDrift)} (League ${driftLeague})`);
+  check('AI average never moves, whatever the player does', maxAverageDrift < 0.005, `max drift ${maxAverageDrift.toExponential(1)}`);
+  check('AI total identical before/after every season', maxTotalDrift < 0.005, `max drift ${maxTotalDrift.toExponential(1)}`);
+  // A strong player keeps a League 1 place for good, pushing one AI club down: the middle leagues sit a little above their bands.
+  check('No league average drifts more than ±3.5 from band (5-season avg)', maxLeagueDrift <= 3.5, `max ${fmt(maxLeagueDrift)} (League ${driftLeague})`);
   console.log(`      league averages (mean over run): ${leagueAverages.map((xs) => fmt(mean(xs), 1)).join(' / ')}`);
   check('Fewer than 2 AI clubs above 95 at any time', maxAbove95 < 2, `max ${maxAbove95}`);
   check('No AI club at 99 for long (≤ 2 seasons)', maxAt99Streak <= 2, `longest ${maxAt99Streak}`);
@@ -210,10 +214,10 @@ function worldRun(): void {
 // 2. Strategy: places over expectation
 
 function strategyRun(): void {
-  console.log('\n== Player strategies: places over expectation per season (medium) ==');
+  console.log('\n== Reading the season: places over expectation per season (medium) ==');
   const starts = [5, 25, 50, 70, 88];
-  const seasons = quick ? 6 : 10;
-  const avg: Record<StrategyName, number> = { smart: 0, even: 0, careless: 0 };
+  const seasons = quick ? 6 : 12;
+  const avg: Record<StrategyName, number> = { reader: 0, coinFlip: 0, careless: 0 };
   for (const name of Object.keys(STRATEGIES) as StrategyName[]) {
     const perf: number[] = [];
     const byStart: string[] = [];
@@ -224,7 +228,8 @@ function strategyRun(): void {
         const rng = new Rng(seed);
         for (let s = 0; s < seasons; s++) {
           playSeasonWithStats(career);
-          here.push(career.pending!.performance);
+          // The first two seasons are still settling from the starting split.
+          if (s >= 2) here.push(career.pending!.performance);
           allocatePoints(career, STRATEGIES[name](career, rng));
         }
       }
@@ -234,9 +239,9 @@ function strategyRun(): void {
     avg[name] = mean(perf);
     console.log(`      ${name.padEnd(9)} ${fmt(avg[name])}   by start rating ${byStart.join('  ')}`);
   }
-  check('Smart player gains ~4–6 places a season', avg.smart >= 3.5 && avg.smart <= 6.5, fmt(avg.smart));
-  check('Even-split player roughly holds position', Math.abs(avg.even) <= 1.5, fmt(avg.even));
-  check('Careless player sinks', avg.careless < -1, fmt(avg.careless));
+  check('Reading the season clearly beats guessing (2+ places)', avg.reader - avg.coinFlip >= 2, `${fmt(avg.reader)} v ${fmt(avg.coinFlip)}`);
+  check('A guesser drifts below expectation', avg.coinFlip < 0, fmt(avg.coinFlip));
+  check('Careless player sinks furthest', avg.careless < avg.coinFlip, fmt(avg.careless));
 }
 
 // ---------------------------------------------------------------------------
@@ -255,23 +260,17 @@ function seasonsTo99(difficulty: Difficulty, strategy: StrategyName, seed: numbe
 
 function climbRun(): void {
   console.log(`\n== Climb from 0 to 99 (cap ${MAX_CLIMB} seasons) ==`);
-  const targets: Record<Difficulty, { smart: [number, number]; even: [number, number] }> = {
-    easy: { smart: [5, 6], even: [9, 11] },
-    medium: { smart: [7, 9], even: [16, 20] },
-    // Hard has no boost: reaching 99 is meant to be a very long grind at best.
-    hard: { smart: [40, 70], even: [70, 70] },
-  };
+  // A reader's climb, in seasons; a guesser should take far longer or never make it.
+  const readerTargets: Record<Difficulty, [number, number]> = { easy: [6, 12], medium: [8, 14], hard: [15, 70] };
+  const average = (runs: (number | null)[]) => mean(runs.map((r) => r ?? MAX_CLIMB));
   for (const difficulty of ['easy', 'medium', 'hard'] as Difficulty[]) {
-    for (const strategy of ['smart', 'even'] as const) {
-      const runs = Array.from({ length: SEEDS }, (_, i) => seasonsTo99(difficulty, strategy, 1000 + i));
-      const done = runs.filter((r): r is number => r !== null);
-      const [lo, hi] = targets[difficulty][strategy];
-      const summary = `${runs.map((r) => r ?? `>${MAX_CLIMB}`).join(', ')} (target ~${lo === hi ? lo : `${lo}–${hi}`})`;
-      const avgSeasons = done.length === runs.length ? mean(done) : Infinity;
-      // Estimates are rough: accept within 40% of the range.
-      const pass = difficulty === 'hard' ? done.length <= runs.length / 2 : avgSeasons >= lo * 0.6 && avgSeasons <= hi * 1.4;
-      check(`${difficulty} / ${strategy}: seasons 0→99`, pass, summary + (difficulty === 'hard' ? ' (hard: most never reach 99)' : ''));
-    }
+    const reading = Array.from({ length: SEEDS }, (_, i) => seasonsTo99(difficulty, 'reader', 1000 + i));
+    const guessing = Array.from({ length: SEEDS }, (_, i) => seasonsTo99(difficulty, 'coinFlip', 1000 + i));
+    const show = (runs: (number | null)[]) => runs.map((r) => r ?? `>${MAX_CLIMB}`).join(', ');
+    const [lo, hi] = readerTargets[difficulty];
+    // Estimates are rough: accept within 40% of the range.
+    check(`${difficulty} / reader: seasons 0→99`, average(reading) >= lo * 0.6 && average(reading) <= hi * 1.4, `${show(reading)} (target ~${lo}–${hi})`);
+    check(`${difficulty} / guesser: far slower than a reader`, average(guessing) >= 2 * average(reading) || guessing.every((r) => r === null), show(guessing));
   }
   const careless = Array.from({ length: SEEDS }, (_, i) => seasonsTo99('hard', 'careless', 2000 + i));
   check('Careless on hard never climbs 0→99', careless.every((r) => r === null), careless.map((r) => r ?? 'never').join(', '));
@@ -281,7 +280,7 @@ function climbRun(): void {
 // 4. Starting at 99
 
 function topRun(): void {
-  console.log('\n== Player club starting at 99 (smart, medium) ==');
+  console.log('\n== Player club starting at 99 (reader, medium) ==');
   let titles = 0;
   let seasons = 0;
   for (let seed = 1; seed <= SEEDS; seed++) {
@@ -291,14 +290,50 @@ function topRun(): void {
       playSeasonWithStats(career);
       seasons++;
       if (career.pending!.outcome === 'champion') titles++;
-      allocatePoints(career, smart(career, rng));
+      allocatePoints(career, reader(career, rng));
     }
   }
   check('Wins League 1 most seasons, but not every season', titles / seasons > 0.5 && titles < seasons, `${titles}/${seasons}`);
 }
 
+// ---------------------------------------------------------------------------
+// 5. Beyond 99: how far each kind of player climbs
+
+function peakRun(): void {
+  const seasons = quick ? 25 : 40;
+  console.log(`\n== Beyond 99: from 95 over ${seasons} seasons (medium) ==`);
+  const peaks: Record<StrategyName, number[]> = { reader: [], coinFlip: [], careless: [] };
+  let unbeaten = 0;
+  let readerSeasonsAbove120 = 0;
+  for (const name of Object.keys(STRATEGIES) as StrategyName[]) {
+    for (let seed = 1; seed <= SEEDS; seed++) {
+      const career = newCareer({ rating: 95, difficulty: 'medium', seed: 900 + seed }, footballSport);
+      const rng = new Rng(seed);
+      let peak = 0;
+      for (let s = 0; s < seasons; s++) {
+        playSeasonWithStats(career);
+        const r = rating(career.clubs[career.playerClubId]);
+        if (name === 'reader') {
+          const row = career.season.leagues[career.pending!.tier - 1].table.find((x) => x.clubId === career.playerClubId)!;
+          if (row.lost === 0) unbeaten++;
+          if (r > 120) readerSeasonsAbove120++;
+        }
+        allocatePoints(career, STRATEGIES[name](career, rng));
+        peak = Math.max(peak, rating(career.clubs[career.playerClubId]));
+      }
+      peaks[name].push(peak);
+    }
+    console.log(`      ${name.padEnd(9)} peak ${peaks[name].map((p) => fmt(p, 0)).join(', ')}`);
+  }
+  console.log(`      reader: ${unbeaten} unbeaten season(s), ${readerSeasonsAbove120} season(s) above 120`);
+  check('A good reader climbs well past 99', mean(peaks.reader) >= 125, fmt(mean(peaks.reader), 0));
+  check('Nobody passes the 150 cap', Math.max(...Object.values(peaks).flat()) <= 150 + 1e-9, fmt(Math.max(...Object.values(peaks).flat()), 1));
+  check('A guesser stays near the top of the AI', mean(peaks.coinFlip) <= 115, fmt(mean(peaks.coinFlip), 0));
+  check('Unbeaten seasons happen, but not routinely', unbeaten >= 1 && unbeaten <= (seasons * SEEDS) / 3, `${unbeaten} of ${seasons * SEEDS}`);
+}
+
 const only = process.argv.find((a) => a.startsWith('--only='))?.slice(7);
-const sections = { world: worldRun, strategy: strategyRun, climb: climbRun, top: topRun };
+const sections = { world: worldRun, strategy: strategyRun, climb: climbRun, top: topRun, peak: peakRun };
 const started = Date.now();
 for (const [name, run] of Object.entries(sections)) if (!only || only.split(',').includes(name)) run();
 const failed = results.filter((r) => !r.pass);

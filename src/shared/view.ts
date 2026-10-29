@@ -5,7 +5,7 @@ export type Duration = '30s' | '2m' | '5m';
 export const DURATIONS: Duration[] = ['30s', '2m', '5m'];
 export const DURATION_LABELS: Record<Duration, string> = { '30s': '30 sec', '2m': '2 min', '5m': '5 min' };
 export type Difficulty = 'easy' | 'medium' | 'hard';
-export type Focus = 'attack' | 'balanced' | 'defence';
+export type Focus = 'attack' | 'defence';
 export type Style = 'attacking' | 'balanced' | 'defensive';
 export type Zone = 'champion' | 'promotion' | 'playoff' | 'relegation' | null;
 
@@ -131,7 +131,8 @@ export interface ClubView {
   short: string;
   colours: string[];
   /** This season's goals against the league average, the only clue to where the drain hit. */
-  goals: { scored: number; conceded: number; average: number; played: number };
+  /** Ranks: 1 = most scored, fewest conceded. */
+  goals: { scored: number; conceded: number; scoredRank: number; concededRank: number; average: number; played: number };
   tier: number;
   difficulty: Difficulty;
   season: number;
@@ -213,9 +214,9 @@ export interface SeasonEndView {
     goalsAgainst: number;
     avgFor: number;
     avgAgainst: number;
-    /** Goals per game in the club's matches (both teams), against the league's. */
-    perGame: number;
-    leaguePerGame: number;
+    /** Where the season ranked in the league: the clue to which side dropped off. */
+    scoredRank: number;
+    concededRank: number;
     bestRun: string;
     worstRun: string;
     topScorer?: string;

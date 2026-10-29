@@ -4,7 +4,12 @@ export type Style = 'attacking' | 'defensive' | 'balanced';
 export type Stat = 'attack' | 'defence';
 export const STATS: readonly Stat[] = ['attack', 'defence'];
 
-export const MAX_STAT = 99;
+/**
+ * Stat bounds. Starting ratings run 0–99; after that the AI is held near its
+ * bands by the season rules, and the player can climb as far as 150.
+ */
+export const MIN_STAT = -50;
+export const MAX_STAT = 150;
 
 export interface Club {
   id: number;
@@ -44,19 +49,19 @@ export function rating(club: Pick<Club, Stat>): number {
   return (club.attack + club.defence) / 2;
 }
 
-/** Stats for a rating in a style's shape, squeezed near 0 and 99 so the average is exact. */
+/** Stats for a rating in a style's shape, squeezed near the bounds so the average is exact. */
 export function statsFor(value: number, style: Style): Record<Stat, number> {
   const shape = STYLE_SHAPE[style];
-  const v = clamp(value, 0, MAX_STAT);
+  const v = clamp(value, MIN_STAT, MAX_STAT);
   const up = Math.max(...STATS.map((s) => shape[s]));
   const down = -Math.min(...STATS.map((s) => shape[s]));
-  const skew = up === 0 ? 0 : Math.min(STYLE_TUNING.skew, (MAX_STAT - v) / up, v / down);
+  const skew = up === 0 ? 0 : Math.min(STYLE_TUNING.skew, (MAX_STAT - v) / up, (v - MIN_STAT) / down);
   return { attack: v + skew * shape.attack, defence: v + skew * shape.defence };
 }
 
 /**
  * Changes a club's rating by `delta`, split across stats by `weights` and
- * clamped to 0–99. Whatever a capped stat can't take goes to the others.
+ * kept within the stat bounds. Whatever a capped stat can't take goes to the others.
  * Returns the rating change actually applied.
  */
 export function shiftRating(club: Club, delta: number, weights: Record<Stat, number> = EVEN): number {
@@ -68,7 +73,7 @@ export function shiftRating(club: Club, delta: number, weights: Record<Stat, num
     let applied = 0;
     for (const s of open) {
       const want = total > 0 ? (remaining * weights[s]) / total : remaining / open.length;
-      const next = clamp(club[s] + want, 0, MAX_STAT);
+      const next = clamp(club[s] + want, MIN_STAT, MAX_STAT);
       applied += next - club[s];
       club[s] = next;
     }
@@ -79,7 +84,7 @@ export function shiftRating(club: Club, delta: number, weights: Record<Stat, num
 }
 
 function canMove(value: number, direction: number): boolean {
-  return direction > 0 ? value < MAX_STAT : value > 0;
+  return direction > 0 ? value < MAX_STAT : value > MIN_STAT;
 }
 
 export function clamp(x: number, lo: number, hi: number): number {
