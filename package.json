@@ -4,7 +4,7 @@
   "description": "A football management sim that plays itself in your sidebar while you code.",
   "icon": "media/icon.png",
   "version": "0.1.0",
-  "publisher": "sports-simulator",
+  "publisher": "bigdevgreg",
   "license": "MIT",
   "repository": {
     "type": "git",
