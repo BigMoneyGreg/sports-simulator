@@ -35,17 +35,17 @@ describe('Nations Cup', () => {
     expect(topAtHome).toBeLessThan(440);
   });
 
-  it('plays two-legged quarter- and semi-finals and a one-off neutral final', () => {
+  it('plays one-off ties all the way, the final at a neutral ground', () => {
     const cup = drawCup(1, ids(64), new Rng(2));
     const rng = new Rng(3);
     cupStages('cup').forEach((stage, i) => {
       const fixtures = cupFixtures(cup, i);
-      if ('round' in stage && stage.round === 5) expect(fixtures[0].options.neutral).toBe(true);
-      if ('round' in stage && stage.leg === 1) expect(fixtures.every((f) => f.secondLeg && f.options.knockout)).toBe(true);
-      for (const f of fixtures) recordCupResult(cup, f, f.options.knockout ? result(1, 0, 'home') : result(1, 0), rng);
+      expect(fixtures.every((f) => f.options.knockout && !f.secondLeg)).toBe(true);
+      expect(fixtures.every((f) => !!f.options.neutral === ('round' in stage && stage.round === 5))).toBe(true);
+      for (const f of fixtures) recordCupResult(cup, f, result(1, 0, 'home'), rng);
     });
+    expect(cupStages('cup')).toHaveLength(6);
     expect(cup.rounds.map((r) => r.ties.length)).toEqual([32, 16, 8, 4, 2, 1]);
-    expect(cup.rounds[3].ties.every((t) => t.legs.length === 2)).toBe(true);
     expect(cup.winner).toBeDefined();
     expect(cupRun(cup, cup.winner!)).toBe('Winners');
     expect(cupRun(cup, 999)).toBeNull();
@@ -126,34 +126,16 @@ describe('how a tie reads', () => {
   const c = newCareer({ rating: 50, difficulty: 'medium', seed: 12, team: 'NOR' }, footballSport);
   const [eng, bra] = ['ENG', 'BRA'].map((code) => c.clubs.find((x) => x.short === code)!.id);
 
-  it('reads every leg from the left-hand team and names the shootout winner', () => {
-    // England host the first leg and lose 1–2; Brazil host the second, lose 2–3 and win the shootout 3–1.
-    const tie = {
-      home: eng,
-      away: bra,
-      winner: bra,
-      legs: [
-        { home: eng, away: bra, score: [1, 2] as [number, number] },
-        { home: bra, away: eng, score: [2, 3] as [number, number], extraTime: true, penalties: [3, 1] as [number, number] },
-      ],
-    };
-    const v = cupTieView(c, tie);
-    expect(v.legs).toEqual(['1–2', '3–2']);
-    expect(v.aggregate).toBe('4–4 agg');
+  it('names the shootout winner, with the shootout score from their side', () => {
+    // England at home, 2–2 after extra time; Brazil win the shootout 3–1.
+    const v = cupTieView(c, { home: eng, away: bra, winner: bra, score: [2, 2], extraTime: true, penalties: [1, 3] });
+    expect(v.score).toBe('2–2');
     expect(v.decided).toBe('Brazil win 3–1 on penalties');
     expect(v.winner).toBe('away');
   });
 
-  it('gives the aggregate winner first, from either side', () => {
-    const tie = {
-      home: eng,
-      away: bra,
-      winner: eng,
-      legs: [
-        { home: eng, away: bra, score: [3, 0] as [number, number] },
-        { home: bra, away: eng, score: [2, 1] as [number, number] },
-      ],
-    };
-    expect(cupTieView(c, tie).decided).toBe('England win 4–2 on aggregate');
+  it('notes extra time, and says nothing extra for a plain win', () => {
+    expect(cupTieView(c, { home: eng, away: bra, winner: eng, score: [2, 1], extraTime: true }).decided).toBe('England win after extra time');
+    expect(cupTieView(c, { home: eng, away: bra, winner: eng, score: [2, 1] }).decided).toBeUndefined();
   });
 });

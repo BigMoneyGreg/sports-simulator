@@ -240,10 +240,8 @@ export interface CupRunView {
 export interface CupTieView {
   home: TeamBadge;
   away: TeamBadge;
-  /** Each leg's score, always with the left-hand team's goals first. */
-  legs: string[];
-  /** Two-legged ties: "4–4 agg". */
-  aggregate?: string;
+  /** Once played, the left-hand team's goals first. */
+  score?: string;
   /** How a close tie was settled, naming the winner: "Brazil win 3–1 on penalties". */
   decided?: string;
   winner?: 'home' | 'away';

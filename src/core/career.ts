@@ -19,7 +19,7 @@ import { emptyRecords, recordMatch, recordSeasonGoals, type Records } from './re
 import { Rng } from './rng';
 import type { GoalRecord, MatchOutcome, Player, SportModule, TeamSheet } from './sport';
 
-export const CAREER_VERSION = 3;
+export const CAREER_VERSION = 4;
 export const CLUB_COUNT = LEAGUE_COUNT * LEAGUE_SIZE;
 export const PLAYER_CLUB_ID = 0;
 
@@ -95,8 +95,8 @@ export interface PlayerMatch {
 /** One matchday of the season. */
 export type Slot = { kind: 'league'; index: number } | { kind: 'playoff'; stage: number } | { kind: CupId; stage: number };
 
-/** League matchdays the cup rounds follow: spread through the season, the final before the last league round. */
-const CUP_AFTER = [3, 8, 13, 18, 23, 28, 32, 36];
+/** League matchdays the cup rounds follow (after matchdays 6, 12, … 36): spread through the season, the final before the last two league rounds. */
+const CUP_AFTER = [5, 11, 17, 23, 29, 35];
 
 export interface Season {
   number: number;

@@ -1,5 +1,5 @@
 import { currentSlot, FOCUSES, focusAllocation, leagueRounds, type Career, type Playoff, type SeasonRecord, type Slot } from '../core/career';
-import { CHAMPIONSHIP_EVERY, CUP_NAMES, cupRun, cupStages, roundFormat, stageLabel, stillIn, type Cup, type CupId, type CupTie } from '../core/cups';
+import { CHAMPIONSHIP_EVERY, CUP_NAMES, cupRun, cupStages, stageLabel, stillIn, type Cup, type CupId, type CupTie } from '../core/cups';
 import { emptyRecords, topScorers } from '../core/records';
 import { LEAGUE_COUNT, LEAGUE_SIZE, recordResult, sortTable, zone, type Fixture, type TableRow } from '../core/league';
 import { matchClock, timeline } from '../sports/football/commentary';
@@ -400,8 +400,7 @@ function slotLabel(slot: Slot): string {
   const stage = cupStages(slot.kind)[slot.stage];
   const prefix = slot.kind === 'cup' ? 'Cup' : 'WC';
   if ('group' in stage) return `${prefix} group`;
-  const round = roundFormat(slot.kind, stage.round);
-  return `${prefix} ${STAGE_SHORT[round.name]}${round.legs > 1 ? ` (${stage.leg + 1})` : ''}`;
+  return `${prefix} ${STAGE_SHORT[stageLabel(slot.kind, stage)]}`;
 }
 
 /** The player's matchdays in calendar order: every league round, plus cup and play-off matches once they're known. */
@@ -460,30 +459,23 @@ function emptyCup(career: Career, id: CupId): CupView {
   return { id, name: CUP_NAMES[id], status: '', groups: [], rounds: [], pastWinners };
 }
 
-/** One cup tie as shown: scores from the left-hand team's side, and how a close one was won. */
+/** One cup tie as shown, naming the winner when extra time or penalties settled it. */
 export function cupTieView(career: Career, t: CupTie): CupTieView {
   const me = career.playerClubId;
-  // Every score reads from the left-hand team's side, whichever leg it was.
-  const fromLeft = (l: { home: number }, pair: [number, number]) => (l.home === t.home ? `${pair[0]}–${pair[1]}` : `${pair[1]}–${pair[0]}`);
-  const legs = t.legs.map((l) => fromLeft(l, l.score));
-  const agg = t.legs.reduce((a, l) => (l.home === t.home ? [a[0] + l.score[0], a[1] + l.score[1]] : [a[0] + l.score[1], a[1] + l.score[0]]), [0, 0]);
-  const last = t.legs[t.legs.length - 1];
   let decided: string | undefined;
-  if (t.winner !== undefined && last) {
+  if (t.winner !== undefined) {
     const name = shortName(career.clubs[t.winner]);
-    if (last.penalties) {
-      const [w, l] = last.home === t.winner ? last.penalties : [last.penalties[1], last.penalties[0]];
+    if (t.penalties) {
+      const [w, l] = t.winner === t.home ? t.penalties : [t.penalties[1], t.penalties[0]];
       decided = `${name} win ${w}–${l} on penalties`;
-    } else if (last.extraTime) decided = `${name} win after extra time`;
-    else if (t.legs.length === 2) decided = `${name} win ${Math.max(...agg)}–${Math.min(...agg)} on aggregate`;
+    } else if (t.extraTime) decided = `${name} win after extra time`;
   }
   return {
     home: badge(career, t.home),
     away: badge(career, t.away),
-    legs,
-    aggregate: t.legs.length === 2 ? `${agg[0]}–${agg[1]} agg` : undefined,
+    score: t.score && `${t.score[0]}–${t.score[1]}`,
     decided,
-    winner: t.winner === undefined ? undefined : t.winner === t.home ? ('home' as const) : ('away' as const),
+    winner: t.winner === undefined ? undefined : t.winner === t.home ? 'home' : 'away',
     mine: t.home === me || t.away === me,
   };
 }

@@ -195,10 +195,9 @@ Cups never change ratings: only league finishes feed the summer (§7). They brin
 
 **Nations Cup, every season.** The top 64 of last season's final standings (season 1: the starting order).
 - An open draw every round: anyone can meet anyone, so England could draw France in the round of 64. Whoever comes out first is at home.
-- Round of 64, 32 and 16: one match, extra time and penalties if level.
-- Quarter- and semi-finals: two legs, the first drawn at home first. Final: one match at a neutral ground.
-- Results always read from the left-hand team's side, and a tie settled by aggregate, extra time or penalties names its winner (*Brazil win 3–1 on penalties*).
-- Eight cup matchdays sit between league rounds (after matchdays 4, 9, 14, 19, 24, 29, 33 and 37), so the final comes before the last league round.
+- Every round is one match, extra time and penalties if level; the final at a neutral ground. One-off ties give smaller nations a real chance, and two legs added clutter without adding drama.
+- A tie settled by extra time or penalties names its winner (*Brazil win 3–1 on penalties*).
+- Six cup matchdays sit between league rounds (after matchdays 6, 12, 18, 24, 30 and 36), so the final comes before the last two league rounds.
 
 **World Championship, every fourth summer** (seasons 4, 8, 12…), after the play-offs and before the summer decision.
 - Leagues 1 and 2 of the season just finished (40 nations), seeded by final position into five pots of 8. Each of 8 groups of 5 takes one nation from each pot, so the top 8 are always apart.
@@ -582,7 +581,7 @@ In rough priority order:
 | Real nations replace fictional clubs | Relatable worldwide, and players can follow how teams they know are doing; clubs' names are trademarks, countries' aren't |
 | World order by football standing, shuffled within pots of 8 (swing pots across each league line) | A single ranking table over-rates hot streaks; pots keep big nations near the top while every career starts differently |
 | Any nation, any starting league (defaulting to its usual one) | People want to play as their own country, and some want a long climb |
-| Nations Cup (top 64, open draw every round, every season) and World Championship (Leagues 1–2, every 4th summer); no effect on ratings | Real-feeling moments beyond the league, without touching the balance tuning |
+| Nations Cup (top 64, open draw, one-off ties, every season) and World Championship (Leagues 1–2, every 4th summer); no effect on ratings | Real-feeling moments beyond the league, without touching the balance tuning |
 
 ## 17. Name ✅
 

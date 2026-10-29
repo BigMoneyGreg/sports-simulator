@@ -15,7 +15,6 @@ const GROUP_NAMES = 'ABCDEFGH';
 
 interface RoundFormat {
   name: string;
-  legs: 1 | 2;
   neutral: boolean;
 }
 
@@ -28,39 +27,33 @@ const FORMATS: Record<CupId, Format> = {
   cup: {
     groupDays: 0,
     rounds: [
-      { name: 'Round of 64', legs: 1, neutral: false },
-      { name: 'Round of 32', legs: 1, neutral: false },
-      { name: 'Round of 16', legs: 1, neutral: false },
-      { name: 'Quarter-final', legs: 2, neutral: false },
-      { name: 'Semi-final', legs: 2, neutral: false },
-      { name: 'Final', legs: 1, neutral: true },
+      { name: 'Round of 64', neutral: false },
+      { name: 'Round of 32', neutral: false },
+      { name: 'Round of 16', neutral: false },
+      { name: 'Quarter-final', neutral: false },
+      { name: 'Semi-final', neutral: false },
+      { name: 'Final', neutral: true },
     ],
   },
   championship: {
     groupDays: GROUP_SIZE,
     rounds: [
-      { name: 'Round of 16', legs: 1, neutral: true },
-      { name: 'Quarter-final', legs: 1, neutral: true },
-      { name: 'Semi-final', legs: 1, neutral: true },
-      { name: 'Final', legs: 1, neutral: true },
+      { name: 'Round of 16', neutral: true },
+      { name: 'Quarter-final', neutral: true },
+      { name: 'Semi-final', neutral: true },
+      { name: 'Final', neutral: true },
     ],
   },
 };
 
-export interface Leg {
+/** One-off knockout match; the team drawn first is at home, or nominally so at a neutral ground. */
+export interface CupTie {
   home: number;
   away: number;
-  score: [number, number];
-  /** Shootout score, home side first. */
+  /** Once played: home goals first, with the shootout if there was one. */
+  score?: [number, number];
   penalties?: [number, number];
   extraTime?: boolean;
-}
-
-export interface CupTie {
-  /** Drawn first: at home in a one-off tie or the first leg. */
-  home: number;
-  away: number;
-  legs: Leg[];
   winner?: number;
 }
 
@@ -87,28 +80,21 @@ export interface Cup {
   winner?: number;
 }
 
-/** One matchday of a cup: a group matchday, or one leg of a knockout round. */
-export type CupStage = { group: number } | { round: number; leg: number };
+/** One matchday of a cup: a group matchday, or a knockout round. */
+export type CupStage = { group: number } | { round: number };
 
 export function cupStages(id: CupId): CupStage[] {
   const f = FORMATS[id];
-  const groups = Array.from({ length: f.groupDays }, (_, group) => ({ group }));
-  return [...groups, ...f.rounds.flatMap((r, round) => Array.from({ length: r.legs }, (_, leg) => ({ round, leg })))];
-}
-
-export function roundFormat(id: CupId, round: number): { name: string; legs: number } {
-  return FORMATS[id].rounds[round];
+  return [...Array.from({ length: f.groupDays }, (_, group) => ({ group })), ...f.rounds.map((_, round) => ({ round }))];
 }
 
 export function stageLabel(id: CupId, stage: CupStage): string {
-  if ('group' in stage) return `Group stage, matchday ${stage.group + 1}`;
-  const r = FORMATS[id].rounds[stage.round];
-  return r.legs === 2 ? `${r.name}, ${stage.leg === 0 ? '1st' : '2nd'} leg` : r.name;
+  return 'group' in stage ? `Group stage, matchday ${stage.group + 1}` : FORMATS[id].rounds[stage.round].name;
 }
 
 /** An open draw: anyone can meet anyone, and whoever comes out first is at home. */
 function openDraw(ids: number[], rng: Rng): CupTie[] {
-  return pairUp(rng.shuffle([...ids])).map(([home, away]) => ({ home, away, legs: [] }));
+  return pairUp(rng.shuffle([...ids])).map(([home, away]) => ({ home, away }));
 }
 
 /** The Nations Cup: an open draw every round. */
@@ -157,20 +143,12 @@ export function cupFixtures(cup: Cup, stageIndex: number): Fixture[] {
   const format = FORMATS[cup.id].rounds[stage.round];
   const round = cup.rounds[stage.round];
   if (!round) return [];
-  return round.ties.map((tie): Fixture => {
-    if (format.legs === 2 && stage.leg === 1) {
-      const [first, second] = tie.legs[0].score;
-      return { ...base, home: tie.away, away: tie.home, secondLeg: true, options: { knockout: { aggregate: [second, first] } } };
-    }
-    if (format.legs === 2) return { ...base, home: tie.home, away: tie.away, options: {} };
-    return { ...base, home: tie.home, away: tie.away, options: { neutral: format.neutral, knockout: { aggregate: [0, 0] } } };
-  });
+  return round.ties.map((tie) => ({ ...base, home: tie.home, away: tie.away, options: { neutral: format.neutral, knockout: { aggregate: [0, 0] } } }));
 }
 
 /** Records a cup result and, once a stage is complete, draws what comes next. */
 export function recordCupResult(cup: Cup, fixture: Fixture, outcome: MatchOutcome, rng: Rng): void {
   const stage = cupStages(cup.id)[fixture.stage!];
-  const score: [number, number] = [outcome.homeGoals, outcome.awayGoals];
   if ('group' in stage) {
     const group = cup.groups.find((g) => g.table.some((r) => r.clubId === fixture.home))!;
     recordResult(group.table, fixture.home, fixture.away, outcome);
@@ -180,12 +158,11 @@ export function recordCupResult(cup: Cup, fixture: Fixture, outcome: MatchOutcom
     return;
   }
   const round = cup.rounds[stage.round];
-  const tie = round.ties.find((t) => t.home === fixture.home || t.home === fixture.away)!;
-  const leg: Leg = { home: fixture.home, away: fixture.away, score };
-  if (outcome.penalties) leg.penalties = outcome.penalties;
-  if (outcome.extraTime) leg.extraTime = true;
-  tie.legs.push(leg);
-  if (outcome.winner) tie.winner = outcome.winner === 'home' ? fixture.home : fixture.away;
+  const tie = round.ties.find((t) => t.home === fixture.home)!;
+  tie.score = [outcome.homeGoals, outcome.awayGoals];
+  if (outcome.penalties) tie.penalties = outcome.penalties;
+  if (outcome.extraTime) tie.extraTime = true;
+  tie.winner = outcome.winner === 'home' ? fixture.home : fixture.away;
   if (!round.ties.every((t) => t.winner !== undefined)) return;
 
   const next = FORMATS[cup.id].rounds[stage.round + 1];
@@ -195,7 +172,7 @@ export function recordCupResult(cup: Cup, fixture: Fixture, outcome: MatchOutcom
     return;
   }
   // The cup is drawn afresh each round; the championship follows its bracket.
-  const ties = cup.id === 'cup' ? openDraw(winners, rng) : pairUp(winners).map(([home, away]) => ({ home, away, legs: [] }));
+  const ties = cup.id === 'cup' ? openDraw(winners, rng) : pairUp(winners).map(([home, away]) => ({ home, away }));
   cup.rounds.push({ name: next.name, ties });
 }
 
@@ -213,7 +190,7 @@ function knockoutFromGroups(cup: Cup): CupTie[] {
   for (const swap of [false, true]) {
     for (let g = 0; g < placed.length; g += 2) {
       const [first, second] = swap ? [placed[g + 1][0], placed[g][1]] : [placed[g][0], placed[g + 1][1]];
-      ties.push({ home: first, away: second, legs: [] });
+      ties.push({ home: first, away: second });
     }
   }
   return ties;

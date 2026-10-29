@@ -412,7 +412,7 @@ function cupParts(v: GameView): string[] {
   const tie = (t: CupView['rounds'][number]['ties'][number]) => {
     const side = (b: typeof t.home, won: boolean) => `${swatch(b)}${won ? `<strong>${esc(b.short)}</strong>` : esc(b.short)}`;
     return `<li class="${t.mine ? 'me' : ''}"><span>${side(t.home, t.winner === 'home')} v ${side(t.away, t.winner === 'away')}</span>
-      <span class="muted">${t.legs.map(esc).join(', ') || 'to play'}${t.aggregate ? ` · ${esc(t.aggregate)}` : ''}</span>${
+      <span class="muted">${t.score ? esc(t.score) : 'to play'}</span>${
         t.decided ? `<span class="decided small muted">${esc(t.decided)}</span>` : ''
       }</li>`;
   };
