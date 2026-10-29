@@ -1,0 +1,500 @@
+import { MAX_STAT, rating, shiftRating, STATS, statsFor, STYLE_WEIGHTS, type Club, type Stat, type Style } from './club';
+import {
+  doubleRoundRobin,
+  emptyTable,
+  LEAGUE_COUNT,
+  LEAGUE_SIZE,
+  PROMOTED_AUTOMATICALLY,
+  RELEGATED,
+  recordResult,
+  sortTable,
+  type Fixture,
+  type RoundKind,
+  type TableRow,
+} from './league';
+import { bandPull, expectedPositions, normalise, positionBonus, RATING_TUNING, seasonGain, totalRating, type Difficulty } from './ratings';
+import { Rng } from './rng';
+import type { GoalRecord, MatchOutcome, Player, SportModule, TeamSheet } from './sport';
+
+export const CAREER_VERSION = 1;
+export const CLUB_COUNT = LEAGUE_COUNT * LEAGUE_SIZE;
+export const PLAYER_CLUB_ID = 0;
+
+export interface ClubIdentity {
+  name: string;
+  short: string;
+  colours: [string, string];
+}
+
+/** Everything sport-specific the shared core needs. */
+export interface SportDefinition<M = unknown> {
+  module: SportModule<M>;
+  generateSquad(rng: Rng, firstId: number): Player[];
+  lineup(squad: Player[]): TeamSheet['lineup'];
+  /** `count` distinct fictional clubs. */
+  clubIdentities(rng: Rng, count: number): ClubIdentity[];
+}
+
+export interface CareerOptions {
+  rating: number;
+  difficulty: Difficulty;
+  /** Defaults to an even split. Must average to `rating`. */
+  split?: Record<Stat, number>;
+  clubName?: string;
+  seed: number;
+}
+
+export interface LeagueSeason {
+  tier: number;
+  clubIds: number[];
+  table: TableRow[];
+}
+
+export interface PlayoffTie {
+  /** Better-placed club: hosts the second leg. */
+  high: number;
+  low: number;
+  /** First-leg score at the lower seed's ground: [low, high]. */
+  leg1?: [number, number];
+  winner?: number;
+}
+
+export interface Playoff {
+  tier: number;
+  semis: [PlayoffTie, PlayoffTie];
+  final?: { home: number; away: number; winner?: number };
+  winner?: number;
+}
+
+export interface PlayerMatch {
+  round: number;
+  kind: RoundKind;
+  opponentId: number;
+  home: boolean;
+  goalsFor: number;
+  goalsAgainst: number;
+  /** Goals from the player club's point of view: `for` is true for goals counting for it. */
+  goals: (Omit<GoalRecord, 'side'> & { for: boolean })[];
+  penalties?: [number, number];
+  extraTime?: boolean;
+  won?: boolean;
+}
+
+export interface Season {
+  number: number;
+  leagues: LeagueSeason[];
+  /** Expected finishing position for every club, by rating rank at the start of the season. */
+  expected: Record<number, number>;
+  ratingAtStart: Record<number, number>;
+  schedule: Fixture[][];
+  /** Index of the next round to play: league rounds, then up to three play-off rounds. */
+  round: number;
+  playoffs: Playoff[];
+  playerMatches: PlayerMatch[];
+  /** Goals per player this season (own goals excluded). */
+  scorers: Record<number, number>;
+}
+
+export type SeasonOutcome = 'champion' | 'promoted' | 'playoffWinner' | 'playoffs' | 'relegated' | null;
+
+export interface SeasonEnd {
+  season: number;
+  tier: number;
+  position: number;
+  expected: number;
+  performance: number;
+  bonus: number;
+  boost: number;
+  /** Rating lost to the decline (shown on the end-of-season screen). */
+  decline: number;
+  /** Points to allocate across attack, defence and chemistry. */
+  points: number;
+  outcome: SeasonOutcome;
+  newTier: number;
+  /** Club ids per league for next season, League 1 first. */
+  nextLeagues: number[][];
+  promoted: Record<number, number[]>;
+  relegated: Record<number, number[]>;
+  playoffWinners: Record<number, number>;
+}
+
+export interface SeasonRecord {
+  season: number;
+  tier: number;
+  position: number;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  points: number;
+  outcome: SeasonOutcome;
+  topScorer?: { playerId: number; name: string; goals: number };
+  ratingStart: number;
+  ratingEnd: number;
+}
+
+export interface Career {
+  version: number;
+  rng: number;
+  difficulty: Difficulty;
+  playerClubId: number;
+  /** Sum of all club ratings; fixed for the whole career. */
+  totalRating: number;
+  clubs: Club[];
+  season: Season;
+  /** Set when the season is over and the player has points to allocate. */
+  pending: SeasonEnd | null;
+  history: SeasonRecord[];
+}
+
+// ---------------------------------------------------------------------------
+// New career
+
+export function newCareer(options: CareerOptions, sport: SportDefinition): Career {
+  const chosen = Math.round(options.rating);
+  if (chosen < 0 || chosen > MAX_STAT) throw new Error(`rating must be 0–99, got ${options.rating}`);
+  const rng = new Rng(options.seed);
+  const identities = sport.clubIdentities(rng, CLUB_COUNT);
+
+  const aiRatings = rng.shuffle(Array.from({ length: CLUB_COUNT }, (_, i) => i).filter((r) => r !== chosen));
+  const styles: Style[] = ['attacking', 'defensive', 'balanced'];
+  const clubs: Club[] = identities.map((identity, id) => {
+    const isPlayer = id === PLAYER_CLUB_ID;
+    const style: Style = isPlayer ? 'balanced' : rng.pick(styles);
+    const stats = isPlayer ? playerStats(chosen, options.split) : statsFor(aiRatings[id - 1], style);
+    return {
+      id,
+      ...identity,
+      name: isPlayer && options.clubName ? options.clubName : identity.name,
+      style,
+      ...stats,
+      squad: sport.generateSquad(rng, id * 100),
+      isPlayer,
+    };
+  });
+
+  const byRating = [...clubs].sort((a, b) => rating(b) - rating(a) || a.id - b.id);
+  const leagues = Array.from({ length: LEAGUE_COUNT }, (_, t) => byRating.slice(t * LEAGUE_SIZE, (t + 1) * LEAGUE_SIZE).map((c) => c.id));
+
+  const career: Career = {
+    version: CAREER_VERSION,
+    rng: 0,
+    difficulty: options.difficulty,
+    playerClubId: PLAYER_CLUB_ID,
+    totalRating: totalRating(clubs),
+    clubs,
+    season: newSeason(1, leagues, clubs, rng),
+    pending: null,
+    history: [],
+  };
+  career.rng = rng.state;
+  return career;
+}
+
+function playerStats(value: number, split?: Record<Stat, number>): Record<Stat, number> {
+  if (!split) return { attack: value, defence: value, chemistry: value };
+  const sum = STATS.reduce((t, s) => t + split[s], 0);
+  if (STATS.some((s) => split[s] < 0 || split[s] > MAX_STAT) || sum !== value * 3) {
+    throw new Error(`stat split must be 0–99 each and average ${value}`);
+  }
+  return { ...split };
+}
+
+function newSeason(number: number, leagues: number[][], clubs: Club[], rng: Rng): Season {
+  const expected: Record<number, number> = {};
+  const ratingAtStart: Record<number, number> = {};
+  const schedule: Fixture[][] = Array.from({ length: (LEAGUE_SIZE - 1) * 2 }, () => []);
+  const leagueSeasons = leagues.map((clubIds, t) => {
+    const tier = t + 1;
+    for (const [id, pos] of expectedPositions(clubIds.map((id) => clubs[id]))) expected[id] = pos;
+    doubleRoundRobin(clubIds, rng).forEach((round, r) => {
+      for (const [home, away] of round) schedule[r].push({ tier, home, away, kind: 'league', options: {} });
+    });
+    return { tier, clubIds: [...clubIds], table: emptyTable(clubIds) };
+  });
+  for (const c of clubs) ratingAtStart[c.id] = rating(c);
+  return { number, leagues: leagueSeasons, expected, ratingAtStart, schedule, round: 0, playoffs: [], playerMatches: [], scorers: {} };
+}
+
+// ---------------------------------------------------------------------------
+// Rounds
+
+export function leagueRounds(season: Season): number {
+  return season.schedule.length;
+}
+
+/** The fixtures of the next round, or null when the season is over. */
+export function nextRound(career: Career): Fixture[] | null {
+  const s = career.season;
+  if (career.pending) return null;
+  if (s.round < s.schedule.length) return s.schedule[s.round];
+  const stage = s.round - s.schedule.length;
+  if (stage === 0) return s.playoffs.length ? s.playoffs.flatMap((p) => p.semis.map((tie) => semiFixture(p.tier, tie, 1))) : null;
+  if (stage === 1) return s.playoffs.flatMap((p) => p.semis.map((tie) => semiFixture(p.tier, tie, 2)));
+  if (stage === 2) {
+    return s.playoffs.map((p) => ({
+      tier: p.tier,
+      home: p.final!.home,
+      away: p.final!.away,
+      kind: 'playoffFinal' as const,
+      options: { neutral: true, knockout: { aggregate: [0, 0] as [number, number] } },
+    }));
+  }
+  return null;
+}
+
+function semiFixture(tier: number, tie: PlayoffTie, leg: 1 | 2): Fixture {
+  if (leg === 1) return { tier, home: tie.low, away: tie.high, kind: 'playoffSemi1', options: {} };
+  const [low, high] = tie.leg1!;
+  return { tier, home: tie.high, away: tie.low, kind: 'playoffSemi2', options: { knockout: { aggregate: [high, low] } } };
+}
+
+export function isSeasonOver(career: Career): boolean {
+  return !career.pending && nextRound(career) === null;
+}
+
+/** Whether the player's club plays in the given round. */
+export function playerInRound(career: Career, fixtures: Fixture[]): Fixture | undefined {
+  return fixtures.find((f) => f.home === career.playerClubId || f.away === career.playerClubId);
+}
+
+export function teamSheet(career: Career, clubId: number, sport: SportDefinition): TeamSheet {
+  const c = career.clubs[clubId];
+  return { clubId, attack: c.attack, defence: c.defence, chemistry: c.chemistry, lineup: sport.lineup(c.squad) };
+}
+
+export interface RoundResult {
+  fixture: Fixture;
+  outcome: MatchOutcome;
+}
+
+/** Records a finished round's results and moves the season on. */
+export function completeRound(career: Career, results: RoundResult[]): void {
+  const s = career.season;
+  for (const { fixture, outcome } of results) {
+    for (const g of outcome.goals) if (!g.ownGoal) s.scorers[g.playerId] = (s.scorers[g.playerId] ?? 0) + 1;
+    if (fixture.kind === 'league') recordResult(s.leagues[fixture.tier - 1].table, fixture.home, fixture.away, outcome);
+    else recordPlayoff(s, fixture, outcome);
+    if (fixture.home === career.playerClubId || fixture.away === career.playerClubId) {
+      s.playerMatches.push(playerMatch(career, s.round, fixture, outcome));
+    }
+  }
+  s.round++;
+  if (s.round === s.schedule.length) s.playoffs = drawPlayoffs(s);
+}
+
+function playerMatch(career: Career, round: number, fixture: Fixture, outcome: MatchOutcome): PlayerMatch {
+  const home = fixture.home === career.playerClubId;
+  const mySide = home ? 'home' : 'away';
+  const record: PlayerMatch = {
+    round,
+    kind: fixture.kind,
+    opponentId: home ? fixture.away : fixture.home,
+    home,
+    goalsFor: home ? outcome.homeGoals : outcome.awayGoals,
+    goalsAgainst: home ? outcome.awayGoals : outcome.homeGoals,
+    goals: outcome.goals.map(({ side, ...g }) => ({ ...g, for: side === mySide })),
+  };
+  if (outcome.penalties) record.penalties = home ? outcome.penalties : [outcome.penalties[1], outcome.penalties[0]];
+  if (outcome.extraTime) record.extraTime = true;
+  if (outcome.winner) record.won = outcome.winner === mySide;
+  return record;
+}
+
+function drawPlayoffs(s: Season): Playoff[] {
+  return s.leagues
+    .filter((l) => l.tier > 1)
+    .map((l) => {
+      const [third, fourth, fifth, sixth] = sortTable(l.table).slice(2, 6).map((r) => r.clubId);
+      return { tier: l.tier, semis: [{ high: third, low: sixth }, { high: fourth, low: fifth }] };
+    });
+}
+
+function recordPlayoff(s: Season, fixture: Fixture, outcome: MatchOutcome): void {
+  const p = s.playoffs.find((x) => x.tier === fixture.tier)!;
+  if (fixture.kind === 'playoffFinal') {
+    p.final!.winner = outcome.winner === 'home' ? fixture.home : fixture.away;
+    p.winner = p.final!.winner;
+    return;
+  }
+  const tie = p.semis.find((t) => t.high === fixture.home || t.high === fixture.away)!;
+  if (fixture.kind === 'playoffSemi1') {
+    tie.leg1 = [outcome.homeGoals, outcome.awayGoals];
+  } else {
+    tie.winner = outcome.winner === 'home' ? fixture.home : fixture.away;
+    if (p.semis.every((t) => t.winner !== undefined)) {
+      // The better-placed semi-final winner is the nominal home side at the neutral final.
+      const [a, b] = p.semis.map((t) => t.winner!);
+      const pos = (id: number) => sortTable(s.leagues[p.tier - 1].table).findIndex((r) => r.clubId === id);
+      p.final = pos(a) < pos(b) ? { home: a, away: b } : { home: b, away: a };
+    }
+  }
+}
+
+/** Plays the next round instantly (AI-only rounds, balance tool, tests). */
+export function playRound<M>(career: Career, sport: SportDefinition<M>): RoundResult[] {
+  const fixtures = nextRound(career);
+  if (!fixtures) return [];
+  const rng = new Rng(career.rng);
+  const results = fixtures.map((fixture) => {
+    const m = sport.module.createMatch(teamSheet(career, fixture.home, sport), teamSheet(career, fixture.away, sport), fixture.options, rng);
+    while (!sport.module.isFinished(m)) sport.module.step(m, rng);
+    return { fixture, outcome: sport.module.outcome(m) };
+  });
+  career.rng = rng.state;
+  completeRound(career, results);
+  return results;
+}
+
+// ---------------------------------------------------------------------------
+// End of season
+
+/**
+ * Closes the season: works out positions, promotion and relegation, applies
+ * the decline and gains to AI clubs, applies the decline to the player's club
+ * and works out the points they have to allocate. The game then waits for
+ * `allocatePoints`.
+ */
+export function endSeason(career: Career): SeasonEnd {
+  if (career.pending) return career.pending;
+  if (!isSeasonOver(career)) throw new Error('season is not over');
+  const s = career.season;
+  const rng = new Rng(career.rng);
+
+  const finalTables = s.leagues.map((l) => sortTable(l.table));
+  const position: Record<number, number> = {};
+  const tierOf: Record<number, number> = {};
+  finalTables.forEach((table, t) => table.forEach((row, i) => ((position[row.clubId] = i + 1), (tierOf[row.clubId] = t + 1))));
+
+  const promoted: Record<number, number[]> = {};
+  const relegated: Record<number, number[]> = {};
+  const playoffWinners: Record<number, number> = {};
+  for (const p of s.playoffs) playoffWinners[p.tier] = p.winner!;
+  finalTables.forEach((table, t) => {
+    const tier = t + 1;
+    if (tier > 1) promoted[tier] = [...table.slice(0, PROMOTED_AUTOMATICALLY).map((r) => r.clubId), playoffWinners[tier]];
+    if (tier < LEAGUE_COUNT) relegated[tier] = table.slice(LEAGUE_SIZE - RELEGATED).map((r) => r.clubId);
+  });
+  const nextLeagues = finalTables.map((table, t) => {
+    const tier = t + 1;
+    const stay = table.map((r) => r.clubId).filter((id) => !promoted[tier]?.includes(id) && !relegated[tier]?.includes(id));
+    return [...stay, ...(promoted[tier + 1] ?? []), ...(relegated[tier - 1] ?? [])];
+  });
+  const newTierOf: Record<number, number> = {};
+  nextLeagues.forEach((ids, t) => ids.forEach((id) => (newTierOf[id] = t + 1)));
+
+  // AI clubs: decline, gain, then band pull towards their new league.
+  for (const club of career.clubs) {
+    if (club.isPlayer) continue;
+    const tier = tierOf[club.id];
+    const gain = seasonGain(tier, s.expected[club.id], position[club.id], rating(club), rng.normal(0, RATING_TUNING.aiNoise));
+    shiftRating(club, gain - RATING_TUNING.decline, STYLE_WEIGHTS[club.style]);
+    bandPull(club, newTierOf[club.id]);
+  }
+
+  // Player club: decline now; the gain comes back as points to allocate.
+  const me = career.clubs[career.playerClubId];
+  const tier = tierOf[me.id];
+  const pos = position[me.id];
+  const boost = RATING_TUNING.difficultyBoost[career.difficulty];
+  const gain = seasonGain(tier, s.expected[me.id], pos, rating(me), boost);
+  const decline = -shiftRating(me, -RATING_TUNING.decline);
+  let points = Math.round(gain * RATING_TUNING.pointsPerRating);
+  if (points < 0) {
+    shiftRating(me, points / RATING_TUNING.pointsPerRating);
+    points = 0;
+  }
+  points = Math.min(points, allocationCapacity(me));
+
+  career.rng = rng.state;
+  career.pending = {
+    season: s.number,
+    tier,
+    position: pos,
+    expected: s.expected[me.id],
+    performance: s.expected[me.id] - pos,
+    bonus: positionBonus(tier, pos),
+    boost,
+    decline,
+    points,
+    outcome: seasonOutcome(tier, pos, s.playoffs, me.id),
+    newTier: newTierOf[me.id],
+    nextLeagues,
+    promoted,
+    relegated,
+    playoffWinners,
+  };
+  return career.pending;
+}
+
+function seasonOutcome(tier: number, pos: number, playoffs: Playoff[], id: number): SeasonOutcome {
+  if (tier === 1 && pos === 1) return 'champion';
+  if (tier > 1 && pos <= PROMOTED_AUTOMATICALLY) return 'promoted';
+  const p = playoffs.find((x) => x.tier === tier);
+  if (p?.winner === id) return 'playoffWinner';
+  if (p?.semis.some((t) => t.high === id || t.low === id)) return 'playoffs';
+  if (tier < LEAGUE_COUNT && pos > LEAGUE_SIZE - RELEGATED) return 'relegated';
+  return null;
+}
+
+/** Whole stat points the club can still take before every stat hits 99. */
+export function allocationCapacity(club: Club): number {
+  return STATS.reduce((t, s) => t + Math.max(0, Math.floor(MAX_STAT - club[s] + 1e-9)), 0);
+}
+
+/**
+ * Applies the player's allocation, rebalances the AI so the total rating is
+ * unchanged, records the season and starts the next one.
+ */
+export function allocatePoints(career: Career, allocation: Record<Stat, number>): void {
+  const pending = career.pending;
+  if (!pending) throw new Error('no points to allocate');
+  const me = career.clubs[career.playerClubId];
+  const spent = STATS.reduce((t, s) => t + allocation[s], 0);
+  if (STATS.some((s) => !Number.isInteger(allocation[s]) || allocation[s] < 0 || me[s] + allocation[s] > MAX_STAT + 1e-9)) {
+    throw new Error('each stat takes a whole number of points and stays at 99 or below');
+  }
+  if (spent !== pending.points) throw new Error(`allocate exactly ${pending.points} points, got ${spent}`);
+  for (const s of STATS) me[s] += allocation[s];
+
+  normalise(career.clubs, career.totalRating);
+  career.history.push(seasonRecord(career, pending));
+
+  const rng = new Rng(career.rng);
+  career.season = newSeason(pending.season + 1, pending.nextLeagues, career.clubs, rng);
+  career.rng = rng.state;
+  career.pending = null;
+}
+
+function seasonRecord(career: Career, pending: SeasonEnd): SeasonRecord {
+  const s = career.season;
+  const me = career.clubs[career.playerClubId];
+  const row = s.leagues[pending.tier - 1].table.find((r) => r.clubId === me.id)!;
+  const top = me.squad
+    .map((p) => ({ playerId: p.id, name: p.name, goals: s.scorers[p.id] ?? 0 }))
+    .sort((a, b) => b.goals - a.goals)[0];
+  return {
+    season: s.number,
+    tier: pending.tier,
+    position: pending.position,
+    played: row.played,
+    won: row.won,
+    drawn: row.drawn,
+    lost: row.lost,
+    goalsFor: row.goalsFor,
+    goalsAgainst: row.goalsAgainst,
+    points: row.points,
+    outcome: pending.outcome,
+    topScorer: top && top.goals > 0 ? top : undefined,
+    ratingStart: s.ratingAtStart[me.id],
+    ratingEnd: rating(me),
+  };
+}
+
+/** Plays out the rest of the season instantly and closes it. */
+export function playSeason(career: Career, sport: SportDefinition): SeasonEnd {
+  while (nextRound(career)) playRound(career, sport);
+  return endSeason(career);
+}

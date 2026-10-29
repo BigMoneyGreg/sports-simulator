@@ -28,9 +28,18 @@ export interface MatchOptions {
   knockout?: { aggregate: [number, number] };
 }
 
+export interface GoalRecord {
+  side: 'home' | 'away';
+  playerId: number;
+  minute: number;
+  added: number;
+  ownGoal: boolean;
+}
+
 export interface MatchOutcome {
   homeGoals: number;
   awayGoals: number;
+  goals: GoalRecord[];
   /** Set for knockout ties (after aggregate, extra time and penalties). */
   winner?: 'home' | 'away';
   penalties?: [number, number];
