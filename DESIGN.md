@@ -69,7 +69,7 @@ Next season … (won league 1? → carry on, or start a new career)
 | Option | Values | Notes |
 |---|---|---|
 | Starting rating | 0–99 (slider) | Your club's team rating. Decides your league and your expected finish. Want it hard? Start low. Want to win every week? Start at 99 |
-| Difficulty | Easy / Medium / Hard | A small hidden boost to your club each season: Easy +4 · Medium +2 · Hard none (§7) |
+| Difficulty | Easy / Medium / Hard | A hidden boost to your club each season: Easy +10 · Medium +5 · Hard +2 (§7) |
 | Stat split | Optional | Defaults to an even split (attack = defence = chemistry = rating). Can be shifted, e.g. more attack, less defence, as long as the average stays at the chosen rating |
 | Match duration | 1–5 real minutes | Length of one 90-minute match; can be changed later |
 | Club name | Generated, editable | See §10 |
@@ -194,7 +194,9 @@ performance = expectedPosition − actualPosition     (positive = did better tha
 
 gain = 10
      + 1.0 × performance     same multiplier up and down, for every club
-     + promotion bonus       +3 if promoted, +2 extra for winning the league
+     + promotion bonus       +3 if promoted
+     − relegation penalty    −3 if relegated (3 up and 3 down at every boundary, so these always cancel)
+     ± title / bottom        +2 for winning the league, −2 for finishing last (cancel within each league)
      + noise                  AI clubs only: small random variation
      × plateau                gains shrink as rating approaches 99
 ```
@@ -235,28 +237,40 @@ Worked example: a club starting at 0 whose good allocation is worth about 5 plac
 | 4 | L5 | ~5th | 2nd ✅ promoted | +3 +3 bonus | 21 |
 | 5 | L4 | 20th | 15th | +5 | 26 |
 
-About **3–4 seasons per league** (plus the difficulty boost below).
+About **3–4 seasons per league** before the difficulty boost below; see the estimates table for each difficulty.
 
-### Difficulty: a small hidden boost 🟢 NOW
+### Difficulty: a hidden boost 🟢 NOW
 
-Each season your club gets a small extra boost, **paid for by every AI club losing a tiny hidden amount**, so the total rating in the game never changes:
+Each season your club gets an extra boost, **paid for by every AI club losing a tiny hidden amount**, so the total rating in the game never changes:
 
 | Difficulty | Your boost per season | Each of the 99 AI clubs loses |
 |---|---|---|
-| Easy | +4 (3.96) | 0.04 |
-| Medium | +2 (1.98) | 0.02 |
-| Hard | none | none |
+| Easy | +10 | ~0.10 |
+| Medium | +5 | ~0.05 |
+| Hard | +2 | ~0.02 |
 
 - Ratings are stored with decimals but **shown as whole numbers**, so the AI drain is invisible.
-- The boost alone is slow (on medium, about 50 seasons from 0 to 99), so it never replaces good decisions. It just tilts things gently in your favour.
 - If your club is capped at 99, the unused boost is not taken from the AI clubs.
+
+### Rough time from 0 to 99
+
+Estimates, to be confirmed by the balance tool. "Smart" = good allocation worth about 5 places a season; "average" = even split, no real edge. The last few points to 99 are the slowest, because once you're the highest-rated club you're expected to win and can't beat expectations.
+
+| Difficulty | Smart player | Average player | Smart player, real time at 3-min matches |
+|---|---|---|---|
+| Easy (+10) | ~5–7 seasons | ~10–12 seasons | ~10–14 hours |
+| Medium (+5) | ~8–10 seasons | ~18–22 seasons | ~16–20 hours |
+| Hard (+2) | ~13–16 seasons | ~45–50 seasons | ~26–32 hours |
+
+Note: on **easy**, a smart player is often promoted every season, and even an average player climbs steadily. Easy is for people who want to reach the top quickly; medium and hard keep the "sit in a league for a few seasons" feel.
 
 ### Keeping the total constant
 
 Total rating across all 100 clubs is **fixed**: the overall average stays **exactly 49.5** every season.
 
 - Performance scores already sum to zero within each league.
-- **Everything else** (promotion bonuses, plateau, caps at 0 and 99, AI noise, band pull, the difficulty boost) is balanced by a final **normalisation step**: the leftover amount is spread across the AI clubs as a tiny adjustment.
+- Promotion bonuses and relegation penalties cancel at every boundary; title and bottom-place adjustments cancel within each league.
+- **Everything else** (plateau, caps at 0 and 99, AI noise, band pull, the difficulty boost) is balanced by a final **normalisation step**: the leftover amount is spread across the AI clubs as a tiny adjustment.
 - The player's club is never normalised, so its rating depends only on results and difficulty.
 
 ### Extra AI-only adjustments
@@ -276,7 +290,7 @@ All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned wi
 - Promoted clubs finish in the bottom half of their new league about 70% of the time
 - The total rating across all clubs is identical (to 2 decimal places) before and after every season
 - A **smart** simulated player (fixes weaknesses) gains about 4–6 places a season over expectation; an **even-split** player roughly holds position; a **careless** player sinks
-- A smart player on medium takes 3–4 seasons per league on average; a careless player can never climb from 0 to 99
+- 0→99 timings roughly match the estimates table for each difficulty; a careless player on hard can never climb from 0 to 99
 - A player club starting at 99 wins league 1 most seasons, but not every season
 
 ---
@@ -467,7 +481,8 @@ In rough priority order:
 | Starting rating 0–99 replaces league choice | One simple choice; players pick their own challenge, from "win every week" to "rise from nothing" |
 | Same decline (−10) for the player as for AI clubs | Everyone plays by the same rules |
 | Performance multiplier 1.0, equal up and down | Each place above/below expectation = ±1 rating; luck cancels out over time |
-| Difficulty = hidden player boost (Easy +4 / Medium +2 / Hard 0) paid for by tiny AI drain | Gentle help without breaking the fixed total |
+| Difficulty = hidden player boost (Easy +10 / Medium +5 / Hard +2) paid for by tiny AI drain | A full 0→99 climb can be quick or a grind; total rating unchanged |
+| Promotion +3 / relegation −3, title +2 / last −2 | Bonuses always cancel, so the total stays fixed |
 | Total rating fixed; normalisation across AI clubs | Average stays 49.5 forever; no inflation |
 | Football first; other sports only after it's finished | Keeps version 1 small |
 | Unbeaten-run tracker in status bar: **rejected** | Unnecessary; records page covers it |
