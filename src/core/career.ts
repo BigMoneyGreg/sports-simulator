@@ -1,4 +1,4 @@
-import { MAX_STAT, rating, shiftRating, STATS, statsFor, STYLE_WEIGHTS, type Club, type Stat, type Style } from './club';
+import { clamp, MAX_STAT, rating, shiftRating, STATS, statsFor, type Club, type Stat, type Style } from './club';
 import {
   doubleRoundRobin,
   emptyTable,
@@ -12,7 +12,7 @@ import {
   type RoundKind,
   type TableRow,
 } from './league';
-import { bandPull, expectedPositions, normalise, positionBonus, RATING_TUNING, seasonGain, totalRating, type Difficulty } from './ratings';
+import { applyDecline, bandPull, expectedPositions, normalise, positionBonus, RATING_TUNING, seasonGain, totalRating, type Difficulty } from './ratings';
 import { Rng } from './rng';
 import type { GoalRecord, MatchOutcome, Player, SportModule, TeamSheet } from './sport';
 
@@ -107,6 +107,7 @@ export interface SeasonEnd {
   boost: number;
   /** Rating lost to the decline (shown on the end-of-season screen). */
   decline: number;
+  declineByStat: Record<Stat, number>;
   /** Points to allocate across attack, defence and chemistry. */
   points: number;
   outcome: SeasonOutcome;
@@ -385,12 +386,12 @@ export function endSeason(career: Career): SeasonEnd {
   const newTierOf: Record<number, number> = {};
   nextLeagues.forEach((ids, t) => ids.forEach((id) => (newTierOf[id] = t + 1)));
 
-  // AI clubs: decline, gain, then band pull towards their new league.
+  // AI clubs: decline and gain, rebuilt in their style's shape, then pulled towards their new league's band.
   for (const club of career.clubs) {
     if (club.isPlayer) continue;
     const tier = tierOf[club.id];
     const gain = seasonGain(tier, s.expected[club.id], position[club.id], rating(club), rng.normal(0, RATING_TUNING.aiNoise));
-    shiftRating(club, gain - RATING_TUNING.decline, STYLE_WEIGHTS[club.style]);
+    Object.assign(club, statsFor(clamp(rating(club) - RATING_TUNING.decline + gain, 0, MAX_STAT), club.style));
     bandPull(club, newTierOf[club.id]);
   }
 
@@ -400,7 +401,9 @@ export function endSeason(career: Career): SeasonEnd {
   const pos = position[me.id];
   const boost = RATING_TUNING.difficultyBoost[career.difficulty];
   const gain = seasonGain(tier, s.expected[me.id], pos, rating(me), boost);
-  const decline = -shiftRating(me, -RATING_TUNING.decline);
+  const before = rating(me);
+  const declineByStat = applyDecline(me, rng);
+  const decline = before - rating(me);
   let points = Math.round(gain * RATING_TUNING.pointsPerRating);
   if (points < 0) {
     shiftRating(me, points / RATING_TUNING.pointsPerRating);
@@ -418,6 +421,7 @@ export function endSeason(career: Career): SeasonEnd {
     bonus: positionBonus(tier, pos),
     boost,
     decline,
+    declineByStat,
     points,
     outcome: seasonOutcome(tier, pos, s.playoffs, me.id),
     newTier: newTierOf[me.id],
@@ -442,6 +446,31 @@ function seasonOutcome(tier: number, pos: number, playoffs: Playoff[], id: numbe
 /** Whole stat points the club can still take before every stat hits 99. */
 export function allocationCapacity(club: Club): number {
   return STATS.reduce((t, s) => t + Math.max(0, Math.floor(MAX_STAT - club[s] + 1e-9)), 0);
+}
+
+/**
+ * Splits `points` across stats in proportion to `weights`, in whole points,
+ * never taking a stat above 99. Overflow goes to the next most-wanted stat.
+ */
+export function fillAllocation(club: Club, points: number, weights: Record<Stat, number>): Record<Stat, number> {
+  const room = (s: Stat) => Math.max(0, Math.floor(MAX_STAT - club[s] + 1e-9));
+  const total = STATS.reduce((t, s) => t + Math.max(0, weights[s]), 0) || 1;
+  const out = { attack: 0, defence: 0, chemistry: 0 };
+  let left = points;
+  for (const s of STATS) {
+    out[s] = Math.min(room(s), Math.floor((points * Math.max(0, weights[s])) / total));
+    left -= out[s];
+  }
+  const order = [...STATS].sort((a, b) => weights[b] - weights[a]);
+  while (left > 0 && order.some((s) => out[s] < room(s))) {
+    for (const s of order) {
+      if (left > 0 && out[s] < room(s)) {
+        out[s]++;
+        left--;
+      }
+    }
+  }
+  return out;
 }
 
 /**

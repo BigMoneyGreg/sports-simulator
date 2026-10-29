@@ -1,11 +1,16 @@
 import { band, LEAGUE_COUNT, LEAGUE_SIZE } from './league';
-import { clamp, MAX_STAT, rating, shiftRating, type Club } from './club';
+import { clamp, MAX_STAT, rating, shiftRating, STATS, type Club, type Stat } from './club';
+import type { Rng } from './rng';
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
 /** Starting values from DESIGN.md §7; tuned by tools/balance.ts. */
 export const RATING_TUNING = {
   decline: 10,
+  /** Standard deviation, per stat, of how unevenly the decline lands. */
+  declineSpread: 7,
+  /** Extra decline per point a stat sits above the club's rating (strong areas regress). */
+  declineRegression: 0.25,
   averageGain: 10,
   performanceMultiplier: 1.0,
   topBonus: [6, 4, 2],
@@ -17,7 +22,10 @@ export const RATING_TUNING = {
   plateauStart: 85,
   plateauFloor: 0.3,
   /** Fraction of the distance outside its band an AI club is pulled back each season. */
-  bandPull: 0.3,
+  bandPull: 0.8,
+  /** AI clubs above this rating lose this share of the excess each season (stars get poached). */
+  aiCeiling: 93,
+  aiCeilingPull: 0.7,
   /** Rating points of player-allocation per point of rating. */
   pointsPerRating: 3,
 };
@@ -56,12 +64,41 @@ export function seasonGain(tier: number, expected: number, actual: number, curre
   return RATING_TUNING.decline + (net > 0 ? net * plateau(currentRating) : net);
 }
 
-/** Pulls an AI club drifting outside its league's band part of the way back. */
+/**
+ * The season's decline: the club loses `decline` rating on average, but it
+ * lands unevenly across stats (a key player leaves, the defence ages), a
+ * little more on whichever stats are strongest. Returns what each stat lost.
+ */
+export function applyDecline(club: Club, rng: Rng): Record<Stat, number> {
+  const { decline, declineSpread, declineRegression } = RATING_TUNING;
+  const mean = rating(club);
+  const raw = STATS.map((s) => rng.normal(0, declineSpread) + declineRegression * (club[s] - mean));
+  const centre = raw.reduce((t, x) => t + x, 0) / raw.length;
+  const amounts = raw.map((x) => Math.max(0, decline + x - centre));
+  const scale = (decline * STATS.length) / amounts.reduce((t, x) => t + x, 0);
+  const before = { attack: club.attack, defence: club.defence, chemistry: club.chemistry };
+  let shortfall = 0;
+  STATS.forEach((s, i) => {
+    const want = amounts[i] * scale;
+    const next = Math.max(0, club[s] - want);
+    shortfall += want - (club[s] - next);
+    club[s] = next;
+  });
+  if (shortfall > 0) shiftRating(club, -shortfall / STATS.length);
+  return { attack: before.attack - club.attack, defence: before.defence - club.defence, chemistry: before.chemistry - club.chemistry };
+}
+
+/**
+ * Pulls an AI club drifting outside its league's band part of the way back,
+ * and keeps runaway clubs from settling at the very top.
+ */
 export function bandPull(club: Club, tier: number): void {
   const { min, max } = band(tier);
   const r = rating(club);
   const outside = r < min ? min - r : r > max ? max - r : 0;
   if (outside !== 0) shiftRating(club, outside * RATING_TUNING.bandPull);
+  const excess = rating(club) - RATING_TUNING.aiCeiling;
+  if (excess > 0) shiftRating(club, -excess * RATING_TUNING.aiCeilingPull);
 }
 
 /**

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   allocatePoints,
   completeRound,
-  endSeason,
+  fillAllocation,
   isSeasonOver,
   newCareer,
   nextRound,
@@ -12,15 +12,12 @@ import {
 } from '../src/core/career';
 import { rating, shiftRating, statsFor, type Club } from '../src/core/club';
 import { band, doubleRoundRobin, emptyTable, recordResult, sortTable, zone } from '../src/core/league';
-import { normalise, plateau, positionBonus, seasonGain, totalRating } from '../src/core/ratings';
+import { applyDecline, normalise, plateau, positionBonus, seasonGain, totalRating } from '../src/core/ratings';
 import { Rng } from '../src/core/rng';
 import { footballSport } from '../src/sports/football';
 
-const evenSplit = (career: Career) => {
-  const p = career.pending!.points;
-  const base = Math.floor(p / 3);
-  return { attack: base + (p % 3 > 0 ? 1 : 0), defence: base + (p % 3 > 1 ? 1 : 0), chemistry: base };
-};
+const evenSplit = (career: Career) =>
+  fillAllocation(career.clubs[career.playerClubId], career.pending!.points, { attack: 1, defence: 1, chemistry: 1 });
 
 describe('fixtures', () => {
   const ids = Array.from({ length: 20 }, (_, i) => i);
@@ -200,6 +197,8 @@ describe('career', () => {
     for (let season = 0; season < 6; season++) {
       playSeason(c, footballSport);
       expect(c.pending!.decline).toBeCloseTo(10);
+      const d = c.pending!.declineByStat;
+      expect(d.attack + d.defence + d.chemistry).toBeCloseTo(30);
       allocatePoints(c, evenSplit(c));
       expect(totalRating(c.clubs)).toBeCloseTo(4950, 6);
       for (const club of c.clubs) {
@@ -263,5 +262,26 @@ describe('career', () => {
     completeRound(c, fixtures.map((fixture) => ({ fixture, outcome: { homeGoals: 1, awayGoals: 1, goals: [] } })));
     expect(c.season.round).toBe(1);
     expect(nextRound(c)).not.toBe(fixtures);
+  });
+});
+
+describe('allocation and decline', () => {
+  it('fills an allocation without passing 99 and spends every point it can', () => {
+    const club = { attack: 97.4, defence: 50, chemistry: 60 } as Club;
+    const a = fillAllocation(club, 12, { attack: 1, defence: 0, chemistry: 0 });
+    expect(a.attack).toBe(1);
+    expect(a.attack + a.defence + a.chemistry).toBe(12);
+  });
+
+  it('lands the decline unevenly but averages 10 per stat', () => {
+    const rng = new Rng(4);
+    let spread = 0;
+    for (let i = 0; i < 200; i++) {
+      const club = { attack: 60, defence: 50, chemistry: 40 } as Club;
+      const d = applyDecline(club, rng);
+      expect(d.attack + d.defence + d.chemistry).toBeCloseTo(30);
+      spread += Math.abs(d.attack - d.defence);
+    }
+    expect(spread / 200).toBeGreaterThan(2);
   });
 });

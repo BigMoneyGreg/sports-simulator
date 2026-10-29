@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import type { TeamSheet } from '../src/core/sport';
-import { createMatch, formSpread, isFinished, outcome, playMatch, step, type MatchEvent } from '../src/sports/football/match';
+import { createMatch, effectiveStats, formSpread, isFinished, outcome, playMatch, step, type MatchEvent } from '../src/sports/football/match';
 import { generateSquad, lineup } from '../src/sports/football/squad';
 
 function sheet(clubId: number, rating: number, rng = new Rng(clubId)): TeamSheet {
@@ -157,5 +157,25 @@ describe('football match', () => {
     const r = outcome(m);
     expect(r.extraTime).toBe(false);
     if (r.awayGoals - r.homeGoals < 5) expect(r.winner).toBe('home');
+  });
+});
+
+describe('effective strength', () => {
+  it('values a point equally in any stat for a balanced team', () => {
+    const base = effectiveStats({ attack: 50, defence: 50, chemistry: 50 });
+    expect(base).toEqual({ attack: 50, defence: 50 });
+    const gap = (s: { attack: number; defence: number }) => s.attack + s.defence;
+    const plusAttack = gap(effectiveStats({ attack: 51.5, defence: 50, chemistry: 50 }));
+    const plusChem = gap(effectiveStats({ attack: 50, defence: 50, chemistry: 51.5 }));
+    expect(plusAttack).toBeCloseTo(plusChem);
+  });
+
+  it('punishes a stat lagging behind the rest, so fixing weaknesses pays', () => {
+    const balanced = effectiveStats({ attack: 50, defence: 50, chemistry: 50 });
+    const lopsided = effectiveStats({ attack: 60, defence: 40, chemistry: 50 });
+    expect(lopsided.attack + lopsided.defence).toBeLessThan(balanced.attack + balanced.defence - 10);
+    // Small imbalances within the tolerance cost nothing.
+    const slight = effectiveStats({ attack: 51, defence: 49, chemistry: 50 });
+    expect(slight.attack + slight.defence).toBeCloseTo(100);
   });
 });

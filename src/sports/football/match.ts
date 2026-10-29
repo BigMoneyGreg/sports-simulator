@@ -3,13 +3,13 @@ import type { MatchOptions, MatchOutcome, SportModule, TeamSheet } from '../../c
 
 /** Starting values from DESIGN.md §5; tuned by tools/balance.ts. */
 export const TUNING = {
-  baseXg: 1.22,
+  baseXg: 1.17,
   slope: 0.25,
   homeAdvantage: 1.14,
   awayFactor: 0.9,
   /** Form-on-the-day spread at chemistry 0 and 99 (multiplier drawn from 1 ± spread). */
-  formSpreadLow: 0.4,
-  formSpreadHigh: 0.1,
+  formSpreadLow: 0.3,
+  formSpreadHigh: 0.08,
   /** Boost after 75' per 99 points of chemistry advantage. */
   lateChemistry: 0.2,
   yellowsPerTeam: 1.7,
@@ -20,6 +20,11 @@ export const TUNING = {
   ownGoalShare: 0.03,
   chancesPerGoal: 2.5,
   penaltyConversion: 0.76,
+  /** Share of effective attack and defence that comes from chemistry. */
+  chemistryLink: 1 / 3,
+  /** Effective attack and defence lost per point a stat lags the team's rating (beyond the tolerance). */
+  weaknessPenalty: 2,
+  weaknessTolerance: 2,
 };
 
 export type Period = 'first' | 'second' | 'et1' | 'et2' | 'done';
@@ -69,6 +74,22 @@ export function formSpread(chemistry: number): number {
   return TUNING.formSpreadLow + (TUNING.formSpreadHigh - TUNING.formSpreadLow) * c;
 }
 
+/**
+ * Attack and defence as they play on the pitch. Chemistry links the team, so
+ * it feeds both; a stat lagging behind the rest is a weakness opponents
+ * exploit, which drags both down.
+ */
+export function effectiveStats(team: Pick<TeamSheet, 'attack' | 'defence' | 'chemistry'>): { attack: number; defence: number } {
+  const { chemistryLink: link, weaknessPenalty, weaknessTolerance } = TUNING;
+  const mean = (team.attack + team.defence + team.chemistry) / 3;
+  const weakness = [team.attack, team.defence, team.chemistry].reduce((t, v) => t + Math.max(0, mean - v - weaknessTolerance), 0);
+  const penalty = weaknessPenalty * weakness;
+  return {
+    attack: (1 - link) * team.attack + link * team.chemistry - penalty,
+    defence: (1 - link) * team.defence + link * team.chemistry - penalty,
+  };
+}
+
 /** Expected goals per match for a side before form, cards and timing. */
 export function expectedGoals(attack: number, opponentDefence: number, venue: 'home' | 'away' | 'neutral'): number {
   const venueFactor = venue === 'home' ? TUNING.homeAdvantage : venue === 'away' ? TUNING.awayFactor : 1;
@@ -79,8 +100,10 @@ export function createMatch(home: TeamSheet, away: TeamSheet, options: MatchOpti
   const neutral = options.neutral ?? false;
   const homeForm = 1 + rng.range(-1, 1) * formSpread(home.chemistry);
   const awayForm = 1 + rng.range(-1, 1) * formSpread(away.chemistry);
-  const homeXg = expectedGoals(home.attack, away.defence, neutral ? 'neutral' : 'home') * homeForm / Math.sqrt(awayForm);
-  const awayXg = expectedGoals(away.attack, home.defence, neutral ? 'neutral' : 'away') * awayForm / Math.sqrt(homeForm);
+  const h = effectiveStats(home);
+  const a = effectiveStats(away);
+  const homeXg = (expectedGoals(h.attack, a.defence, neutral ? 'neutral' : 'home') * homeForm) / Math.sqrt(awayForm);
+  const awayXg = (expectedGoals(a.attack, h.defence, neutral ? 'neutral' : 'away') * awayForm) / Math.sqrt(homeForm);
   return {
     home: newSide(home, homeXg / 90),
     away: newSide(away, awayXg / 90),

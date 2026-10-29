@@ -97,11 +97,13 @@ Each club has three stats, each **0–99**:
 |---|---|
 | **Attack** | How often the team creates and scores chances |
 | **Defence** | How well it stops the opponent's chances |
-| **Chemistry** | How *consistent* the team is (fewer bad days) plus a small late-game boost (fewer collapses, more late winners) |
+| **Chemistry** | Links the team: feeds both attack and defence on the pitch. Also makes the team more *consistent* (fewer bad days) and gives a small late-game boost (fewer collapses, more late winners) |
 
 **Team rating = average of attack, defence and chemistry.** This is what places a club within the rating bands (§6).
 
-AI clubs have a "style" (attacking, defensive, balanced) that decides how their gains and declines split across the three stats, so clubs with the same rating play differently.
+**Weakest link** ❓ TO CONFIRM: a stat that lags behind the team's rating is a weakness opponents exploit. Every point it lags (beyond a small tolerance of 2) costs effective attack *and* defence. This is what makes the season's allocation a real decision: a balanced team gets equal value from a point in any stat, but a point that fixes a weakness is worth much more (§5, §7).
+
+AI clubs have a "style" (attacking, defensive, balanced), a fixed **shape** around their rating ❓ TO CONFIRM: attacking clubs are +7 attack / −7 defence, defensive clubs the reverse, and balanced clubs +3.5 attack and defence / −7 chemistry. Every shape carries the same built-in weakness, so AI clubs of the same rating are equally strong but play differently, and AI clubs never fix their weakness: that's the edge a smart player has over them.
 
 Players are generated (names, positions, shirt numbers). They're flavour only: they score goals, get cards and appear in commentary and records. There is no squad management.
 
@@ -115,10 +117,13 @@ All matches on a matchday are simulated minute by minute at the same time. Only 
 
 **Starting model (to be tuned):**
 
+- Each team's **effective** attack and defence ❓ TO CONFIRM:
+  `effAttack = (2 × attack + chemistry) / 3 − weakness`, `effDefence = (2 × defence + chemistry) / 3 − weakness`,
+  where `weakness = 2 × Σ max(0, rating − stat − 2)` over the three stats
 - Each team's expected goals per match:
-  `xG = 1.35 × e^(0.25 × (attack − opponentDefence) / 10)` plus a small home advantage
+  `xG = 1.17 × e^(0.25 × (effAttack − opponentEffDefence) / 10)` × home 1.14 / away 0.90 (tuned from 1.35 so the average is 2.7 once added time is included)
 - Per-minute scoring chance = `xG / 90`, slightly weighted towards late in the game
-- **Chemistry:** each match, a team's "form on the day" multiplier is drawn from a range that narrows as chemistry rises. Low chemistry means more random results; high chemistry means more reliable ones. High chemistry also gives a small boost after the 75th minute.
+- **Chemistry:** each match, a team's "form on the day" multiplier is drawn from a range that narrows as chemistry rises (±30% at chemistry 0, ±8% at 99). Low chemistry means more random results; high chemistry means more reliable ones. High chemistry also gives a small boost after the 75th minute.
 - **Events:** goals (scorer + minute, weighted towards attackers), yellow cards, occasional red cards (the team plays the rest of the match weakened), stoppage-time goals
 - **Play-off final:** extra time and penalties if level
 - All randomness comes from a **seeded random number generator**, so results can be reproduced for testing
@@ -179,7 +184,7 @@ The bands make movement feel real:
 
 ### Every club, every season
 
-1. **Decline:** every club, including yours, loses **10** rating (ageing, players leaving).
+1. **Decline:** every club, including yours, loses **10** rating (ageing, players leaving). ❓ TO CONFIRM: for your club it lands **unevenly** across the three stats (a key striker leaves, the defence ages): on average 10 each, typically ±6, leaning slightly towards your strongest stats. The end-of-season screen shows the split, e.g. *Attack −16 · Defence −7 · Chemistry −7*, and that's the weakness to fix.
 2. **Gains:** clubs regain rating based on **how they finished compared with what was expected**. The average gain is **+10**.
 3. **Ratings carry forward** into the next season for every club, so clubs rise and fall over the years like real life.
 
@@ -270,6 +275,16 @@ League 1's top 3 get nothing (there's nowhere higher to go), and League 5's bott
 
 Estimates, to be confirmed by the balance tool. "Smart" = good allocation worth about 5 places a season; "average" = even split, no real edge. The last few points to 99 are the slowest, because once you're the highest-rated club you're expected to win and can't beat expectations.
 
+**Measured by the balance tool (M3)**, 4 careers each, from rating 0:
+
+| Difficulty | Smart (fixes weaknesses) | Even split | Careless |
+|---|---|---|---|
+| Easy (+10) | 6–8 seasons | 6–13 seasons | — |
+| Medium (+5) | 10–14 seasons | 11–36 seasons | — |
+| Hard (+2) | 9–11 seasons | 21–68 seasons | never |
+
+Smart play is worth about **+3 places a season** from low starts, tapering to ~0 near the top (you can't beat "expected 1st"); about +2 on average. Even split roughly holds (−0.3); careless sinks (−5).
+
 | Difficulty | Smart player | Average player | Smart player, real time at 3-min matches |
 |---|---|---|---|
 | Easy (+10) | ~5–6 seasons | ~9–11 seasons | ~10–12 hours |
@@ -291,7 +306,9 @@ Total rating across all 100 clubs is **fixed**: the overall average stays **exac
 
 ### Extra AI-only adjustments
 
-- **Band pull:** if an AI club drifts outside its current league's band, it is pulled back towards it. This stops bottlenecks, e.g. league 2 filling with 80+ clubs while league 1 has clubs below 80.
+- **Band pull:** if an AI club drifts outside its current league's band, 80% of the gap is closed each season. This stops bottlenecks, e.g. league 2 filling with 80+ clubs while league 1 has clubs below 80.
+- **Ceiling:** an AI club above 93 loses 70% of the excess each season (its stars get poached), so the top never fills with super-clubs. Without it, rank-based expectation can't touch a club far ahead of the rest.
+- **Style shape:** after its gain, an AI club's stats are rebuilt in its style's shape (§4).
 - **Small random variation** each season, so AI clubs don't move mechanically.
 
 Your gain is given as points to allocate across the three stats (3 points ≈ +1 rating), and you can't go above 99.
@@ -518,6 +535,10 @@ In rough priority order:
 | Full-time result as an overlay inside the sidebar box, not a VS Code notification | Never covers code or clutters notifications; status bar covers the hidden case |
 | Sport-agnostic core + sport modules | Rugby/cricket can be added later without a rewrite |
 | One extension for all sports (later) | One codebase; keywords handle discovery |
+| ❓ Chemistry feeds effective attack and defence; weakest-link penalty | Balance tool (M3) showed the original model made allocation meaningless: attack and defence were interchangeable and chemistry added almost nothing to goals, so "never buy chemistry" beat everything (+3 places a season) and "fix your weakness" did nothing |
+| ❓ Uneven decline for your club | Creates a real weakness to fix each season, and something for the season report to name |
+| ❓ AI clubs keep a fixed style shape | AI stats otherwise drifted further out of balance every season, widening gaps within leagues (too many thrashings) |
+| ❓ AI ceiling above 93 | Rank-based expectation can't pull back a club far ahead of the rest; without it 4–6 AI clubs sat above 95 |
 
 ## 17. Name ✅
 

@@ -21,25 +21,34 @@ export interface Club {
   isPlayer: boolean;
 }
 
-/** How an AI club's rating changes are split across its stats. */
-export const STYLE_WEIGHTS: Record<Style, Record<Stat, number>> = {
-  attacking: { attack: 0.5, defence: 0.2, chemistry: 0.3 },
-  defensive: { attack: 0.2, defence: 0.5, chemistry: 0.3 },
-  balanced: { attack: 1 / 3, defence: 1 / 3, chemistry: 1 / 3 },
+/**
+ * Each AI style is a fixed shape around the club's rating. Every shape carries
+ * the same built-in weakness (attacking sides leave gaps at the back,
+ * defensive sides struggle to score, balanced sides lack chemistry), so AI
+ * clubs of equal rating are equally strong but play differently.
+ */
+export const STYLE_TUNING = { skew: 7 };
+
+const STYLE_SHAPE: Record<Style, Record<Stat, number>> = {
+  attacking: { attack: 1, defence: -1, chemistry: 0 },
+  defensive: { attack: -1, defence: 1, chemistry: 0 },
+  balanced: { attack: 0.5, defence: 0.5, chemistry: -1 },
 };
 
-/** How far a style's stats lean away from the rating at the start of a career. */
-const STYLE_SKEW = 5;
+const EVEN: Record<Stat, number> = { attack: 1, defence: 1, chemistry: 1 };
 
 export function rating(club: Pick<Club, Stat>): number {
   return (club.attack + club.defence + club.chemistry) / 3;
 }
 
-/** Starting stats for a given rating, leaning towards the club's style. */
+/** Stats for a rating in a style's shape, squeezed near 0 and 99 so the average is exact. */
 export function statsFor(value: number, style: Style): Record<Stat, number> {
-  const skew = style === 'balanced' ? 0 : Math.min(STYLE_SKEW, MAX_STAT - value, value);
-  const lean = style === 'attacking' ? skew : -skew;
-  return { attack: value + lean, defence: value - lean, chemistry: value };
+  const shape = STYLE_SHAPE[style];
+  const v = clamp(value, 0, MAX_STAT);
+  const up = Math.max(...STATS.map((s) => shape[s]));
+  const down = -Math.min(...STATS.map((s) => shape[s]));
+  const skew = Math.min(STYLE_TUNING.skew, (MAX_STAT - v) / up, v / down);
+  return { attack: v + skew * shape.attack, defence: v + skew * shape.defence, chemistry: v + skew * shape.chemistry };
 }
 
 /**
@@ -47,7 +56,7 @@ export function statsFor(value: number, style: Style): Record<Stat, number> {
  * clamped to 0–99. Whatever a capped stat can't take goes to the others.
  * Returns the rating change actually applied.
  */
-export function shiftRating(club: Club, delta: number, weights: Record<Stat, number> = STYLE_WEIGHTS.balanced): number {
+export function shiftRating(club: Club, delta: number, weights: Record<Stat, number> = EVEN): number {
   const before = rating(club);
   let remaining = delta * 3;
   let open = STATS.filter((s) => canMove(club[s], remaining));
