@@ -335,7 +335,7 @@ What a rating means over a League 1 season (balanced): at **150** about half of 
 ### Extra AI-only adjustments
 
 - **Band pull:** if an AI club drifts outside its current league's band, 80% of the gap is closed each season. This stops bottlenecks, e.g. league 2 filling with 80+ clubs while league 1 has clubs below 80.
-- **Ceiling:** an AI club above 93 loses 70% of the excess each season (its stars get poached), so the top never fills with super-clubs. Without it, rank-based expectation can't touch a club far ahead of the rest.
+- **Ceiling:** an AI club above 93 loses 30% of the excess each season (its stars get poached); the points go back to the other AI clubs, so the average never moves. A 99 champion slips to about 97 then 96: dynasties happen (one club winning about a third of titles over a long career) but end. Without it, rank-based expectation can't touch a club far ahead: one club won 30–47 of 60 titles. At 70% League 1 had no lasting giants at all.
 - **Style shape:** after its gain, an AI club's stats are rebuilt in its style's shape (§4).
 - **Promotion investment:** an AI club gains **+4** rating when promoted, so promoted sides can compete. Tuned so about 80% of promoted clubs finish in the bottom half of their new league (Premier League, last decade: about 78%).
 - **Small random variation** each season, so AI clubs don't move mechanically.
@@ -349,12 +349,12 @@ All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned wi
 - AI-only match realism (§5): home/draw/away shares, goals, scorelines, upsets, late goals, comebacks
 - The AI total and average never move, whatever the player does
 - No league's average drifts more than ±3.5 from its band average (a strong player holding a League 1 place pushes one AI club down)
-- Fewer than 2 AI clubs above 95 at any time; none at 99 for long
+- No more than 4 AI clubs above 95 at any time; none at 99 for long
 - Promoted AI clubs finish in the bottom half of their new league about 78% of the time
 - **Reading the ranks beats guessing by 2+ places a season**; a guesser drifts below expectation; a careless player sinks furthest
 - A reader reaches 99 in roughly the measured seasons for each difficulty; a guesser takes at least twice as long or never; a careless player on hard never climbs from 0 to 99
 - A player club starting at 99 wins League 1 most seasons, but not every season
-- A good reader climbs well past 99 (peak 130+); a guesser stays well below a reader (≤ 125, 20+ lower); nobody runs away (no peak above 200 in 40 seasons on medium); unbeaten seasons happen but not routinely
+- A good reader climbs well past 99 (peak 130+); a guesser peaks 20+ lower; nobody runs away (no peak above 200 in 40 seasons on medium); unbeaten seasons happen but not routinely
 
 ---
 
@@ -590,6 +590,7 @@ In rough priority order:
 | MIT licence | Permissive and the norm for VS Code extensions; anyone can learn from or fork it |
 | Publisher `bigdevgreg`; publish by uploading the `.vsix` by hand | "BigMoneyGreg" was rejected as suspicious by the Marketplace; a token needs an Azure DevOps organisation, which asked for an Azure subscription |
 | Summer: rebuild attack or defence, no balanced option; ranks for goals scored and conceded as the clue | Measured: with a balanced option, guessing and perfect knowledge ended level, so the choice didn't matter. Now reading the ranks beats guessing by over 4 places a season |
+| AI ceiling pull 30% (was 70%) | A 99 champion keeps most of its strength for a few seasons: real-feeling dynasties and a strong rival at the top, without a permanent super-club |
 | Player outside a fixed AI economy; no practical ceiling; flat decline of 10; smaller boost while reigning champion; imbalance costs gradually, steeply above 99 | A great player can chase 200 and unbeaten seasons without draining the world; only near-perfect balance keeps you climbing at the top, so guessers stall |
 | Very large strength gaps count only partly (beyond 32 points, 30% counts) | The open cup draw pairs teams 60 apart; full gaps gave 6+ goal margins in 6% of cup games and scores like 3–10. Now about 3%, with league scoring unchanged |
 | Real nations replace fictional clubs | Relatable worldwide, and players can follow how teams they know are doing; clubs' names are trademarks, countries' aren't |

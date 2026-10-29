@@ -26,7 +26,7 @@ export const RATING_TUNING = {
   bandPull: 0.8,
   /** AI clubs above this rating lose this share of the excess each season (stars get poached). */
   aiCeiling: 93,
-  aiCeilingPull: 0.7,
+  aiCeilingPull: 0.3,
   /** Rating an AI club gains on promotion (investment), so promoted sides can compete. */
   promotedBoost: 4,
   /** Points the player allocates per point of rating gained (1 point = +1 to a stat). */
