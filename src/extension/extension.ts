@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import { fullHistory } from '../core/career';
+import { startRating, styleSplit } from '../core/league';
+import { TUNING } from '../sports/football/match';
 import { Rng } from '../core/rng';
 import { suggestClubName } from '../sports/football/names';
 import { DURATIONS, type Duration, type ToHost } from '../shared/view';
@@ -25,9 +27,7 @@ export function activate(context: vscode.ExtensionContext): void {
   };
 
   const sidebar = new SidebarProvider(context.extensionUri, (message) => handle(message));
-  // Running from source (F5) adds a 10-second speed for testing; it's never written to settings.
-  const devMode = context.extensionMode === vscode.ExtensionMode.Development;
-  const durations: Duration[] = devMode ? ['10s', ...DURATIONS] : DURATIONS;
+  const durations: Duration[] = DURATIONS;
 
   const refresh = () => {
     sidebar.post({ type: 'view', view: buildView(game!, () => suggestedName, { fullTimeOverlay: config().get('fullTimeOverlay', true), durations }) });
@@ -74,7 +74,12 @@ export function activate(context: vscode.ExtensionContext): void {
       case 'startCareer': {
         const name = message.name.trim().slice(0, 40) || suggestedName;
         setDuration(message.duration);
-        game!.start({ rating: message.rating, difficulty: message.difficulty, split: message.split, clubName: name, seed: (Date.now() ^ (Math.random() * 2 ** 31)) >>> 0 });
+        const seed = (Date.now() ^ (Math.random() * 2 ** 31)) >>> 0;
+        const tier = Math.min(5, Math.max(1, Math.round(message.league)));
+        // Somewhere in the league, weighted towards mid-table; the style leans within the free range.
+        const rating = startRating(tier, new Rng(seed ^ 0x9e3779b9));
+        const split = message.style === 'balanced' ? undefined : styleSplit(rating, message.style, TUNING.weaknessTolerance);
+        game!.start({ rating, difficulty: message.difficulty, split, clubName: name, seed });
         return;
       }
       case 'togglePause':
@@ -102,7 +107,7 @@ export function activate(context: vscode.ExtensionContext): void {
   function setDuration(d: Duration): void {
     if (!durations.includes(d)) return;
     game!.setDuration(d);
-    if (DURATIONS.includes(d)) void config().update('matchDuration', d, vscode.ConfigurationTarget.Global);
+    void config().update('matchDuration', d, vscode.ConfigurationTarget.Global);
   }
 
   async function newCareer(): Promise<void> {

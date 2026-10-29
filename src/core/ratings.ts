@@ -15,7 +15,7 @@ export const RATING_TUNING = {
   performanceMultiplier: 1.0,
   topBonus: [6, 4, 2],
   bottomBonus: [-2, -4, -6],
-  difficultyBoost: { easy: 10, medium: 5, hard: 2 } as Record<Difficulty, number>,
+  difficultyBoost: { easy: 10, medium: 5, hard: 0 } as Record<Difficulty, number>,
   /** Standard deviation of the AI-only random variation, in rating points. */
   aiNoise: 1.5,
   /** Net rises are scaled down linearly from this rating to plateauFloor at 99. */

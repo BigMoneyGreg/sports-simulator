@@ -1049,3 +1049,11 @@ table.league {
 .focus.defence strong {
   color: var(--vscode-charts-blue, #58a6ff);
 }
+
+.seg button .sub-label {
+  display: block;
+  margin-top: 1px;
+  font-size: 0.78em;
+  line-height: 1.2;
+  opacity: 0.8;
+}

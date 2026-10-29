@@ -3,7 +3,7 @@ import { emptyRecords, topScorers } from '../core/records';
 import { rating } from '../core/club';
 import { recordResult, sortTable, zone, type Fixture, type TableRow } from '../core/league';
 import { matchClock, timeline } from '../sports/football/commentary';
-import { outcome, TUNING, type SideKey } from '../sports/football/match';
+import { outcome, type SideKey } from '../sports/football/match';
 import { surname, townName } from '../sports/football/names';
 import { DURATIONS, type Duration } from '../shared/view';
 import type { CabinetView, ClubView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, TableView, TeamBadge, View } from '../shared/view';
@@ -18,7 +18,7 @@ export interface ViewOptions {
 export function buildView(game: Game, suggestedName: () => string, options: ViewOptions = { fullTimeOverlay: true }): View {
   const career = game.career;
   if (!career) {
-    return { screen: 'setup', setup: { suggestedName: suggestedName(), duration: game.duration, tolerance: TUNING.weaknessTolerance, durations: options.durations ?? DURATIONS } };
+    return { screen: 'setup', setup: { suggestedName: suggestedName(), duration: game.duration, durations: options.durations ?? DURATIONS } };
   }
   const me = career.clubs[career.playerClubId];
   const season = career.season;

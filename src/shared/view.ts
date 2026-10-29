@@ -1,13 +1,13 @@
 // Messages and view snapshots shared by the extension host and the webview.
 // The webview only displays what it is sent; all game logic stays in the host.
 
-/** '10s' is a testing speed, only offered when running from source (F5). */
-export type Duration = '10s' | '30s' | '2m' | '5m';
+export type Duration = '30s' | '2m' | '5m';
 export const DURATIONS: Duration[] = ['30s', '2m', '5m'];
-export const DURATION_LABELS: Record<Duration, string> = { '10s': '10 sec', '30s': '30 sec', '2m': '2 min', '5m': '5 min' };
+export const DURATION_LABELS: Record<Duration, string> = { '30s': '30 sec', '2m': '2 min', '5m': '5 min' };
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type StatKey = 'attack' | 'defence';
 export type Focus = 'attack' | 'balanced' | 'defence';
+export type Style = 'attacking' | 'balanced' | 'defensive';
 export type Zone = 'champion' | 'promotion' | 'playoff' | 'relegation' | null;
 
 export interface TeamBadge {
@@ -146,8 +146,6 @@ export interface HeaderView {
 export interface SetupView {
   suggestedName: string;
   duration: Duration;
-  /** How far attack and defence can lean apart for free. */
-  tolerance: number;
   durations: Duration[];
 }
 
@@ -220,7 +218,7 @@ export type View = { screen: 'setup'; setup: SetupView } | GameView;
 
 export type ToHost =
   | { type: 'ready' }
-  | { type: 'startCareer'; rating: number; difficulty: Difficulty; duration: Duration; name: string; split?: Record<StatKey, number> }
+  | { type: 'startCareer'; league: number; difficulty: Difficulty; duration: Duration; style: Style; name: string }
   | { type: 'suggestName' }
   | { type: 'togglePause' }
   | { type: 'setDuration'; duration: Duration }

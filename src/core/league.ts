@@ -100,6 +100,24 @@ export function sortTable(table: TableRow[]): TableRow[] {
   );
 }
 
+/**
+ * A random starting rating within a league, weighted towards the middle:
+ * half the time 40–60% of the way up the league's band, a quarter of the time
+ * 20–40%, and a quarter 60–80%. Never at the very top or bottom.
+ */
+export function startRating(tier: number, rng: Rng): number {
+  const r = rng.next();
+  const from = r < 0.5 ? 8 : r < 0.75 ? 4 : 12;
+  return band(tier).min + from + rng.int(0, 3);
+}
+
+/** Starting attack/defence for a style: leaning `lean` either way, or level. */
+export function styleSplit(rating: number, style: 'attacking' | 'balanced' | 'defensive', lean: number): { attack: number; defence: number } {
+  const l = style === 'balanced' ? 0 : Math.min(lean, rating, 99 - rating);
+  const sign = style === 'attacking' ? 1 : -1;
+  return { attack: rating + sign * l, defence: rating - sign * l };
+}
+
 /** Which league a starting rating lands in. */
 export function tierForRating(rating: number): number {
   return Math.min(LEAGUE_COUNT, LEAGUE_COUNT - Math.floor(Math.max(0, Math.min(99, rating)) / LEAGUE_SIZE));

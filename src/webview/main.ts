@@ -1,4 +1,3 @@
-import { band } from '../core/league';
 import {
   DURATION_LABELS,
   type Difficulty,
@@ -11,6 +10,7 @@ import {
   type PlayoffView,
   type SeasonEndView,
   type SetupView,
+  type Style,
   type TableView,
   type TeamBadge,
   type TimelineView,
@@ -43,13 +43,12 @@ let view: View | null = null;
 
 const setup = {
   league: 3,
-  rating: 50,
   difficulty: 'medium' as Difficulty,
   duration: '2m' as Duration,
+  style: 'balanced' as Style,
   name: '',
-  lean: 0,
-  tolerance: 5,
-  rendered: false,
+  /** Defaults are taken from the host once; option clicks must not reset them. */
+  initialised: false,
 };
 
 function send(message: ToHost): void {
@@ -93,89 +92,62 @@ function paintSwatches(): void {
 // ---------------------------------------------------------------------------
 // Setup
 
-const MAX_LEAN = 15;
+type Option = [value: string, label: string, sub?: string];
 
-const LEAGUE_TEXT: Record<number, string> = {
-  1: 'The top flight.',
-  2: 'One step from the top.',
-  3: 'The middle of the pyramid.',
-  4: 'Lower league football.',
-  5: 'The bottom of the pyramid: a long climb.',
-};
-
-/** Middle of the league's rating band: 10th of 20 at the start. */
-function midRating(tier: number): number {
-  return band(tier).min + 10;
-}
-
-function leanLimit(): number {
-  return Math.min(MAX_LEAN, setup.rating, 99 - setup.rating);
+function seg(name: string, options: Option[], value: string): string {
+  return `<div class="seg" role="radiogroup" data-name="${name}">${options
+    .map(
+      ([val, label, sub]) =>
+        `<button type="button" role="radio" aria-checked="${val === value}" class="${val === value ? 'on' : ''}" data-value="${val}">${esc(label)}${
+          sub ? `<span class="sub-label">${esc(sub)}</span>` : ''
+        }</button>`,
+    )
+    .join('')}</div>`;
 }
 
 function renderSetup(v: SetupView): void {
-  if (!setup.rendered) {
+  if (!setup.initialised) {
     setup.name = v.suggestedName;
     setup.duration = v.duration;
+    setup.initialised = true;
   }
-  setup.tolerance = v.tolerance;
-  setup.rendered = true;
-  delete app.dataset.mode;
-  const seg = <T extends string>(name: string, options: [T, string][], value: T) =>
-    `<div class="seg" role="radiogroup" data-name="${name}">${options
-      .map(([val, label]) => `<button type="button" role="radio" aria-checked="${val === value}" class="${val === value ? 'on' : ''}" data-value="${val}">${esc(label)}</button>`)
-      .join('')}</div>`;
+  app.dataset.mode = 'setup';
   app.innerHTML = `
   <div class="setup card">
     <h2>New career</h2>
-    <p class="muted">Pick a league to start in. Every match plays on its own; each summer you decide where to strengthen: attack or defence.</p>
+    <p class="muted">Pick a league to start in. Every match plays on its own; each summer you decide where to strengthen.</p>
 
     <label class="field">Club name
       <span class="row"><input id="name" type="text" maxlength="40" value="${esc(setup.name)}"><button type="button" id="reroll" class="icon" title="Suggest another name" aria-label="Suggest another name">↻</button></span>
     </label>
 
-    <div class="field">League ${seg('league', [1, 2, 3, 4, 5].map((t) => [String(t), `L${t}`] as [string, string]), String(setup.league))}
-      <span class="hint">${esc(LEAGUE_TEXT[setup.league])} You start mid-table: rated ${setup.rating}, expected 10th of 20.</span>
-    </div>
+    <div class="field">League ${seg('league', [1, 2, 3, 4, 5].map((t): Option => [String(t), `L${t}`]), String(setup.league))}</div>
 
-    <div class="field">Difficulty ${seg('difficulty', [['easy', 'Easy'], ['medium', 'Medium'], ['hard', 'Hard']], setup.difficulty)}
-      <span class="hint">${esc({ easy: 'A big hidden boost every season: climb fast.', medium: 'A few seasons in each league.', hard: 'A long grind to the top.' }[setup.difficulty])}</span>
-    </div>
+    <div class="field">Difficulty ${seg(
+      'difficulty',
+      [
+        ['easy', 'Easy', 'A helpful boost each season'],
+        ['medium', 'Medium', 'A subtle boost each season'],
+        ['hard', 'Hard', 'No extra season boost'],
+      ],
+      setup.difficulty,
+    )}</div>
 
-    <div class="field">Match length ${seg('duration', v.durations.map((d) => [d, DURATION_LABELS[d]] as [Duration, string]), setup.duration)}
-      <span class="hint">Real time for one 90-minute match. You can change it from the box later.</span>
-    </div>
+    <div class="field">Match length ${seg('duration', v.durations.map((d): Option => [d, DURATION_LABELS[d]]), setup.duration)}</div>
 
-    <label class="field">Style <strong id="leanValue"></strong>
-      <input id="lean" type="range" min="-${MAX_LEAN}" max="${MAX_LEAN}" value="${setup.lean}">
-      <span class="row between small muted"><span>Defensive</span><span>Attacking</span></span>
-      <span id="leanHint" class="hint"></span>
-    </label>
+    <div class="field">Style ${seg(
+      'style',
+      [
+        ['attacking', 'Attacking'],
+        ['balanced', 'Balanced'],
+        ['defensive', 'Defensive'],
+      ],
+      setup.style,
+    )}</div>
 
     <button type="button" id="start" class="primary">Start career</button>
   </div>`;
-  updateLean();
 }
-
-/** Refreshes the style read-out in place, so the slider being dragged is never replaced. */
-function updateLean(): void {
-  setup.lean = Math.max(-leanLimit(), Math.min(leanLimit(), setup.lean));
-  const attack = setup.rating + setup.lean;
-  const defence = setup.rating - setup.lean;
-  (document.getElementById('lean') as HTMLInputElement).value = String(setup.lean);
-  document.getElementById('leanValue')!.textContent = `Attack ${attack} · Defence ${defence}`;
-  const hint = document.getElementById('leanHint')!;
-  const weak = Math.abs(setup.lean) > setup.tolerance;
-  hint.classList.toggle('bad', weak);
-  hint.textContent =
-    setup.lean === 0
-      ? 'Balanced. Lean either way to score more and concede more, or the reverse.'
-      : weak
-        ? 'Leaning this far leaves a weakness opponents exploit: it costs you on the pitch.'
-        : setup.lean > 0
-          ? 'Attacking: more goals at both ends.'
-          : 'Defensive: tighter games, fewer goals at both ends.';
-}
-
 
 // ---------------------------------------------------------------------------
 // Game
@@ -469,10 +441,10 @@ function render(): void {
   if (!view) return;
   if (view.screen === 'setup') {
     renderOverlay(null);
-    if (!setup.rendered) renderSetup(view.setup);
+    if (app.dataset.mode !== 'setup') renderSetup(view.setup);
     return;
   }
-  setup.rendered = false;
+  setup.initialised = false;
   renderGame(view);
 }
 
@@ -506,43 +478,33 @@ app.addEventListener('click', (e) => {
   } else if (button.id === 'start') {
     send({
       type: 'startCareer',
-      rating: setup.rating,
+      league: setup.league,
       difficulty: setup.difficulty,
       duration: setup.duration,
+      style: setup.style,
       name: (document.getElementById('name') as HTMLInputElement).value,
-      split: setup.lean ? { attack: setup.rating + setup.lean, defence: setup.rating - setup.lean } : undefined,
     });
   } else if (button.closest('.seg')?.getAttribute('data-name')) {
     const group = button.closest('.seg')!.getAttribute('data-name')!;
     const value = button.dataset.value!;
+    if (group === 'league') setup.league = Number(value);
     if (group === 'difficulty') setup.difficulty = value as Difficulty;
-    if (group === 'league') {
-      setup.league = Number(value);
-      setup.rating = midRating(setup.league);
-    }
     if (group === 'duration') setup.duration = value as Duration;
+    if (group === 'style') setup.style = value as Style;
     setup.name = (document.getElementById('name') as HTMLInputElement).value;
-    setup.rendered = false;
     if (view?.screen === 'setup') renderSetup(view.setup);
   }
 });
 
 app.addEventListener('input', (e) => {
   const input = e.target as HTMLInputElement;
-  if (input.id === 'lean') {
-    setup.lean = Number(input.value);
-    updateLean();
-  } else if (input.id === 'name') {
-    setup.name = input.value;
-  }
+  if (input.id === 'name') setup.name = input.value;
 });
 
 window.addEventListener('message', (event: MessageEvent<ToWebview>) => {
   const message = event.data;
   if (message.type === 'view') {
-    const wasSetup = view?.screen === 'setup';
     view = message.view;
-    if (view.screen === 'setup' && !wasSetup) setup.rendered = false;
     render();
   } else if (message.type === 'suggestedName') {
     const input = document.getElementById('name') as HTMLInputElement | null;

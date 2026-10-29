@@ -68,10 +68,10 @@ Next season … (won league 1? → carry on, or start a new career)
 
 | Option | Values | Notes |
 |---|---|---|
-| League | 1–5 (buttons) | Where you start. Your rating is the middle of that league's band (League 1 → 90, League 3 → 50, League 5 → 10), so you're expected to finish 10th of 20. Replaced the 0–99 slider in M8: one simple, readable choice |
-| Difficulty | Easy / Medium / Hard | A hidden boost to your club each season: Easy +10 · Medium +5 · Hard +2 (§7) |
-| Style | Optional | Defaults to balanced (attack = defence = rating). A slider leans up to 15 either way, e.g. attack 55 / defence 45 at rating 50. Up to ±5 is free; beyond that the weak side is exploited (§4) |
-| Match duration | 30s · 2 min · 5 min | Length of one 90-minute match; can be changed any time from the box. Default 2 min |
+| League | 1–5 (buttons) | Where you start. Your rating is random within the league, weighted to mid-table: 50% chance of 40–60% of the way up the league's band, 25% of 20–40%, 25% of 60–80% (never the very top or bottom). Not shown; you find out from the table |
+| Difficulty | Easy / Medium / Hard | *A helpful boost each season* · *A subtle boost each season* · *No extra season boost*: Easy +10, Medium +5, Hard 0 (§7) |
+| Style | Attacking · Balanced · Defensive | Attacking starts attack 5 above the rating and defence 5 below (within the free lean); defensive the reverse |
+| Match duration | 30 sec · 2 min · 5 min | Length of one 90-minute match; can be changed any time from the ⏱ button in the box. Default 2 min |
 | Club name | Generated, editable | See §10 |
 
 ### Starting position
@@ -249,7 +249,7 @@ Each season your club gets an extra boost, **paid for by every AI club losing a 
 |---|---|---|
 | Easy | +10 | ~0.10 |
 | Medium | +5 | ~0.05 |
-| Hard | +2 | ~0.02 |
+| Hard | 0 | 0 |
 
 - Ratings are stored with decimals but **shown as whole numbers**, so the AI drain is invisible.
 - If your club is capped at 99, the unused boost is not taken from the AI clubs.
@@ -279,7 +279,7 @@ Estimates, to be confirmed by the balance tool. "Smart" = good allocation worth 
 |---|---|---|---|
 | Easy (+10) | 6–7 seasons | 6–8 seasons | — |
 | Medium (+5) | 7–10 seasons | 9–35 seasons | — |
-| Hard (+2) | 10–20 seasons | 22–41 seasons | never |
+| Hard (no boost) | mostly never (one of four careers: 62 seasons) | never | never |
 
 Reading the season report is worth about **+3 places a season** from low starts, tapering to ~0 near the top (you can't beat "expected 1st"); about +1.4 on average. Even split roughly holds (+0.1); careless sinks (−4). 25 of 26 balance targets met; the miss is the original "+4–6 places" guess for smart play, which match luck caps.
 
@@ -421,7 +421,7 @@ Rename any club locally (edit button, or import/export a names file). Anyone who
 
 ## 11. Settings 🟢 NOW
 
-- Match duration (30 seconds / 2 / 5 minutes), also switchable from the ⏱ button in the box. Running from source (F5) adds a 10-second speed for testing
+- Match duration (30 seconds / 2 / 5 minutes), also switchable from the ⏱ button in the box
 - Full-time overlay on/off
 - Status bar score on/off
 - Reset career (with confirmation)
@@ -532,7 +532,8 @@ In rough priority order:
 | Renamed from Sideline to Sports Simulator | *Sideline - Live Sports Scores* already exists on the Marketplace; the plain name says what it is |
 | Football first; other sports only after it's finished | Keeps version 1 small |
 | Unbeaten-run tracker in status bar: **rejected** | Unnecessary; records page covers it |
-| League picker (start mid-table) instead of a 0–99 rating | Simpler: choose where to start, not a number |
+| League picker with a random, mid-weighted start instead of a 0–99 rating | Simpler: choose where to start, not a number; a little uncertainty about how good you are |
+| Hard has no boost | Matches its description; reaching 99 from the bottom becomes a near-impossible grind, and that's the point of Hard |
 | Match lengths 30s · 2 min · 5 min | Three clearly different paces; 1 minute dropped |
 | Pause when VS Code closes | You never miss matches; no catch-up simulation |
 | Fictional club names only, checked against real club lists | Avoid trademark issues; renaming handled locally later |

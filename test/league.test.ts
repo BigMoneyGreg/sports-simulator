@@ -13,7 +13,7 @@ import {
   type Career,
 } from '../src/core/career';
 import { rating, shiftRating, statsFor, type Club } from '../src/core/club';
-import { band, doubleRoundRobin, emptyTable, recordResult, sortTable, zone } from '../src/core/league';
+import { band, doubleRoundRobin, emptyTable, recordResult, sortTable, startRating, styleSplit, zone } from '../src/core/league';
 import { applyDecline, normalise, plateau, positionBonus, seasonGain, totalRating } from '../src/core/ratings';
 import { Rng } from '../src/core/rng';
 import { footballSport } from '../src/sports/football';
@@ -325,5 +325,49 @@ describe('league picker', () => {
       expect(c.season.leagues[tier - 1].clubIds).toContain(c.playerClubId);
       expect(c.season.expected[c.playerClubId]).toBe(10);
     }
+  });
+});
+
+describe('starting position', () => {
+  it('starts somewhere in the chosen league, weighted towards mid-table', () => {
+    const rng = new Rng(3);
+    const counts = { low: 0, mid: 0, high: 0 };
+    for (let i = 0; i < 4000; i++) {
+      const tier = 1 + (i % 5);
+      const r = startRating(tier, rng);
+      const pos = r - band(tier).min;
+      expect(pos).toBeGreaterThanOrEqual(4);
+      expect(pos).toBeLessThanOrEqual(15);
+      counts[pos < 8 ? 'low' : pos < 12 ? 'mid' : 'high']++;
+    }
+    expect(counts.mid / 4000).toBeCloseTo(0.5, 1);
+    expect(counts.low / 4000).toBeCloseTo(0.25, 1);
+    expect(counts.high / 4000).toBeCloseTo(0.25, 1);
+  });
+
+  it('turns a style into a free lean that keeps the rating', () => {
+    expect(styleSplit(50, 'attacking', 5)).toEqual({ attack: 55, defence: 45 });
+    expect(styleSplit(50, 'defensive', 5)).toEqual({ attack: 45, defence: 55 });
+    expect(styleSplit(50, 'balanced', 5)).toEqual({ attack: 50, defence: 50 });
+    expect(styleSplit(3, 'attacking', 5)).toEqual({ attack: 6, defence: 0 });
+  });
+});
+
+describe('AI clubs', () => {
+  it('are randomly attacking or defensive, leaning 10 either way', () => {
+    const styles = { attacking: 0, defensive: 0, balanced: 0 };
+    for (let seed = 1; seed <= 20; seed++) {
+      const c = newCareer({ rating: 50, difficulty: 'medium', seed }, footballSport);
+      for (const club of c.clubs.filter((x) => !x.isPlayer)) {
+        styles[club.style]++;
+        const r = rating(club);
+        if (r >= 10 && r <= 89) expect(Math.abs(club.attack - club.defence)).toBeCloseTo(20);
+        expect(Math.sign(club.attack - club.defence) || 0).toBe(club.style === 'attacking' ? (r > 0 && r < 99 ? 1 : 0) : r > 0 && r < 99 ? -1 : 0);
+      }
+    }
+    const total = styles.attacking + styles.defensive;
+    expect(styles.balanced).toBe(0);
+    expect(styles.attacking / total).toBeGreaterThan(0.45);
+    expect(styles.attacking / total).toBeLessThan(0.55);
   });
 });

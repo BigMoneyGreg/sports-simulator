@@ -258,7 +258,8 @@ function climbRun(): void {
   const targets: Record<Difficulty, { smart: [number, number]; even: [number, number] }> = {
     easy: { smart: [5, 6], even: [9, 11] },
     medium: { smart: [7, 9], even: [16, 20] },
-    hard: { smart: [12, 14], even: [40, 40] },
+    // Hard has no boost (M8): reaching 99 is meant to be a very long grind at best.
+    hard: { smart: [40, 70], even: [70, 70] },
   };
   for (const difficulty of ['easy', 'medium', 'hard'] as Difficulty[]) {
     for (const strategy of ['smart', 'even'] as const) {
@@ -268,7 +269,8 @@ function climbRun(): void {
       const summary = `${runs.map((r) => r ?? `>${MAX_CLIMB}`).join(', ')} (target ~${lo === hi ? lo : `${lo}–${hi}`})`;
       const avgSeasons = done.length === runs.length ? mean(done) : Infinity;
       // Estimates are rough: accept within 40% of the range.
-      check(`${difficulty} / ${strategy}: seasons 0→99`, avgSeasons >= lo * 0.6 && avgSeasons <= hi * 1.4, summary);
+      const pass = difficulty === 'hard' ? done.length <= runs.length / 2 : avgSeasons >= lo * 0.6 && avgSeasons <= hi * 1.4;
+      check(`${difficulty} / ${strategy}: seasons 0→99`, pass, summary + (difficulty === 'hard' ? ' (hard: most never reach 99)' : ''));
     }
   }
   const careless = Array.from({ length: SEEDS }, (_, i) => seasonsTo99('hard', 'careless', 2000 + i));
