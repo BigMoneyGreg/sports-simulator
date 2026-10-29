@@ -241,6 +241,44 @@ const ROWS: Row[] = [
 export const NATIONS: Nation[] = ROWS.map(([code, name, colours, names, shortName]) => ({ code, name, colours: colours.split(' '), names, ...(shortName ? { shortName } : {}) }));
 
 /**
+ * Each nation's one rival, the fixture its fans care about most. One-way
+ * where it is in real life: Scotland and Wales both have England, but
+ * England has Germany.
+ */
+export const RIVALS: Record<string, string> = {
+  // Europe
+  ALB: 'SRB', AND: 'ESP', ARM: 'AZE', AUT: 'GER', AZE: 'ARM', BLR: 'POL', BEL: 'NED', BIH: 'CRO', BUL: 'ROU', CRO: 'SRB',
+  CYP: 'GRE', CZE: 'SVK', DEN: 'SWE', ENG: 'GER', EST: 'LVA', FRO: 'ISL', FIN: 'SWE', FRA: 'ITA', GEO: 'ARM', GER: 'NED',
+  GIB: 'ESP', GRE: 'TUR', HUN: 'AUT', ISL: 'NOR', ISR: 'CYP', ITA: 'GER', KAZ: 'UZB', KVX: 'ALB', LVA: 'EST', LIE: 'SUI',
+  LTU: 'LVA', LUX: 'BEL', MLT: 'CYP', MDA: 'ROU', MNE: 'SRB', NED: 'GER', MKD: 'BUL', NIR: 'IRL', NOR: 'SWE', POL: 'GER',
+  POR: 'ESP', IRL: 'ENG', ROU: 'HUN', SMR: 'ITA', SCO: 'ENG', SRB: 'CRO', SVK: 'CZE', SVN: 'CRO', ESP: 'POR', SWE: 'DEN',
+  SUI: 'AUT', TUR: 'GRE', UKR: 'POL', WAL: 'ENG',
+  // South America
+  ARG: 'BRA', BOL: 'CHI', BRA: 'ARG', CHI: 'PER', COL: 'VEN', ECU: 'PER', PAR: 'BOL', PER: 'CHI', URU: 'ARG', VEN: 'COL',
+  // North and Central America and the Caribbean
+  AIA: 'MSR', ATG: 'SKN', ARU: 'CUW', BAH: 'BER', BRB: 'TRI', BLZ: 'GUA', BER: 'BAH', VGB: 'VIR', CAN: 'USA', CAY: 'JAM',
+  CRC: 'HON', CUB: 'JAM', CUW: 'ARU', DMA: 'LCA', DOM: 'HAI', SLV: 'HON', GRN: 'VIN', GUA: 'SLV', GUY: 'SUR', HAI: 'JAM',
+  HON: 'SLV', JAM: 'TRI', MEX: 'USA', MSR: 'AIA', NCA: 'CRC', PAN: 'CRC', PUR: 'CUB', SKN: 'ATG', LCA: 'DMA', VIN: 'GRN',
+  SUR: 'GUY', TRI: 'JAM', TCA: 'BAH', USA: 'MEX', VIR: 'VGB',
+  // Africa
+  ALG: 'MAR', ANG: 'COD', BEN: 'TOG', BOT: 'RSA', BFA: 'CIV', BDI: 'RWA', CMR: 'NGA', CPV: 'SEN', CTA: 'CHA', CHA: 'CMR',
+  COM: 'MAD', CGO: 'COD', COD: 'CGO', DJI: 'SOM', EGY: 'ALG', EQG: 'GAB', ERI: 'ETH', SWZ: 'LES', ETH: 'ERI', GAB: 'CMR',
+  GAM: 'SEN', GHA: 'NGA', GUI: 'SEN', GNB: 'CPV', CIV: 'GHA', KEN: 'UGA', LES: 'RSA', LBR: 'SLE', LBY: 'EGY', MAD: 'MRI',
+  MWI: 'ZAM', MLI: 'SEN', MTN: 'SEN', MRI: 'MAD', MAR: 'ALG', MOZ: 'ANG', NAM: 'BOT', NIG: 'NGA', NGA: 'GHA', RWA: 'BDI',
+  STP: 'EQG', SEN: 'CIV', SEY: 'MRI', SLE: 'LBR', SOM: 'ETH', RSA: 'NGA', SSD: 'SDN', SDN: 'SSD', TAN: 'KEN', TOG: 'GHA',
+  TUN: 'ALG', UGA: 'KEN', ZAM: 'ZIM', ZIM: 'ZAM',
+  // Asia
+  AFG: 'TJK', AUS: 'JPN', BHR: 'QAT', BAN: 'IND', BHU: 'NEP', BRU: 'MAS', CAM: 'THA', CHN: 'KOR', TPE: 'HKG', GUM: 'PHI',
+  HKG: 'MAC', IND: 'PAK', IDN: 'MAS', IRN: 'IRQ', IRQ: 'IRN', JPN: 'KOR', JOR: 'IRQ', KUW: 'IRQ', KGZ: 'TJK', LAO: 'VIE',
+  LBN: 'SYR', MAC: 'HKG', MAS: 'SIN', MDV: 'SRI', MNG: 'CHN', MYA: 'THA', NEP: 'IND', PRK: 'KOR', OMA: 'UAE', PAK: 'IND',
+  PLE: 'JOR', PHI: 'IDN', QAT: 'KSA', KSA: 'IRN', SIN: 'MAS', KOR: 'JPN', SRI: 'MDV', SYR: 'LBN', TJK: 'KGZ', THA: 'VIE',
+  TLS: 'IDN', TKM: 'UZB', UAE: 'QAT', UZB: 'KAZ', VIE: 'THA', YEM: 'OMA',
+  // Oceania
+  ASA: 'SAM', COK: 'NZL', FIJ: 'NCL', NCL: 'TAH', NZL: 'AUS', PNG: 'SOL', SAM: 'ASA', SOL: 'VAN', TAH: 'NCL', TGA: 'SAM',
+  VAN: 'SOL',
+};
+
+/**
  * The 100 nations in the world, strongest first, by football standing (titles,
  * consistency over the last decade, current form), not a single ranking table.
  * Starting pots are cut from this order.

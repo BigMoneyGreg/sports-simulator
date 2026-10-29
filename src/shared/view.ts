@@ -127,7 +127,8 @@ export interface ClubView {
   difficulty: Difficulty;
   season: number;
   expected: number;
-  rival?: TeamBadge;
+  /** The rival and where it is now, e.g. "League 1, 3rd". */
+  rival?: TeamBadge & { where: string };
   cabinet: CabinetView;
   records: RecordsView;
   history: HistoryRowView[];

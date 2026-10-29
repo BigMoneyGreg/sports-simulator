@@ -4,7 +4,7 @@ import { band, STARTING_POTS } from '../src/core/league';
 import { rating } from '../src/core/club';
 import { Rng } from '../src/core/rng';
 import { NAME_POOLS } from '../src/sports/football/data/names';
-import { NATIONS, WORLD_ORDER } from '../src/sports/football/data/nations';
+import { NATIONS, RIVALS, WORLD_ORDER } from '../src/sports/football/data/nations';
 import { footballSport } from '../src/sports/football';
 import { naturalTier, playerNamer, shortName, surname } from '../src/sports/football/names';
 
@@ -18,6 +18,15 @@ describe('nations', () => {
       expect(n.colours.length, n.name).toBeLessThanOrEqual(3);
       for (const c of n.colours) expect(c, n.name).toMatch(/^#[0-9a-f]{6}$/);
     }
+  });
+
+  it('gives every nation one rival, another real nation', () => {
+    const codes = new Set(NATIONS.map((n) => n.code));
+    for (const n of NATIONS) {
+      expect(codes.has(RIVALS[n.code]), n.name).toBe(true);
+      expect(RIVALS[n.code], n.name).not.toBe(n.code);
+    }
+    expect(Object.keys(RIVALS)).toHaveLength(NATIONS.length);
   });
 
   it('never tints the header black or white', () => {

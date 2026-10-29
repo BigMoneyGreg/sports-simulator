@@ -59,7 +59,7 @@ export function buildView(game: Game, options: ViewOptions = { fullTimeOverlay: 
       difficulty: career.difficulty,
       season: season.number,
       expected: season.expected[me.id],
-      rival: career.rival !== null && career.rival !== undefined ? badge(career, career.rival) : undefined,
+      rival: rivalView(career, tables),
       cabinet: cabinet(career.history),
       records: recordsView(career),
       history: [...career.history].reverse().map(historyRow),
@@ -258,6 +258,14 @@ function ordinal(n: number): string {
   const sfx = ['th', 'st', 'nd', 'rd'];
   const v = n % 100;
   return n + (sfx[(v - 20) % 10] ?? sfx[v] ?? sfx[0]);
+}
+
+function rivalView(career: Career, tables: TableView[]): ClubView['rival'] {
+  if (career.rival === null || career.rival === undefined) return undefined;
+  const short = career.clubs[career.rival].short;
+  const table = tables.find((t) => t.rows.some((r) => r.short === short))!;
+  const row = table.rows.find((r) => r.short === short)!;
+  return { ...badge(career, career.rival), where: `League ${table.tier}, ${ordinal(row.pos)}` };
 }
 
 let nationList: NationOption[] | undefined;

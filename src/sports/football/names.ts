@@ -1,7 +1,7 @@
 import type { ClubIdentity } from '../../core/career';
 import type { Rng } from '../../core/rng';
 import { NAME_POOLS } from './data/names';
-import { NATIONS, WORLD_ORDER, type Nation } from './data/nations';
+import { NATIONS, RIVALS, WORLD_ORDER, type Nation } from './data/nations';
 
 const BY_CODE = new Map(NATIONS.map((n) => [n.code, n]));
 
@@ -30,10 +30,10 @@ export function naturalTier(code: string, leagueSize: number, leagues: number): 
  * order, strongest first. A nation from outside it takes the place of the
  * weakest.
  */
-export function world(rng: Rng, count: number, code?: string): { player: ClubIdentity; others: ClubIdentity[] } {
+export function world(rng: Rng, count: number, code?: string): { player: ClubIdentity; others: ClubIdentity[]; rival?: string } {
   const mine = code ?? rng.pick(WORLD_ORDER.slice(0, count));
   const others = WORLD_ORDER.filter((c) => c !== mine).slice(0, count - 1);
-  return { player: identity(nation(mine)), others: others.map((c) => identity(nation(c))) };
+  return { player: identity(nation(mine)), others: others.map((c) => identity(nation(c))), rival: RIVALS[mine] };
 }
 
 /** A name generator for one squad: surnames only repeat once the pool runs out, as with Kims and Nguyens. */

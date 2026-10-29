@@ -37,10 +37,11 @@ export interface SportDefinition<M = unknown> {
   generateSquad(rng: Rng, firstId: number, club: ClubIdentity): Player[];
   lineup(squad: Player[]): TeamSheet['lineup'];
   /**
-   * The world for a career: the player's team (`code`, or a random one) and
-   * the other `count - 1` teams, strongest first.
+   * The world for a career: the player's team (`code`, or a random one), the
+   * other `count - 1` teams, strongest first, and the short code of the
+   * player's rival.
    */
-  world(rng: Rng, count: number, code?: string): { player: ClubIdentity; others: ClubIdentity[] };
+  world(rng: Rng, count: number, code?: string): { player: ClubIdentity; others: ClubIdentity[]; rival?: string };
 }
 
 export interface CareerOptions {
@@ -186,7 +187,7 @@ export interface Career {
   honours: { cup: CupWinner[]; championship: CupWinner[] };
   /** The most recent World Championship, kept to look back on until the next one. */
   lastChampionship: Cup | null;
-  /** The rival club in the player's league, shown on the Club tab. */
+  /** The player's rival for the whole career, shown on the Team tab. */
   rival: number | null;
 }
 
@@ -234,16 +235,15 @@ export function newCareer(options: CareerOptions, sport: SportDefinition): Caree
     lastChampionship: null,
     rival: null,
   };
-  career.rival = pickRival(career);
+  career.rival = clubs.find((c) => !c.isPlayer && c.short === world.rival)?.id ?? closestInLeague(career);
   career.rng = rng.state;
   return career;
 }
 
-/** Keeps the rival while you share a league; otherwise the closest-rated club in your new one. */
-export function pickRival(career: Career): number | null {
+/** Stand-in rival when the real one isn't in the world: the closest-rated club in the starting league. */
+function closestInLeague(career: Career): number | null {
   const league = career.season.leagues.find((l) => l.clubIds.includes(career.playerClubId));
   if (!league) return null;
-  if (career.rival !== null && career.rival !== undefined && league.clubIds.includes(career.rival)) return career.rival;
   const mine = rating(career.clubs[career.playerClubId]);
   const others = league.clubIds.filter((id) => id !== career.playerClubId);
   return others.sort((a, b) => Math.abs(rating(career.clubs[a]) - mine) - Math.abs(rating(career.clubs[b]) - mine) || a - b)[0] ?? null;
@@ -639,7 +639,6 @@ export function allocatePoints(career: Career, allocation: Record<Stat, number>)
 
   const rng = new Rng(career.rng);
   career.season = newSeason(pending.season + 1, pending.nextLeagues, pending.standing, career.clubs, rng);
-  career.rival = pickRival(career);
   career.rng = rng.state;
   career.pending = null;
 }

@@ -359,7 +359,7 @@ All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned wi
 - **Live match:** scoreboard (crests, score, clock) and a match report like a real game summary: goals prominent, cards small and greyed, half-time and full-time markers, newest first. No running commentary
 - **Tabs:** Match · Table · Fixtures · Cups · Team (stats, trophies, history)
 - **Table:** promotion, play-off and relegation places highlighted
-- **Rival:** one team in your league is your rival, shown on the Team tab
+- **Rival:** your nation's real rival for the whole career (§10), shown on the Team tab with where it is now (*England · League 1, 5th*)
 
 ### Status bar
 
@@ -425,6 +425,7 @@ The game uses real nations, not clubs: country names, flags and colours are free
 - **Playable nations:** FIFA's members (~210), leaving out any currently banned from international football (Russia). Following FIFA's list keeps the choice neutral: Kosovo, Palestine and Chinese Taipei are in because FIFA has them; England, Scotland, Wales and Northern Ireland are separate.
 - **World order:** the 100 nations in the world, ordered by hand on football standing: titles and history, consistency over the last decade, and current form. It is checked against the world ranking but not copied from it, so Italy and Germany stay high through a bad spell and a short hot streak doesn't lift a minnow. Reviewed against the ranking of 7 October 2026. The list is `WORLD_ORDER` in `src/sports/football/data/nations.ts`.
 - **Badges:** two or three flag colours in diagonal bands (France, Italy, Germany… get three). The first colour tints the header, so it is never black or white.
+- **Rivals:** every nation has one real rival (`RIVALS` in `nations.ts`): Argentina–Brazil, Greece–Turkey, Honduras–El Salvador. Rivalries can be one-way: Scotland, Wales and Ireland all have England; England has Germany. If the rival isn't among the 100 in the world, the closest-rated team in the starting league stands in.
 - **Codes and short names:** three-letter codes (BRA, ENG, JPN); long names have a short form for narrow spaces (*Bosnia*, *N. Ireland*, *USA*).
 - **Players:** generated everyday names from the nation's region, about 40 pools (English, Scottish, Latin American, West African, Japanese, Arabic…). Some nations mix in a second pool for about a quarter of the squad (France, England, Netherlands…). Surnames don't repeat in a squad until a pool runs out, as with Kims and Nguyens. Name combinations that would produce famous real players are left out of the pools.
 

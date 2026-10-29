@@ -537,7 +537,7 @@ function clubHtml(v: GameView): string {
       <dt>Conceded</dt><dd>${g.conceded} <span class="muted">(league avg ${g.average})</span></dd>
     </dl>
     <p class="muted small">After ${g.played} league match${g.played === 1 ? '' : 'es'} this season.</p>
-    ${c.rival ? `<p class="small">Rival: ${swatch(c.rival)}${esc(c.rival.name)}</p>` : ''}
+    ${c.rival ? `<p class="small">Rival: ${swatch(c.rival)}<strong>${esc(c.rival.name)}</strong> <span class="muted">· ${esc(c.rival.where)}</span></p>` : ''}
   </div>
   <div class="card">
     <h3 class="sub first">Trophy cabinet</h3>

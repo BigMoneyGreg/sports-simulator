@@ -41,17 +41,26 @@ describe('records', () => {
 });
 
 describe('rival', () => {
-  it('is a club in the player league, kept while they share it', () => {
-    const c = newCareer({ rating: 50, difficulty: 'medium', seed: 3 }, footballSport);
-    const league = c.season.leagues.find((l) => l.clubIds.includes(0))!;
-    expect(league.clubIds).toContain(c.rival);
-    expect(c.rival).not.toBe(0);
-    const before = c.rival;
+  const rivalCode = (c: ReturnType<typeof newCareer>) => c.clubs[c.rival!].short;
+
+  it('is the nation’s real rival, whichever league each is in, for the whole career', () => {
+    const c = newCareer({ rating: 10, difficulty: 'medium', seed: 3, team: 'ARG' }, footballSport);
+    expect(rivalCode(c)).toBe('BRA');
     playSeason(c, footballSport);
     allocatePoints(c, fillAllocation(c.clubs[0], c.pending!.points, { attack: 1, defence: 1 }));
-    const now = c.season.leagues.find((l) => l.clubIds.includes(0))!;
-    expect(now.clubIds).toContain(c.rival);
-    if (now.clubIds.includes(before!)) expect(c.rival).toBe(before);
+    expect(rivalCode(c)).toBe('BRA');
+  });
+
+  it('can be one-way: Scotland and Wales have England, England has Germany', () => {
+    for (const [team, rival] of [['SCO', 'ENG'], ['WAL', 'ENG'], ['ENG', 'GER']]) {
+      expect(rivalCode(newCareer({ rating: 50, difficulty: 'medium', seed: 1, team }, footballSport))).toBe(rival);
+    }
+  });
+
+  it('falls back to the closest-rated club in the starting league when the real rival is not in the world', () => {
+    const c = newCareer({ rating: 5, difficulty: 'medium', seed: 2, team: 'FIJ' }, footballSport);
+    expect(c.season.leagues[4].clubIds).toContain(c.rival);
+    expect(c.rival).not.toBe(0);
   });
 });
 
