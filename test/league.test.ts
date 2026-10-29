@@ -195,6 +195,18 @@ describe('career', () => {
     }
   });
 
+  it('actually plays next season with promoted and relegated clubs in their new leagues', () => {
+    const c = start();
+    for (let season = 0; season < 3; season++) {
+      const end = playSeason(c, footballSport);
+      allocatePoints(c, evenSplit(c));
+      const tierOf = (id: number) => c.season.leagues.find((l) => l.clubIds.includes(id))!.tier;
+      for (const tier of [2, 3, 4, 5]) for (const id of end.promoted[tier]) expect(tierOf(id)).toBe(tier - 1);
+      for (const tier of [1, 2, 3, 4]) for (const id of end.relegated[tier]) expect(tierOf(id)).toBe(tier + 1);
+      for (const l of c.season.leagues) expect(l.table.map((r) => r.clubId).sort()).toEqual([...l.clubIds].sort());
+    }
+  });
+
   it('keeps the total rating fixed across many seasons, with the player allocating', () => {
     const c = start(30, 7, 'easy');
     for (let season = 0; season < 6; season++) {
