@@ -4,7 +4,7 @@ import { band, STARTING_POTS } from '../src/core/league';
 import { rating } from '../src/core/club';
 import { Rng } from '../src/core/rng';
 import { NAME_POOLS } from '../src/sports/football/data/names';
-import { NATIONS, RIVALS, WORLD_ORDER } from '../src/sports/football/data/nations';
+import { LOCATIONS, NATIONS, RIVALS, WORLD_ORDER } from '../src/sports/football/data/nations';
 import { footballSport } from '../src/sports/football';
 import { naturalTier, playerNamer, shortName, surname } from '../src/sports/football/names';
 
@@ -27,6 +27,11 @@ describe('nations', () => {
       expect(RIVALS[n.code], n.name).not.toBe(n.code);
     }
     expect(Object.keys(RIVALS)).toHaveLength(NATIONS.length);
+  });
+
+  it('places every nation on the map', () => {
+    for (const n of NATIONS) expect(LOCATIONS[n.code], n.name).toHaveLength(2);
+    expect(Object.keys(LOCATIONS)).toHaveLength(NATIONS.length);
   });
 
   it('never tints the header black or white', () => {

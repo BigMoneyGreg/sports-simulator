@@ -57,10 +57,10 @@ describe('rival', () => {
     }
   });
 
-  it('falls back to the closest-rated club in the starting league when the real rival is not in the world', () => {
-    const c = newCareer({ rating: 5, difficulty: 'medium', seed: 2, team: 'FIJ' }, footballSport);
-    expect(c.season.leagues[4].clubIds).toContain(c.rival);
-    expect(c.rival).not.toBe(0);
+  it('falls back to the nearest neighbour in the world when the real rival is not in it', () => {
+    expect(rivalCode(newCareer({ rating: 5, difficulty: 'medium', seed: 2, team: 'FIJ' }, footballSport))).toBe('NZL');
+    expect(rivalCode(newCareer({ rating: 5, difficulty: 'medium', seed: 2, team: 'ETH' }, footballSport))).toBe('EGY');
+    expect(rivalCode(newCareer({ rating: 5, difficulty: 'medium', seed: 2, team: 'LIE' }, footballSport))).toBe('SUI');
   });
 });
 

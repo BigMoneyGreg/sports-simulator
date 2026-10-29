@@ -240,7 +240,7 @@ export function newCareer(options: CareerOptions, sport: SportDefinition): Caree
   return career;
 }
 
-/** Stand-in rival when the real one isn't in the world: the closest-rated club in the starting league. */
+/** Stand-in rival when the sport doesn't name one: the closest-rated club in the starting league. */
 function closestInLeague(career: Career): number | null {
   const league = career.season.leagues.find((l) => l.clubIds.includes(career.playerClubId));
   if (!league) return null;
