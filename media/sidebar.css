@@ -171,7 +171,10 @@ input:focus-visible {
 }
 
 .primary:disabled {
-  opacity: 0.45;
+  /* An outline that still reads on light themes, where a faded fill vanished. */
+  color: var(--muted);
+  background: transparent;
+  border: 1px dashed var(--line);
   cursor: default;
 }
 
@@ -1082,6 +1085,10 @@ table.league {
  * flattens the scoreboard to one line. Scores, clock, position and controls stay.
  */
 
+.short {
+  display: none;
+}
+
 .slim {
   display: none;
 }
@@ -1295,4 +1302,72 @@ table.league {
 
 .howto p {
   margin: 4px 0 0;
+}
+
+/* Header position and the cup toggle switch to short labels a little earlier than the rest. */
+@media (max-width: 290px) {
+  .full {
+    display: none;
+  }
+
+  .short {
+    display: inline;
+  }
+}
+
+/* Country picker groups */
+.group-label {
+  margin: 6px 8px 2px;
+  font-size: 0.8em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Cups: status, your run and folded rounds */
+.cup-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bracket .round-name {
+  width: 100%;
+}
+
+details.fold > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+details.fold > summary::before {
+  content: '▸ ';
+}
+
+details.fold[open] > summary::before {
+  content: '▾ ';
+}
+
+/* Fixtures: cup and championship rows stand out a little. */
+.fixtures li.cup,
+.fixtures li.championship {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* Scoreboard shootout line */
+.pens {
+  margin-top: 2px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.rival-mark {
+  font-size: 0.8em;
+  color: var(--muted);
+}
+
+.seg button:disabled {
+  opacity: 0.45;
+  cursor: default;
 }

@@ -37,10 +37,14 @@ export interface LiveMatchView {
   clock: string;
   finished: boolean;
   aggregate?: string;
+  /** After a shootout, e.g. "Pens 4–2" (home first). */
+  penalties?: string;
   timeline: TimelineView[];
 }
 
 export interface FullTimeView {
+  /** e.g. "League 3" or "Nations Cup · Round of 64". */
+  competition: string;
   home: TeamBadge & { goals: number };
   away: TeamBadge & { goals: number };
   note?: string;
@@ -95,6 +99,7 @@ export interface TableRowView {
   points: number;
   zone: Zone;
   isPlayer: boolean;
+  isRival: boolean;
   /** Places gained (+) or lost (−) since kick-off, while matches are live. */
   move?: number;
 }
@@ -105,7 +110,11 @@ export interface TableView {
 }
 
 export interface FixtureView {
+  /** Short: "MD 7", "C32", "WCQF". */
   label: string;
+  /** The label in full, on hover. */
+  labelTitle?: string;
+  kind: 'league' | 'playoff' | 'cup' | 'championship';
   /** Opponent's name for tight spaces. */
   town: string;
   opponent: TeamBadge;
@@ -127,8 +136,8 @@ export interface ClubView {
   difficulty: Difficulty;
   season: number;
   expected: number;
-  /** The rival and where it is now, e.g. "League 1, 3rd". */
-  rival?: TeamBadge & { where: string };
+  /** The rival, where it is now ("League 1, 3rd") and the record against it ("Played 6 · W3 D1 L2"). */
+  rival?: TeamBadge & { where: string; record: string };
   cabinet: CabinetView;
   records: RecordsView;
   history: HistoryRowView[];
@@ -157,11 +166,15 @@ export interface NationOption {
   colours: string[];
   /** The league it starts in by default. */
   tier: number;
+  /** Among the biggest football nations, listed first. */
+  popular: boolean;
 }
 
 export interface SetupView {
   /** Every playable nation, A–Z. */
   nations: NationOption[];
+  /** Picked to start with, from VS Code's display language. */
+  suggested?: string;
   duration: Duration;
   durations: Duration[];
 }
@@ -258,6 +271,8 @@ export interface CupView {
   name: string;
   /** Where the player stands, in a sentence. */
   status: string;
+  /** What comes next, when it isn't on now. */
+  next?: string;
   groups: CupGroupView[];
   /** Knockout rounds drawn so far, latest first. */
   rounds: { name: string; ties: CupTieView[] }[];

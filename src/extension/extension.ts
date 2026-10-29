@@ -28,7 +28,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const durations: Duration[] = DURATIONS;
 
   const refresh = () => {
-    sidebar.post({ type: 'view', view: buildView(game!, { fullTimeOverlay: config().get('fullTimeOverlay', true), durations }) });
+    sidebar.post({ type: 'view', view: buildView(game!, { fullTimeOverlay: config().get('fullTimeOverlay', true), durations, language: vscode.env.language }) });
     const text = statusText(game!);
     const seasonOver = !!game!.career?.pending;
     statusBar.update(config().get('statusBarScore', true) || seasonOver ? text : null);

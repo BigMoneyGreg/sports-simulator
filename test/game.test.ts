@@ -92,6 +92,18 @@ describe('game clock', () => {
     expect(game.phase).toBe('live');
   });
 
+  it('suggests a country from a display language that points to one, but not from plain English', () => {
+    const { game } = setup();
+    const suggested = (language: string) => {
+      const v = buildView(game, { fullTimeOverlay: true, language });
+      return v.screen === 'setup' ? v.setup.suggested : 'n/a';
+    };
+    expect(suggested('de')).toBe('GER');
+    expect(suggested('en-GB')).toBe('ENG');
+    expect(suggested('pt-br')).toBe('BRA');
+    expect(suggested('en')).toBeUndefined();
+  });
+
   it('builds a view at every stage', () => {
     const { game } = setup();
     expect(buildView(game).screen).toBe('setup');

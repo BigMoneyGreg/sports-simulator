@@ -72,7 +72,7 @@ Next season … (won league 1? → carry on, or start a new career)
 | Difficulty | Easy / Medium / Hard | *A helpful boost each season* · *A subtle boost each season* · *No extra season boost*: Easy +10, Medium +5, Hard 0 (§7) |
 | Style | Attacking · Balanced · Defensive | Attacking starts attack 5 above the rating and defence 5 below (within the free lean); defensive the reverse |
 | Match duration | 30 sec · 2 min · 5 min | Length of one 90-minute match; can be changed any time from the ⏱ button in the box. Default 2 min |
-| Country | Search box over every nation, A–Z | Sets the league picker to its usual level (marked *Usual*); any league can be picked. See §10 |
+| Country | Search box over every nation: the 16 biggest first, then A–Z | Sets the league picker to its usual level (marked *Usual*); any league can be picked, but only once a country is chosen. Preselected from VS Code's display language when it points to one country (German → Germany; plain English doesn't). See §10 |
 
 ### Starting position
 
@@ -358,8 +358,10 @@ All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned wi
 - **Team tab:** rating, this season's goals scored and conceded against the league average (the only clue to the drain), rival, trophies, records, history
 - **Live match:** scoreboard (crests, score, clock) and a match report like a real game summary: goals prominent, cards small and greyed, half-time and full-time markers, newest first. No running commentary
 - **Tabs:** Match · Table · Fixtures · Cups · Team (stats, trophies, history)
+- **Cups tab:** a two-line status (where you stand, what's next), your run, the latest round in full, earlier rounds and finished groups folded away, past winners
+- **Fixtures:** one short label per matchday (*MD 7*, *C32*, *WCQF*, *PO SF1*), full name on hover; cup rows marked with an accent edge
 - **Table:** promotion, play-off and relegation places highlighted
-- **Rival:** your nation's real rival for the whole career (§10), shown on the Team tab with where it is now (*England · League 1, 5th*)
+- **Rival:** your nation's real rival for the whole career (§10), shown on the Team tab with where it is now and your all-time record against it (*England · League 1, 5th · Played 6 · W3 D1 L2*), and marked ⚔ in the table
 
 ### Status bar
 
@@ -578,6 +580,7 @@ In rough priority order:
 | Summer explanation behind "How does summer work?"; Club tab hides records that don't exist yet | Keeps the choice and its button in view; no columns of dashes |
 | MIT licence | Permissive and the norm for VS Code extensions; anyone can learn from or fork it |
 | Publisher `bigdevgreg`; publish by uploading the `.vsix` by hand | "BigMoneyGreg" was rejected as suspicious by the Marketplace; a token needs an Azure DevOps organisation, which asked for an Azure subscription |
+| Very large strength gaps count only partly (beyond 32 points, 30% counts) | The open cup draw pairs teams 60 apart; full gaps gave 6+ goal margins in 6% of cup games and scores like 3–10. Now about 3%, with league scoring unchanged |
 | Real nations replace fictional clubs | Relatable worldwide, and players can follow how teams they know are doing; clubs' names are trademarks, countries' aren't |
 | World order by football standing, shuffled within pots of 8 (swing pots across each league line) | A single ranking table over-rates hot streaks; pots keep big nations near the top while every career starts differently |
 | Any nation, any starting league (defaulting to its usual one) | People want to play as their own country, and some want a long climb |

@@ -64,6 +64,27 @@ describe('rival', () => {
   });
 });
 
+describe('record against the rival', () => {
+  it('counts only matches against the rival, a shootout as a draw', () => {
+    const r = emptyRecords();
+    const match = { goalsAgainst: 1, opponent: 'England', season: 1, scorers: [] };
+    recordMatch(r, { ...match, goalsFor: 2, rival: true });
+    recordMatch(r, { ...match, goalsFor: 1, rival: true, won: true });
+    recordMatch(r, { ...match, goalsFor: 0, rival: false });
+    expect(r.rival).toEqual({ won: 1, drawn: 1, lost: 0 });
+  });
+
+  it('shows on the Team tab with where the rival is', () => {
+    const game = new Game({ save: () => {}, changed: () => {} });
+    game.start({ rating: 50, difficulty: 'medium', seed: 2, team: 'SCO' });
+    const v = buildView(game);
+    if (v.screen !== 'game') throw new Error('expected game view');
+    expect(v.club.rival).toMatchObject({ name: 'England', record: 'Not played yet' });
+    expect(v.club.rival!.where).toMatch(/^League [1-5], \d+(st|nd|rd|th)$/);
+    expect(v.tables.flatMap((t) => t.rows).filter((r) => r.isRival).map((r) => r.short)).toEqual(['ENG']);
+  });
+});
+
 describe('summary line', () => {
   it('matches the design format', () => {
     expect(summaryLine({ season: 7, tier: 3, position: 1, won: 26, drawn: 7, lost: 5, outcome: 'promoted' })).toBe('Season 7 · Champions, League 3 · 26W 7D 5L · Promoted 🏆');

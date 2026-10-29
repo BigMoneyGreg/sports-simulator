@@ -17,18 +17,28 @@ export interface Records {
   /** All-time goals for the club, by player. */
   scorers: Record<number, { name: string; goals: number }>;
   manager: { matches: number; won: number; drawn: number; lost: number };
+  /** All-time record against the rival; a shootout counts as a draw, as in real records. */
+  rival: { won: number; drawn: number; lost: number };
 }
 
 export function emptyRecords(): Records {
-  return { unbeaten: { current: 0, best: 0 }, winning: { current: 0, best: 0 }, scorers: {}, manager: { matches: 0, won: 0, drawn: 0, lost: 0 } };
+  return {
+    unbeaten: { current: 0, best: 0 },
+    winning: { current: 0, best: 0 },
+    scorers: {},
+    manager: { matches: 0, won: 0, drawn: 0, lost: 0 },
+    rival: { won: 0, drawn: 0, lost: 0 },
+  };
 }
 
 /** Records one of the player's matches. `won` decides knockout ties settled on penalties. */
-export function recordMatch(r: Records, m: MatchRecord & { scorers: { id: number; name: string }[]; won?: boolean }): void {
+export function recordMatch(r: Records, m: MatchRecord & { scorers: { id: number; name: string }[]; won?: boolean; rival?: boolean }): void {
   const diff = m.goalsFor - m.goalsAgainst;
   const result = diff > 0 ? 'W' : diff < 0 ? 'L' : 'D';
+  const key = result === 'W' ? 'won' : result === 'D' ? 'drawn' : 'lost';
   r.manager.matches++;
-  r.manager[result === 'W' ? 'won' : result === 'D' ? 'drawn' : 'lost']++;
+  r.manager[key]++;
+  if (m.rival) r.rival[key]++;
 
   const record: MatchRecord = { goalsFor: m.goalsFor, goalsAgainst: m.goalsAgainst, opponent: m.opponent, season: m.season };
   if (diff > 0 && (!r.biggestWin || better(record, r.biggestWin))) r.biggestWin = record;

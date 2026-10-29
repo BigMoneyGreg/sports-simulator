@@ -19,7 +19,7 @@ import { emptyRecords, recordMatch, recordSeasonGoals, type Records } from './re
 import { Rng } from './rng';
 import type { GoalRecord, MatchOutcome, Player, SportModule, TeamSheet } from './sport';
 
-export const CAREER_VERSION = 4;
+export const CAREER_VERSION = 5;
 export const CLUB_COUNT = LEAGUE_COUNT * LEAGUE_SIZE;
 export const PLAYER_CLUB_ID = 0;
 
@@ -373,9 +373,10 @@ export function completeRound(career: Career, results: RoundResult[]): void {
       recordMatch((career.records ??= emptyRecords()), {
         goalsFor: record.goalsFor,
         goalsAgainst: record.goalsAgainst,
-        opponent: career.clubs[record.opponentId].name,
+        opponent: career.clubs[record.opponentId].shortName ?? career.clubs[record.opponentId].name,
         season: s.number,
         won: record.won,
+        rival: record.opponentId === career.rival,
         scorers: record.goals
           .filter((g) => g.for && !g.ownGoal)
           .map((g) => ({ id: g.playerId, name: me.squad.find((p) => p.id === g.playerId)?.name ?? 'Unknown' })),
