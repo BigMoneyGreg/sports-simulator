@@ -3,7 +3,7 @@ import { newCareer } from '../src/core/career';
 import { Rng } from '../src/core/rng';
 import { footballSport } from '../src/sports/football';
 import { CURATED_CLUBS, SPARE_TOWNS } from '../src/sports/football/data/clubs';
-import { clubIdentities, displayName, editDistance, isBlocked, playerNamer, shortCode, suggestClubName, surname } from '../src/sports/football/names';
+import { clubIdentities, displayName, editDistance, isBlocked, playerNamer, shortCode, suggestClubName, surname, townName } from '../src/sports/football/names';
 
 describe('club names', () => {
   it('has 100 curated clubs with unique names and codes', () => {
@@ -68,5 +68,20 @@ describe('player names', () => {
     expect(surname('Daan De Vries')).toBe('De Vries');
     expect(surname('Jack Okafor')).toBe('Okafor');
     expect(playerNamer()(new Rng(1))).toMatch(/^\S+ .+$/);
+  });
+});
+
+describe('player club naming', () => {
+  it('derives the short code from a typed club name', () => {
+    const c = newCareer({ rating: 50, difficulty: 'medium', seed: 1, clubName: 'Wexstead Rovers' }, footballSport);
+    expect(c.clubs[0].name).toBe('Wexstead Rovers');
+    expect(c.clubs[0].short).toMatch(/^W/);
+    expect(new Set(c.clubs.map((x) => x.short)).size).toBe(100);
+  });
+
+  it('strips the suffix for the narrow table', () => {
+    expect(townName('Wexstead Rovers')).toBe('Wexstead');
+    expect(townName('AFC Holtbury')).toBe('Holtbury');
+    expect(townName('Ashminster')).toBe('Ashminster');
   });
 });

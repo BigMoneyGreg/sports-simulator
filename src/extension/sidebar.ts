@@ -1,16 +1,37 @@
 import * as vscode from 'vscode';
+import type { ToHost, ToWebview } from '../shared/view';
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
   static readonly viewId = 'sideline.view';
+  private view: vscode.WebviewView | undefined;
 
-  constructor(private readonly extensionUri: vscode.Uri) {}
+  constructor(
+    private readonly extensionUri: vscode.Uri,
+    private readonly onMessage: (message: ToHost) => void,
+  ) {}
+
+  get visible(): boolean {
+    return this.view?.visible ?? false;
+  }
 
   resolveWebviewView(view: vscode.WebviewView): void {
+    this.view = view;
     view.webview.options = {
       enableScripts: true,
       localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'dist'), vscode.Uri.joinPath(this.extensionUri, 'media')],
     };
     view.webview.html = this.html(view.webview);
+    view.webview.onDidReceiveMessage((m: ToHost) => this.onMessage(m));
+    view.onDidChangeVisibility(() => {
+      if (view.visible) this.onMessage({ type: 'ready' });
+    });
+    view.onDidDispose(() => {
+      if (this.view === view) this.view = undefined;
+    });
+  }
+
+  post(message: ToWebview): void {
+    if (this.view?.visible) void this.view.webview.postMessage(message);
   }
 
   private html(webview: vscode.Webview): string {

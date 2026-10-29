@@ -8,7 +8,7 @@ exports.run = async function run() {
   await ext.activate();
   assert.ok(ext.isActive, 'extension active');
   const commands = await vscode.commands.getCommands(true);
-  for (const c of ['sideline.open']) {
+  for (const c of ['sideline.open', 'sideline.togglePause', 'sideline.resetCareer']) {
     assert.ok(commands.includes(c), `command ${c} registered`);
   }
   await vscode.commands.executeCommand('sideline.view.focus');

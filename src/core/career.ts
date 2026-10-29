@@ -31,8 +31,10 @@ export interface SportDefinition<M = unknown> {
   module: SportModule<M>;
   generateSquad(rng: Rng, firstId: number): Player[];
   lineup(squad: Player[]): TeamSheet['lineup'];
-  /** `count` distinct fictional clubs. */
+  /** `count` distinct fictional clubs, the player's first. */
   clubIdentities(rng: Rng, count: number): ClubIdentity[];
+  /** A three-letter code for a name, unique among `used`. */
+  shortCode(name: string, used: Set<string>): string;
 }
 
 export interface CareerOptions {
@@ -161,6 +163,10 @@ export function newCareer(options: CareerOptions, sport: SportDefinition): Caree
 
   const aiRatings = rng.shuffle(Array.from({ length: CLUB_COUNT }, (_, i) => i).filter((r) => r !== chosen));
   const styles: Style[] = ['attacking', 'defensive', 'balanced'];
+  if (options.clubName) {
+    const used = new Set(identities.slice(1).map((c) => c.short));
+    identities[PLAYER_CLUB_ID] = { ...identities[PLAYER_CLUB_ID], name: options.clubName, short: sport.shortCode(options.clubName, used) };
+  }
   const clubs: Club[] = identities.map((identity, id) => {
     const isPlayer = id === PLAYER_CLUB_ID;
     const style: Style = isPlayer ? 'balanced' : rng.pick(styles);
@@ -168,7 +174,6 @@ export function newCareer(options: CareerOptions, sport: SportDefinition): Caree
     return {
       id,
       ...identity,
-      name: isPlayer && options.clubName ? options.clubName : identity.name,
       style,
       ...stats,
       squad: sport.generateSquad(rng, id * 100),

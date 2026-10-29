@@ -50,16 +50,50 @@
         "command": "sideline.resetCareer",
         "title": "Sideline: Reset Career"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Sideline",
+      "properties": {
+        "sideline.matchDuration": {
+          "type": "string",
+          "enum": [
+            "30s",
+            "1m",
+            "2m",
+            "5m"
+          ],
+          "enumDescriptions": [
+            "30 seconds (key events only in commentary)",
+            "1 minute",
+            "2 minutes",
+            "5 minutes"
+          ],
+          "default": "2m",
+          "description": "Real time one 90-minute match takes."
+        },
+        "sideline.fullTimeOverlay": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the full-time result over the Sideline box for a few seconds after your match."
+        },
+        "sideline.statusBarScore": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show your live score in the status bar."
+        }
+      }
+    }
   },
   "scripts": {
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "balance": "npx tsx tools/balance.ts",
+    "balance": "tsx tools/balance.ts",
     "package": "npx @vscode/vsce package --no-dependencies",
-    "test:integration": "npm run build && node test/integration/run.mjs"
+    "test:integration": "npm run build && node test/integration/run.mjs",
+    "preview": "npm run build && tsx tools/preview.ts",
+    "check-names": "tsx tools/check-names.ts"
   },
   "devDependencies": {
     "@types/node": "22.20.5",

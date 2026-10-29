@@ -1,6 +1,6 @@
 import type { SportDefinition } from '../../core/career';
 import { football as module, type FootballMatch } from './match';
-import { clubIdentities, playerNamer } from './names';
+import { clubIdentities, playerNamer, shortCode } from './names';
 import { generateSquad, lineup } from './squad';
 
 export const footballSport: SportDefinition<FootballMatch> = {
@@ -8,4 +8,5 @@ export const footballSport: SportDefinition<FootballMatch> = {
   generateSquad: (rng, firstId) => generateSquad(rng, firstId, playerNamer()),
   lineup,
   clubIdentities,
+  shortCode,
 };

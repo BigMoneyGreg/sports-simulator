@@ -1,0 +1,119 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fillAllocation } from '../src/core/career';
+import { Game, MINUTE_MS, type SavedGame } from '../src/extension/game';
+import { buildView, statusText } from '../src/extension/viewModel';
+
+function setup() {
+  const saves: (SavedGame | null)[] = [];
+  const seasonOver = vi.fn();
+  const fullTime = vi.fn();
+  const changed = vi.fn();
+  const game = new Game({ save: (g) => saves.push(g && JSON.parse(JSON.stringify(g))), changed, seasonOver, fullTime });
+  return { game, saves, seasonOver, fullTime, changed };
+}
+
+const minute = MINUTE_MS['2m'];
+
+describe('game clock', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('kicks off straight away and advances one match-minute per tick', () => {
+    const { game } = setup();
+    game.start({ rating: 50, difficulty: 'medium', seed: 1 });
+    expect(game.phase).toBe('live');
+    const m = game.shownMatch!.match;
+    expect(m.minute).toBe(0);
+    vi.advanceTimersByTime(minute * 10);
+    expect(m.minute).toBe(10);
+    expect(game.live!.matches.every((x) => x.minute === 10)).toBe(true);
+  });
+
+  it('pauses and resumes from the exact minute', () => {
+    const { game } = setup();
+    game.start({ rating: 50, difficulty: 'medium', seed: 2 });
+    vi.advanceTimersByTime(minute * 20);
+    game.togglePause();
+    vi.advanceTimersByTime(minute * 50);
+    expect(game.shownMatch!.match.minute).toBe(20);
+    game.togglePause();
+    vi.advanceTimersByTime(minute * 5);
+    expect(game.shownMatch!.match.minute).toBe(25);
+  });
+
+  it('saves mid-match and resumes from the save with identical results', () => {
+    const a = setup();
+    a.game.start({ rating: 50, difficulty: 'medium', seed: 3 });
+    vi.advanceTimersByTime(minute * 30);
+    a.game.shutdown();
+    const saved = a.saves.at(-1)!;
+    expect(saved.live!.matches[0].minute).toBe(30);
+
+    const b = setup();
+    b.game.load(JSON.parse(JSON.stringify(saved)));
+    a.game.load(JSON.parse(JSON.stringify(saved)));
+    vi.advanceTimersByTime(minute * 120);
+    expect(b.game.career!.season.round).toBe(1);
+    expect(b.game.career!.season.playerMatches).toEqual(a.game.career!.season.playerMatches);
+  });
+
+  it('shows full time for 5 seconds, then starts the next matchday', () => {
+    const { game, fullTime } = setup();
+    game.start({ rating: 50, difficulty: 'medium', seed: 4 });
+    for (let i = 0; i < 200 && game.phase === 'live'; i++) vi.advanceTimersByTime(minute);
+    expect(game.phase).toBe('fullTime');
+    expect(fullTime).toHaveBeenCalledTimes(1);
+    expect(game.career!.season.round).toBe(1);
+    expect(game.shownMatch!.match.period).toBe('done');
+    vi.advanceTimersByTime(4900);
+    expect(game.phase).toBe('fullTime');
+    vi.advanceTimersByTime(200);
+    expect(game.phase).toBe('live');
+    expect(game.shownMatch!.match.minute).toBe(0);
+  });
+
+  it('plays a whole season, waits at the end, and moves on after allocation', () => {
+    const { game, seasonOver } = setup();
+    game.duration = '30s';
+    game.start({ rating: 50, difficulty: 'medium', seed: 5 });
+    vi.advanceTimersByTime(60 * 60 * 1000);
+    expect(game.phase).toBe('seasonOver');
+    expect(seasonOver).toHaveBeenCalledTimes(1);
+    const career = game.career!;
+    expect(career.season.playerMatches.filter((m) => m.kind === 'league')).toHaveLength(38);
+    // Play-off rounds without the player are resolved instantly.
+    expect(career.season.playoffs.every((p) => p.winner !== undefined)).toBe(true);
+    vi.advanceTimersByTime(60_000);
+    expect(game.phase).toBe('seasonOver');
+    expect(statusText(game)).toMatch(/Season over/);
+
+    game.allocate(fillAllocation(career.clubs[0], career.pending!.points, { attack: 1, defence: 1, chemistry: 1 }));
+    expect(game.career!.season.number).toBe(2);
+    expect(game.phase).toBe('live');
+  });
+
+  it('builds a view at every stage', () => {
+    const { game } = setup();
+    expect(buildView(game, () => 'Test FC').screen).toBe('setup');
+    game.start({ rating: 70, difficulty: 'hard', seed: 6, clubName: 'Test FC' });
+    vi.advanceTimersByTime(minute * 60);
+    const v = buildView(game, () => '');
+    if (v.screen !== 'game') throw new Error('expected game view');
+    expect(v.header.club.name).toBe('Test FC');
+    expect(v.tables).toHaveLength(5);
+    expect(v.tables[v.playerTier - 1].rows.some((r) => r.isPlayer && r.live)).toBe(true);
+    expect(v.fixtures).toHaveLength(38);
+    expect(v.match!.clock).toMatch(/^\d+'$/);
+    expect(statusText(game)).toMatch(/^⚽ [A-Z0-9]{3} \d+–\d+ [A-Z0-9]{3} \d+'$/);
+  });
+
+  it('resets back to setup', () => {
+    const { game, saves } = setup();
+    game.start({ rating: 50, difficulty: 'medium', seed: 7 });
+    game.reset();
+    expect(game.career).toBeNull();
+    expect(saves.at(-1)).toBeNull();
+    vi.advanceTimersByTime(minute * 10);
+    expect(game.live).toBeNull();
+  });
+});

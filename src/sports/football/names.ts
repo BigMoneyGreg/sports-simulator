@@ -22,6 +22,14 @@ export function displayName(town: string, suffix: string): string {
   return suffix === 'AFC' ? `AFC ${town}` : `${town} ${suffix}`;
 }
 
+/** The name without its club suffix, for tight spaces: "Wexstead Rovers" → "Wexstead". */
+export function townName(name: string): string {
+  const words = name.split(' ');
+  if (words.length > 1 && words[0] === 'AFC') return words.slice(1).join(' ');
+  if (words.length > 1 && CLUB_SUFFIXES.includes(words[words.length - 1])) return words.slice(0, -1).join(' ');
+  return name;
+}
+
 function normalise(name: string): string {
   return name
     .toLowerCase()
