@@ -97,7 +97,8 @@ input:focus-visible {
 .crest {
   display: inline-block;
   flex: none;
-  border: 1px solid var(--line);
+  /* Strong enough that white and pale flags still show on light themes. */
+  border: 1px solid color-mix(in srgb, var(--vscode-foreground) 30%, transparent);
   vertical-align: -2px;
 }
 
@@ -1155,6 +1156,28 @@ table.league {
 
   .fixtures li > :nth-child(3) {
     display: none;
+  }
+}
+
+@media (max-width: 250px) {
+  /* Records: label above value, so long values keep the full width. */
+  .records {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .records dd + dt {
+    margin-top: 4px;
+  }
+
+  .history li {
+    grid-template-columns: 22px auto 1fr auto;
+    gap: 4px;
+  }
+
+  .history li > :nth-child(3) {
+    white-space: nowrap;
+    font-size: 0.85em;
   }
 }
 

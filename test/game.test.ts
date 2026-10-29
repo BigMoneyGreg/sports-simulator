@@ -115,7 +115,11 @@ describe('game clock', () => {
     expect(v.tables).toHaveLength(5);
     // An hour in, the live tables show clubs moving since kick-off.
     expect(v.tables.some((t) => t.rows.some((r) => r.move))).toBe(true);
-    expect(v.fixtures).toHaveLength(38);
+    expect(v.fixtures.filter((f) => f.kind === 'league')).toHaveLength(38);
+    // Wales are in the first-round cup draw, so their tie is listed before it's played.
+    expect(v.fixtures.filter((f) => f.kind === 'cup')).toEqual([expect.objectContaining({ label: 'C64', current: false })]);
+    expect(v.cups.cup.status).toMatch(/^Still in · Round of 64 v .+ \((home|away)\)$/);
+    expect(v.cups.cup.next).toBe('After matchday 6');
     expect(v.match!.clock).toMatch(/^\d+'$/);
     expect(statusText(game)).toMatch(/^⚽ [A-Z0-9]{3} \d+–\d+ [A-Z0-9]{3} \d+'$/);
   });

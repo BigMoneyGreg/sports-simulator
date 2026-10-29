@@ -62,8 +62,8 @@ export interface HistoryRowView {
   record: string;
   points: number;
   outcome: SeasonOutcome;
-  /** How far the player went in each competition that season. */
-  cups: CupRunView[];
+  /** How far the player went in the cups that season, in one short line: "Cup: R64 · WC: Groups". */
+  cups?: string;
   summary: string;
 }
 

@@ -1,5 +1,5 @@
 import { currentSlot, FOCUSES, focusAllocation, leagueRounds, type Career, type Playoff, type SeasonRecord, type Slot } from '../core/career';
-import { CHAMPIONSHIP_EVERY, CUP_NAMES, cupRun, cupStages, stageLabel, stillIn, type Cup, type CupId, type CupTie } from '../core/cups';
+import { CHAMPIONSHIP_EVERY, CUP_NAMES, cupFixtures, cupRun, cupStages, stageLabel, stillIn, type Cup, type CupId, type CupTie } from '../core/cups';
 import { emptyRecords, topScorers } from '../core/records';
 import { LEAGUE_COUNT, LEAGUE_SIZE, recordResult, sortTable, zone, type Fixture, type TableRow } from '../core/league';
 import { matchClock, timeline } from '../sports/football/commentary';
@@ -72,7 +72,7 @@ export function buildView(game: Game, options: ViewOptions = { fullTimeOverlay: 
     waiting: career.pending ? 'seasonOver' : null,
     playoffs: season.playoffs.map((p) => playoffView(career, p)),
     seasonEnd: career.pending ? buildSeasonEnd(career, tables[tier - 1]) : null,
-    cups: buildCups(career),
+    cups: buildCups(career, !!game.live),
     fullTime: options.fullTimeOverlay ? buildFullTime(game) : null,
   };
   return view;
@@ -118,11 +118,20 @@ export function summaryLine(r: Pick<SeasonRecord, 'season' | 'tier' | 'position'
   return [`Season ${r.season}`, place, `${r.won}W ${r.drawn}D ${r.lost}L`, tail].filter(Boolean).join(' · ') + (r.position === 1 ? ' 🏆' : '');
 }
 
-function cupLines(r: Pick<SeasonRecord, 'cup' | 'championship'>): CupRunView[] {
-  const lines: CupRunView[] = [];
-  if (r.cup) lines.push({ name: CUP_NAMES.cup, run: r.cup });
-  if (r.championship) lines.push({ name: CUP_NAMES.championship, run: r.championship });
-  return lines;
+const RUN_SHORT: Record<string, string> = {
+  Winners: 'Won',
+  Final: 'Final',
+  'Semi-final': 'SF',
+  'Quarter-final': 'QF',
+  'Round of 16': 'R16',
+  'Round of 32': 'R32',
+  'Round of 64': 'R64',
+  'Group stage': 'Groups',
+};
+
+function cupLine(r: Pick<SeasonRecord, 'cup' | 'championship'>): string | undefined {
+  const parts = [r.cup && `Cup: ${RUN_SHORT[r.cup] ?? r.cup}`, r.championship && `WC: ${RUN_SHORT[r.championship] ?? r.championship}`].filter(Boolean);
+  return parts.length ? parts.join(' · ') : undefined;
 }
 
 /** The season report's line for a competition: how far you went, and who won if it wasn't you. */
@@ -133,7 +142,7 @@ function seasonCupLine(career: Career, cup: Cup): CupRunView {
 }
 
 function historyRow(r: SeasonRecord): HistoryRowView {
-  return { season: r.season, tier: r.tier, position: r.position, record: `${r.won}W ${r.drawn}D ${r.lost}L`, points: r.points, outcome: r.outcome, cups: cupLines(r), summary: summaryLine(r) };
+  return { season: r.season, tier: r.tier, position: r.position, record: `${r.won}W ${r.drawn}D ${r.lost}L`, points: r.points, outcome: r.outcome, cups: cupLine(r), summary: summaryLine(r) };
 }
 
 function cabinet(history: SeasonRecord[]): CabinetView {
@@ -465,6 +474,12 @@ function buildFixtures(career: Career, game: Game): FixtureView[] {
     const m = played.get(r);
     if (m) out.push(fixtureView(career, slot, { home: m.home ? me : m.opponentId, away: m.home ? m.opponentId : me }, m, false));
     else if (current) out.push(fixtureView(career, slot, game.live!.fixtures[game.live!.player], undefined, true));
+    else if (r >= s.round && slot.kind !== 'playoff') {
+      // A cup tie already drawn shows as soon as it's known.
+      const cup = slot.kind === 'cup' ? s.cup : s.championship;
+      const f = cup && cupFixtures(cup, slot.stage).find((x) => x.home === me || x.away === me);
+      if (f) out.push(fixtureView(career, slot, f, undefined, false));
+    }
   });
   return out;
 }
@@ -485,17 +500,17 @@ function fixtureView(career: Career, slot: Slot, f: Pick<Fixture, 'home' | 'away
   return view;
 }
 
-function buildCups(career: Career): CupsView {
+function buildCups(career: Career, live: boolean): CupsView {
   const s = career.season;
   const next = Math.ceil(s.number / CHAMPIONSHIP_EVERY) * CHAMPIONSHIP_EVERY;
   const upcoming = next === s.number ? 'This summer · Leagues 1–2 qualify when the league season ends' : `Next: summer of Season ${next} · Leagues 1–2 qualify`;
   let championship: CupView;
-  if (s.championship) championship = cupView(career, s.championship);
+  if (s.championship) championship = cupView(career, s.championship, live);
   else if (career.lastChampionship) {
     const last = cupView(career, career.lastChampionship);
     championship = { ...last, status: `Season ${career.lastChampionship.season} edition · ${last.status}`, next: upcoming };
   } else championship = { ...emptyCup(career, 'championship'), status: 'Not played yet', next: upcoming };
-  const cup = cupView(career, s.cup);
+  const cup = cupView(career, s.cup, live);
   if (!s.cup.entrants.includes(career.playerClubId)) cup.next = "Last season's top 64 qualify";
   return { cup, championship };
 }
@@ -526,7 +541,19 @@ export function cupTieView(career: Career, t: CupTie): CupTieView {
   };
 }
 
-function cupView(career: Career, cup: Cup): CupView {
+/** When the cup's next round is played: "After matchday 12", "Playing now", or "This summer" for the championship. */
+function whenPlayed(career: Career, cup: Cup, live: boolean): string | undefined {
+  const s = career.season;
+  if (cup.season !== s.number) return undefined;
+  const at = s.calendar.findIndex((slot, i) => i >= s.round && slot.kind === cup.id);
+  if (at < 0) return undefined;
+  const before = s.calendar.slice(0, at).reverse().find((slot) => slot.kind === 'league');
+  if (cup.id === 'championship' || !before || before.kind !== 'league') return 'This summer, after the league season';
+  if (at === s.round) return live ? 'Playing now' : 'Next up';
+  return `After matchday ${before.index + 1}`;
+}
+
+function cupView(career: Career, cup: Cup, live = false): CupView {
   const me = career.playerClubId;
   const view = emptyCup(career, cup.id);
   view.groups = cup.groups.map((g) => ({
@@ -548,9 +575,15 @@ function cupView(career: Career, cup: Cup): CupView {
   }));
   if (cup.winner !== undefined) view.winner = badge(career, cup.winner);
   const run = cupRun(cup, me);
+  const nextTie = cup.rounds[cup.rounds.length - 1]?.ties.find((t) => (t.home === me || t.away === me) && t.winner === undefined);
   if (run === null) view.status = "You didn't qualify.";
   else if (run === 'Winners') view.status = `Winners! ${career.clubs[me].name} lift the ${CUP_NAMES[cup.id]}.`;
-  else if (stillIn(cup, me)) view.status = run === 'Group stage' ? 'In the group stage: the top two in each group go through.' : `Still in: ${run}.`;
+  else if (nextTie) {
+    const opponent = shortName(career.clubs[nextTie.home === me ? nextTie.away : nextTie.home]);
+    const venue = cup.id === 'championship' || run === 'Final' ? 'neutral' : nextTie.home === me ? 'home' : 'away';
+    view.status = `Still in · ${run} v ${opponent} (${venue})`;
+    view.next = whenPlayed(career, cup, live);
+  } else if (stillIn(cup, me)) view.status = run === 'Group stage' ? 'In the group stage: the top two in each group go through.' : `Still in · ${run}`;
   else if (run === 'Final') view.status = 'Runners-up: beaten in the final.';
   else view.status = run === 'Group stage' ? 'Out in the group stage.' : `Knocked out in the ${run.toLowerCase()}.`;
   return view;

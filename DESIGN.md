@@ -358,8 +358,9 @@ All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned wi
 - **Team tab:** rating, this season's goals scored and conceded against the league average (the only clue to the drain), rival, trophies, records, history
 - **Live match:** scoreboard (crests, score, clock) and a match report like a real game summary: goals prominent, cards small and greyed, half-time and full-time markers, newest first. No running commentary
 - **Tabs:** Match · Table · Fixtures · Cups · Team (stats, trophies, history)
-- **Cups tab:** a two-line status (where you stand, what's next), your run, the latest round in full, earlier rounds and finished groups folded away, past winners
-- **Fixtures:** one short label per matchday (*MD 7*, *C32*, *WCQF*, *PO SF1*), full name on hover; cup rows marked with an accent edge
+- **Cups tab:** a two-line status naming your next tie and when it's played (*Still in · Round of 32 v Brazil (away)* / *After matchday 12*), your run once it's more than one tie, the latest round in full, earlier rounds and finished groups folded away, past winners
+- **Fixtures:** one short label per matchday (*MD 7*, *C32*, *WCQF*, *PO SF1*), full name on hover; cup rows marked with an accent edge and listed as soon as they're drawn
+- **History:** one row a season, with the cup runs on one short line (*Cup: R64 · WC: Groups*)
 - **Table:** promotion, play-off and relegation places highlighted
 - **Rival:** your nation's real rival for the whole career (§10), shown on the Team tab with where it is now and your all-time record against it (*England · League 1, 5th · Played 6 · W3 D1 L2*), and marked ⚔ in the table
 

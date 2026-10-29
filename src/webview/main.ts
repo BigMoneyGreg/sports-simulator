@@ -427,7 +427,8 @@ function cupParts(v: GameView): string[] {
   };
   const ties = (r: CupView['rounds'][number]) => `<ul class="bracket card flush">${[...r.ties].sort((a, b) => Number(b.mine) - Number(a.mine)).map((t) => tie(t)).join('')}</ul>`;
   const myRun = c.rounds.flatMap((r) => r.ties.filter((t) => t.mine).map((t) => ({ round: r.name, t })));
-  const run = myRun.length
+  // Your run is worth its own card once there's more than the current tie to show.
+  const run = myRun.length > 1
     ? `<h3 class="sub">Your run</h3><ul class="bracket card flush">${myRun.map(({ round, t }) => tie(t, round)).join('')}</ul>`
     : '';
   const [latest, ...earlier] = c.rounds;
@@ -531,12 +532,12 @@ function recordsHtml(r: GameView['club']['records']): string {
     ['Heaviest defeat', r.heaviestDefeat ? esc(r.heaviestDefeat) : null],
     ['Unbeaten run', /^0\b/.test(r.unbeaten) ? null : esc(r.unbeaten)],
     ['Winning run', /^0\b/.test(r.winning) ? null : esc(r.winning)],
-    ['Most goals', r.mostGoals ? esc(r.mostGoals) : null],
+    ['Most goals in a season', r.mostGoals ? esc(r.mostGoals) : null],
     ['Top scorers', r.topScorers.length ? r.topScorers.map(esc).join('<br>') : null],
   ];
   const shown = rows.filter(([, value]) => value !== null);
   return shown.length
-    ? `<dl class="report">${shown.map(([label, value]) => `<dt>${label}</dt><dd>${value}</dd>`).join('')}</dl>`
+    ? `<dl class="report records">${shown.map(([label, value]) => `<dt>${label}</dt><dd>${value}</dd>`).join('')}</dl>`
     : '<p class="muted small">Records appear as the matches are played.</p>';
 }
 
@@ -589,7 +590,7 @@ function clubHtml(v: GameView): string {
             .map(
               (h) => `<li><span>S${h.season}</span><span>L${h.tier} · ${ordinal(h.position)}</span><span class="muted small">${esc(h.record)}</span>
               <button type="button" class="link small" data-copy="${esc(h.summary)}" title="Copy summary">Copy</button>${
-                h.cups.map((x) => `<span class="muted small cups">${esc(x.name)}: ${esc(x.run)}</span>`).join('')
+                h.cups ? `<span class="muted small cups">${esc(h.cups)}</span>` : ''
               }</li>`,
             )
             .join('')}</ol>`
