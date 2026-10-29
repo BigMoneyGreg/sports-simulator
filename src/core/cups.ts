@@ -51,13 +51,15 @@ export interface Leg {
   home: number;
   away: number;
   score: [number, number];
-  note?: string;
+  /** Shootout score, home side first. */
+  penalties?: [number, number];
+  extraTime?: boolean;
 }
 
 export interface CupTie {
-  /** The better seed. */
-  high: number;
-  low: number;
+  /** Drawn first: at home in a one-off tie or the first leg. */
+  home: number;
+  away: number;
   legs: Leg[];
   winner?: number;
 }
@@ -77,8 +79,8 @@ export interface CupGroup {
 export interface Cup {
   id: CupId;
   season: number;
-  /** 1 for the strongest entrant. */
-  seeds: Record<number, number>;
+  /** Who qualified, strongest first. */
+  entrants: number[];
   groups: CupGroup[];
   /** Knockout rounds drawn so far. */
   rounds: CupRound[];
@@ -104,21 +106,15 @@ export function stageLabel(id: CupId, stage: CupStage): string {
   return r.legs === 2 ? `${r.name}, ${stage.leg === 0 ? '1st' : '2nd'} leg` : r.name;
 }
 
-function seedsOf(entrants: number[]): Record<number, number> {
-  return Object.fromEntries(entrants.map((id, i) => [id, i + 1]));
+/** An open draw: anyone can meet anyone, and whoever comes out first is at home. */
+function openDraw(ids: number[], rng: Rng): CupTie[] {
+  return pairUp(rng.shuffle([...ids])).map(([home, away]) => ({ home, away, legs: [] }));
 }
 
-/** Pairs each top-half seed with a random bottom-half one. */
-function seededDraw(entrants: number[], rng: Rng): CupTie[] {
-  const half = entrants.length / 2;
-  const low = rng.shuffle(entrants.slice(half));
-  return entrants.slice(0, half).map((high, i) => ({ high, low: low[i], legs: [] }));
-}
-
-/** The Nations Cup: entrants best first; the top half are kept apart in the first round. */
+/** The Nations Cup: an open draw every round. */
 export function drawCup(season: number, entrants: number[], rng: Rng): Cup {
   if (entrants.length !== CUP_ENTRANTS) throw new Error(`the cup needs ${CUP_ENTRANTS} entrants`);
-  return { id: 'cup', season, seeds: seedsOf(entrants), groups: [], rounds: [{ name: FORMATS.cup.rounds[0].name, ties: rng.shuffle(seededDraw(entrants, rng)) }] };
+  return { id: 'cup', season, entrants: [...entrants], groups: [], rounds: [{ name: FORMATS.cup.rounds[0].name, ties: openDraw(entrants, rng) }] };
 }
 
 /** The World Championship: five pots of eight by seeding, one from each pot in every group. */
@@ -130,7 +126,7 @@ export function drawChampionship(season: number, entrants: number[], rng: Rng): 
     const ids = pots.map((pot) => pot[g]);
     return { name: GROUP_NAMES[g], table: emptyTable(ids), days: singleRoundRobin(ids) };
   });
-  return { id: 'championship', season, seeds: seedsOf(entrants), groups, rounds: [] };
+  return { id: 'championship', season, entrants: [...entrants], groups, rounds: [] };
 }
 
 /** Everyone plays everyone once; with an odd number, one team rests each matchday. */
@@ -163,12 +159,11 @@ export function cupFixtures(cup: Cup, stageIndex: number): Fixture[] {
   if (!round) return [];
   return round.ties.map((tie): Fixture => {
     if (format.legs === 2 && stage.leg === 1) {
-      const [low, high] = tie.legs[0].score;
-      return { ...base, home: tie.high, away: tie.low, secondLeg: true, options: { knockout: { aggregate: [high, low] } } };
+      const [first, second] = tie.legs[0].score;
+      return { ...base, home: tie.away, away: tie.home, secondLeg: true, options: { knockout: { aggregate: [second, first] } } };
     }
-    if (format.legs === 2) return { ...base, home: tie.low, away: tie.high, options: {} };
-    // One-off ties: the lower seed hosts, except at neutral venues.
-    return { ...base, home: tie.low, away: tie.high, options: { neutral: format.neutral, knockout: { aggregate: [0, 0] } } };
+    if (format.legs === 2) return { ...base, home: tie.home, away: tie.away, options: {} };
+    return { ...base, home: tie.home, away: tie.away, options: { neutral: format.neutral, knockout: { aggregate: [0, 0] } } };
   });
 }
 
@@ -185,8 +180,11 @@ export function recordCupResult(cup: Cup, fixture: Fixture, outcome: MatchOutcom
     return;
   }
   const round = cup.rounds[stage.round];
-  const tie = round.ties.find((t) => t.high === fixture.home || t.high === fixture.away)!;
-  tie.legs.push({ home: fixture.home, away: fixture.away, score, note: note(outcome) });
+  const tie = round.ties.find((t) => t.home === fixture.home || t.home === fixture.away)!;
+  const leg: Leg = { home: fixture.home, away: fixture.away, score };
+  if (outcome.penalties) leg.penalties = outcome.penalties;
+  if (outcome.extraTime) leg.extraTime = true;
+  tie.legs.push(leg);
   if (outcome.winner) tie.winner = outcome.winner === 'home' ? fixture.home : fixture.away;
   if (!round.ties.every((t) => t.winner !== undefined)) return;
 
@@ -197,8 +195,8 @@ export function recordCupResult(cup: Cup, fixture: Fixture, outcome: MatchOutcom
     return;
   }
   // The cup is drawn afresh each round; the championship follows its bracket.
-  const pairs = cup.id === 'cup' ? pairUp(rng.shuffle(winners)) : pairUp(winners);
-  cup.rounds.push({ name: next.name, ties: pairs.map(([a, b]) => (cup.seeds[a] < cup.seeds[b] ? { high: a, low: b, legs: [] } : { high: b, low: a, legs: [] })) });
+  const ties = cup.id === 'cup' ? openDraw(winners, rng) : pairUp(winners).map(([home, away]) => ({ home, away, legs: [] }));
+  cup.rounds.push({ name: next.name, ties });
 }
 
 function pairUp(ids: number[]): [number, number][] {
@@ -215,33 +213,27 @@ function knockoutFromGroups(cup: Cup): CupTie[] {
   for (const swap of [false, true]) {
     for (let g = 0; g < placed.length; g += 2) {
       const [first, second] = swap ? [placed[g + 1][0], placed[g][1]] : [placed[g][0], placed[g + 1][1]];
-      ties.push({ high: first, low: second, legs: [] });
+      ties.push({ home: first, away: second, legs: [] });
     }
   }
   return ties;
 }
 
-function note(outcome: MatchOutcome): string | undefined {
-  if (outcome.penalties) return `(${outcome.penalties[0]}–${outcome.penalties[1]} pens)`;
-  if (outcome.extraTime) return '(aet)';
-  return undefined;
-}
-
 /** How far a team went: "Winners", "Final", "Semi-final", …, "Group stage", or null if it wasn't in it. */
 export function cupRun(cup: Cup, clubId: number): string | null {
-  if (!(clubId in cup.seeds)) return null;
+  if (!cup.entrants.includes(clubId)) return null;
   if (cup.winner === clubId) return 'Winners';
   for (let r = cup.rounds.length - 1; r >= 0; r--) {
-    if (cup.rounds[r].ties.some((t) => t.high === clubId || t.low === clubId)) return cup.rounds[r].name;
+    if (cup.rounds[r].ties.some((t) => t.home === clubId || t.away === clubId)) return cup.rounds[r].name;
   }
   return cup.groups.length ? 'Group stage' : FORMATS[cup.id].rounds[0].name;
 }
 
 /** Whether the team is still in the competition. */
 export function stillIn(cup: Cup, clubId: number): boolean {
-  if (!(clubId in cup.seeds) || cup.winner !== undefined) return cup.winner === clubId;
+  if (!cup.entrants.includes(clubId) || cup.winner !== undefined) return cup.winner === clubId;
   const last = cup.rounds[cup.rounds.length - 1];
   if (!last) return true;
-  const tie = last.ties.find((t) => t.high === clubId || t.low === clubId);
+  const tie = last.ties.find((t) => t.home === clubId || t.away === clubId);
   return !!tie && (tie.winner === undefined || tie.winner === clubId);
 }

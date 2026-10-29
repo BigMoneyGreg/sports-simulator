@@ -4,6 +4,7 @@ import { rating } from '../src/core/club';
 import { cupRun, drawChampionship, drawCup, recordCupResult, cupFixtures, cupStages } from '../src/core/cups';
 import { Rng } from '../src/core/rng';
 import { footballSport } from '../src/sports/football';
+import { cupTieView } from '../src/extension/viewModel';
 
 const ids = (n: number) => Array.from({ length: n }, (_, i) => i);
 const result = (homeGoals: number, awayGoals: number, winner?: 'home' | 'away') => ({ homeGoals, awayGoals, goals: [], winner });
@@ -14,19 +15,24 @@ function nextSeason(c: Career): void {
 }
 
 describe('Nations Cup', () => {
-  it('keeps the top 32 seeds apart in the first round, with the lower seed at home', () => {
-    const cup = drawCup(1, ids(64), new Rng(1));
-    const ties = cup.rounds[0].ties;
-    expect(ties).toHaveLength(32);
-    for (const t of ties) {
-      expect(t.high).toBeLessThan(32);
-      expect(t.low).toBeGreaterThanOrEqual(32);
+  it('draws every round open, with whoever comes out first at home', () => {
+    const topMeetings = new Set<number>();
+    let topAtHome = 0;
+    for (let seed = 1; seed <= 20; seed++) {
+      const cup = drawCup(1, ids(64), new Rng(seed));
+      const ties = cup.rounds[0].ties;
+      expect(ties).toHaveLength(32);
+      expect(new Set(ties.flatMap((t) => [t.home, t.away])).size).toBe(64);
+      for (const t of ties) if (t.home < 32 && t.away < 32) topMeetings.add(seed);
+      for (const f of cupFixtures(cup, 0)) {
+        expect(f.options.knockout).toBeDefined();
+        expect(f.options.neutral).toBeFalsy();
+        if (f.home < 32) topAtHome++;
+      }
     }
-    for (const f of cupFixtures(cup, 0)) {
-      expect(f.home).toBeGreaterThanOrEqual(32);
-      expect(f.options.knockout).toBeDefined();
-      expect(f.options.neutral).toBeFalsy();
-    }
+    expect(topMeetings.size).toBeGreaterThan(10);
+    expect(topAtHome).toBeGreaterThan(200);
+    expect(topAtHome).toBeLessThan(440);
   });
 
   it('plays two-legged quarter- and semi-finals and a one-off neutral final', () => {
@@ -66,7 +72,7 @@ describe('World Championship', () => {
     const r16 = wc.rounds[0].ties;
     expect(r16).toHaveLength(8);
     const groupOf = (id: number) => wc.groups.findIndex((g) => g.table.some((r) => r.clubId === id));
-    for (const t of r16) expect(groupOf(t.high)).not.toBe(groupOf(t.low));
+    for (const t of r16) expect(groupOf(t.home)).not.toBe(groupOf(t.away));
     for (let i = 5; i < cupStages('championship').length; i++) {
       for (const f of cupFixtures(wc, i)) {
         expect(f.options.neutral).toBe(true);
@@ -74,7 +80,7 @@ describe('World Championship', () => {
       }
     }
     expect(wc.rounds.map((r) => r.ties.length)).toEqual([8, 4, 2, 1]);
-    for (const round of wc.rounds.slice(0, 3)) for (const t of round.ties) expect(groupOf(t.high)).not.toBe(groupOf(t.low));
+    for (const round of wc.rounds.slice(0, 3)) for (const t of round.ties) expect(groupOf(t.home)).not.toBe(groupOf(t.away));
     expect(wc.winner).toBeDefined();
   });
 });
@@ -88,18 +94,18 @@ describe('cups in a career', () => {
     }
     while (nextRound(c) && c.season.calendar[c.season.round].kind !== 'championship') playRound(c, footballSport);
     const top = c.season.leagues.slice(0, 2).flatMap((l) => l.clubIds);
-    expect(Object.keys(c.season.championship!.seeds).map(Number).sort((a, b) => a - b)).toEqual([...top].sort((a, b) => a - b));
+    expect([...c.season.championship!.entrants].sort((a, b) => a - b)).toEqual([...top].sort((a, b) => a - b));
     nextSeason(c);
     expect(c.honours.championship).toHaveLength(1);
     expect(c.honours.cup).toHaveLength(4);
   });
 
-  it('seeds next season’s cup from this season’s final standings', () => {
+  it('enters the top 64 of this season’s final standings into next season’s cup', () => {
     const c = newCareer({ rating: 50, difficulty: 'medium', seed: 9, team: 'NOR' }, footballSport);
     playSeason(c, footballSport);
     const standing = c.pending!.standing;
     nextSeason(c);
-    expect(Object.entries(c.season.cup.seeds).sort((a, b) => a[1] - b[1]).map(([id]) => Number(id))).toEqual(standing.slice(0, 64));
+    expect(c.season.cup.entrants).toEqual(standing.slice(0, 64));
   });
 
   it('leaves ratings alone: only the league decides the summer', () => {
@@ -113,5 +119,41 @@ describe('cups in a career', () => {
     const c = newCareer({ rating: 95, difficulty: 'medium', seed: 11, team: 'BRA' }, footballSport);
     nextSeason(c);
     expect(c.history[0].cup).toMatch(/^(Winners|Final|Semi-final|Quarter-final|Round of (16|32|64))$/);
+  });
+});
+
+describe('how a tie reads', () => {
+  const c = newCareer({ rating: 50, difficulty: 'medium', seed: 12, team: 'NOR' }, footballSport);
+  const [eng, bra] = ['ENG', 'BRA'].map((code) => c.clubs.find((x) => x.short === code)!.id);
+
+  it('reads every leg from the left-hand team and names the shootout winner', () => {
+    // England host the first leg and lose 1–2; Brazil host the second, lose 2–3 and win the shootout 3–1.
+    const tie = {
+      home: eng,
+      away: bra,
+      winner: bra,
+      legs: [
+        { home: eng, away: bra, score: [1, 2] as [number, number] },
+        { home: bra, away: eng, score: [2, 3] as [number, number], extraTime: true, penalties: [3, 1] as [number, number] },
+      ],
+    };
+    const v = cupTieView(c, tie);
+    expect(v.legs).toEqual(['1–2', '3–2']);
+    expect(v.aggregate).toBe('4–4 agg');
+    expect(v.decided).toBe('Brazil win 3–1 on penalties');
+    expect(v.winner).toBe('away');
+  });
+
+  it('gives the aggregate winner first, from either side', () => {
+    const tie = {
+      home: eng,
+      away: bra,
+      winner: eng,
+      legs: [
+        { home: eng, away: bra, score: [3, 0] as [number, number] },
+        { home: bra, away: eng, score: [2, 1] as [number, number] },
+      ],
+    };
+    expect(cupTieView(c, tie).decided).toBe('England win 4–2 on aggregate');
   });
 });

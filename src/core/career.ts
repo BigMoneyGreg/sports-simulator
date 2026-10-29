@@ -67,7 +67,7 @@ export interface PlayoffTie {
   /** First-leg score at the lower seed's ground: [low, high]. */
   leg1?: [number, number];
   /** Second-leg score at the higher seed's ground: [high, low], with any extra time or penalties. */
-  leg2?: { score: [number, number]; note?: string };
+  leg2?: { score: [number, number]; penalties?: [number, number]; extraTime?: boolean };
   winner?: number;
 }
 
@@ -434,7 +434,9 @@ function recordPlayoff(s: Season, fixture: Fixture, outcome: MatchOutcome): void
   if (fixture.kind === 'playoffSemi1') {
     tie.leg1 = [outcome.homeGoals, outcome.awayGoals];
   } else {
-    tie.leg2 = { score: [outcome.homeGoals, outcome.awayGoals], note: knockoutNote(outcome) };
+    tie.leg2 = { score: [outcome.homeGoals, outcome.awayGoals] };
+    if (outcome.penalties) tie.leg2.penalties = outcome.penalties;
+    if (outcome.extraTime) tie.leg2.extraTime = true;
     tie.winner = outcome.winner === 'home' ? fixture.home : fixture.away;
     if (p.semis.every((t) => t.winner !== undefined)) {
       // The better-placed semi-final winner is the nominal home side at the neutral final.
@@ -633,7 +635,7 @@ export function allocatePoints(career: Career, allocation: Record<Stat, number>)
   for (const cup of [career.season.cup, career.season.championship]) {
     if (cup?.winner === undefined) continue;
     const final = cup.rounds[cup.rounds.length - 1].ties[0];
-    career.honours[cup.id].push({ season: cup.season, winner: cup.winner, runnerUp: final.high === cup.winner ? final.low : final.high });
+    career.honours[cup.id].push({ season: cup.season, winner: cup.winner, runnerUp: final.home === cup.winner ? final.away : final.home });
   }
   if (career.season.championship) career.lastChampionship = career.season.championship;
 

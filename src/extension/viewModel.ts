@@ -1,5 +1,5 @@
 import { currentSlot, FOCUSES, focusAllocation, leagueRounds, type Career, type Playoff, type SeasonRecord, type Slot } from '../core/career';
-import { CHAMPIONSHIP_EVERY, CUP_NAMES, cupRun, cupStages, roundFormat, stageLabel, stillIn, type Cup, type CupId } from '../core/cups';
+import { CHAMPIONSHIP_EVERY, CUP_NAMES, cupRun, cupStages, roundFormat, stageLabel, stillIn, type Cup, type CupId, type CupTie } from '../core/cups';
 import { emptyRecords, topScorers } from '../core/records';
 import { LEAGUE_COUNT, LEAGUE_SIZE, recordResult, sortTable, zone, type Fixture, type TableRow } from '../core/league';
 import { matchClock, timeline } from '../sports/football/commentary';
@@ -7,7 +7,7 @@ import { outcome, type SideKey } from '../sports/football/match';
 import { NATIONS } from '../sports/football/data/nations';
 import { naturalTier, shortName, surname } from '../sports/football/names';
 import { DURATIONS, type Duration } from '../shared/view';
-import type { CupRunView, CupsView, CupView, NationOption, CabinetView, ClubView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, TableView, TeamBadge, View } from '../shared/view';
+import type { CupRunView, CupsView, CupTieView, CupView, NationOption, CabinetView, ClubView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, TableView, TeamBadge, View } from '../shared/view';
 import { fullTimePause } from './game';
 import type { Game } from './game';
 
@@ -162,7 +162,16 @@ function recordsView(career: Career): RecordsView {
 function playoffView(career: Career, p: Playoff): PlayoffView {
   const name = (id: number | undefined) => (id === undefined ? undefined : career.clubs[id].name);
   const score = (x: [number, number], note?: string) => `${x[0]}–${x[1]}${note ? ` ${note}` : ''}`;
-  const legs = (tie: Playoff['semis'][number]) => [tie.leg1 && score(tie.leg1), tie.leg2 && score(tie.leg2.score, tie.leg2.note)].filter((x): x is string => !!x);
+  // Both legs read from the lower seed's side, as the tie is shown ("low v high").
+  const legs = (tie: Playoff['semis'][number]) => {
+    const out = tie.leg1 ? [score(tie.leg1)] : [];
+    const second = tie.leg2;
+    if (second) {
+      const pens = second.penalties && `(${second.penalties[1]}–${second.penalties[0]} pens)`;
+      out.push(score([second.score[1], second.score[0]], pens ?? (second.extraTime ? '(aet)' : undefined)));
+    }
+    return out;
+  };
   return {
     tier: p.tier,
     semis: p.semis.map((tie) => ({ high: badge(career, tie.high), low: badge(career, tie.low), legs: legs(tie), winner: name(tie.winner) })),
@@ -451,6 +460,34 @@ function emptyCup(career: Career, id: CupId): CupView {
   return { id, name: CUP_NAMES[id], status: '', groups: [], rounds: [], pastWinners };
 }
 
+/** One cup tie as shown: scores from the left-hand team's side, and how a close one was won. */
+export function cupTieView(career: Career, t: CupTie): CupTieView {
+  const me = career.playerClubId;
+  // Every score reads from the left-hand team's side, whichever leg it was.
+  const fromLeft = (l: { home: number }, pair: [number, number]) => (l.home === t.home ? `${pair[0]}–${pair[1]}` : `${pair[1]}–${pair[0]}`);
+  const legs = t.legs.map((l) => fromLeft(l, l.score));
+  const agg = t.legs.reduce((a, l) => (l.home === t.home ? [a[0] + l.score[0], a[1] + l.score[1]] : [a[0] + l.score[1], a[1] + l.score[0]]), [0, 0]);
+  const last = t.legs[t.legs.length - 1];
+  let decided: string | undefined;
+  if (t.winner !== undefined && last) {
+    const name = shortName(career.clubs[t.winner]);
+    if (last.penalties) {
+      const [w, l] = last.home === t.winner ? last.penalties : [last.penalties[1], last.penalties[0]];
+      decided = `${name} win ${w}–${l} on penalties`;
+    } else if (last.extraTime) decided = `${name} win after extra time`;
+    else if (t.legs.length === 2) decided = `${name} win ${Math.max(...agg)}–${Math.min(...agg)} on aggregate`;
+  }
+  return {
+    home: badge(career, t.home),
+    away: badge(career, t.away),
+    legs,
+    aggregate: t.legs.length === 2 ? `${agg[0]}–${agg[1]} agg` : undefined,
+    decided,
+    winner: t.winner === undefined ? undefined : t.winner === t.home ? ('home' as const) : ('away' as const),
+    mine: t.home === me || t.away === me,
+  };
+}
+
 function cupView(career: Career, cup: Cup): CupView {
   const me = career.playerClubId;
   const view = emptyCup(career, cup.id);
@@ -469,19 +506,7 @@ function cupView(career: Career, cup: Cup): CupView {
   }));
   view.rounds = [...cup.rounds].reverse().map((round) => ({
     name: round.name,
-    ties: round.ties.map((t) => {
-      const [home, away] = t.legs[0] ? [t.legs[0].home, t.legs[0].away] : [t.low, t.high];
-      const legs = t.legs.map((l) => (l.home === home ? `${l.score[0]}–${l.score[1]}` : `${l.score[1]}–${l.score[0]}`) + (l.note ? ` ${l.note}` : ''));
-      const agg = t.legs.length === 2 ? t.legs.reduce((a, l) => (l.home === home ? [a[0] + l.score[0], a[1] + l.score[1]] : [a[0] + l.score[1], a[1] + l.score[0]]), [0, 0]) : null;
-      return {
-        home: badge(career, home),
-        away: badge(career, away),
-        legs,
-        aggregate: agg ? `${agg[0]}–${agg[1]} on aggregate` : undefined,
-        winner: t.winner === undefined ? undefined : t.winner === home ? ('home' as const) : ('away' as const),
-        mine: t.high === me || t.low === me,
-      };
-    }),
+    ties: round.ties.map((t) => cupTieView(career, t)),
   }));
   if (cup.winner !== undefined) view.winner = badge(career, cup.winner);
   const run = cupRun(cup, me);

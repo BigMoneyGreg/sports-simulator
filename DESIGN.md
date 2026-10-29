@@ -193,10 +193,11 @@ The bands make movement feel real:
 
 Cups never change ratings: only league finishes feed the summer (§7). They bring trophies, records and stories. Each has its own place in the **Cups** tab, viewable whether or not you're in it, with the draw, results, groups and past winners.
 
-**Nations Cup, every season.** The top 64 of last season's final standings (season 1: the starting order), seeded 1–64.
-- Round of 64: seeds 1–32 each drawn against one of 33–64. Later rounds are drawn at random.
-- Round of 64, 32 and 16: one match, the lower seed at home (a chance of an upset), extra time and penalties if level.
-- Quarter- and semi-finals: two legs, the better seed at home second. Final: one match at a neutral ground.
+**Nations Cup, every season.** The top 64 of last season's final standings (season 1: the starting order).
+- An open draw every round: anyone can meet anyone, so England could draw France in the round of 64. Whoever comes out first is at home.
+- Round of 64, 32 and 16: one match, extra time and penalties if level.
+- Quarter- and semi-finals: two legs, the first drawn at home first. Final: one match at a neutral ground.
+- Results always read from the left-hand team's side, and a tie settled by aggregate, extra time or penalties names its winner (*Brazil win 3–1 on penalties*).
 - Eight cup matchdays sit between league rounds (after matchdays 4, 9, 14, 19, 24, 29, 33 and 37), so the final comes before the last league round.
 
 **World Championship, every fourth summer** (seasons 4, 8, 12…), after the play-offs and before the summer decision.
@@ -581,7 +582,7 @@ In rough priority order:
 | Real nations replace fictional clubs | Relatable worldwide, and players can follow how teams they know are doing; clubs' names are trademarks, countries' aren't |
 | World order by football standing, shuffled within pots of 8 (swing pots across each league line) | A single ranking table over-rates hot streaks; pots keep big nations near the top while every career starts differently |
 | Any nation, any starting league (defaulting to its usual one) | People want to play as their own country, and some want a long climb |
-| Nations Cup (top 64, every season) and World Championship (Leagues 1–2, every 4th summer); no effect on ratings | Real-feeling moments beyond the league, without touching the balance tuning |
+| Nations Cup (top 64, open draw every round, every season) and World Championship (Leagues 1–2, every 4th summer); no effect on ratings | Real-feeling moments beyond the league, without touching the balance tuning |
 
 ## 17. Name ✅
 

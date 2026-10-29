@@ -915,6 +915,11 @@ table.league {
   border-top: 1px solid var(--line);
 }
 
+.bracket .decided {
+  width: 100%;
+  text-align: right;
+}
+
 .bracket li.me {
   background: color-mix(in srgb, var(--accent) 22%, transparent);
 }

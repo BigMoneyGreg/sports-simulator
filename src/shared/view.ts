@@ -169,7 +169,7 @@ export interface SetupView {
 export interface PlayoffTieView {
   high: TeamBadge;
   low: TeamBadge;
-  /** Leg scores, lower seed's home leg first, each as "home–away". */
+  /** Leg scores in order, each with the lower seed's goals first, as the tie reads ("low v high"). */
   legs: string[];
   winner?: string;
 }
@@ -240,9 +240,12 @@ export interface CupRunView {
 export interface CupTieView {
   home: TeamBadge;
   away: TeamBadge;
-  /** Each leg's score from the first leg's home side, e.g. "2–1 (aet)". */
+  /** Each leg's score, always with the left-hand team's goals first. */
   legs: string[];
+  /** Two-legged ties: "4–4 agg". */
   aggregate?: string;
+  /** How a close tie was settled, naming the winner: "Brazil win 3–1 on penalties". */
+  decided?: string;
   winner?: 'home' | 'away';
   mine: boolean;
 }
