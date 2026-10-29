@@ -42,6 +42,8 @@ interface UiState {
 
 const ui: UiState = { tab: 'match', tableTier: null, ...((vscode.getState() as Partial<UiState>) ?? {}) };
 let view: View | null = null;
+/** The summer focus picked but not yet confirmed, and the season it belongs to. */
+const summer = { season: 0, focus: null as Focus | null, sent: false };
 
 const setup = {
   league: 3,
@@ -357,7 +359,8 @@ function seasonEndHtml(e: SeasonEndView): string {
     balanced: ['Balanced', 'Shared evenly'],
     defence: ['Focus defence', 'Most of the work goes into defending'],
   };
-  const option = (o: SeasonEndView['options'][number]) => `<button type="button" class="focus ${o.focus}" data-focus="${o.focus}">
+  if (summer.season !== e.season) Object.assign(summer, { season: e.season, focus: null, sent: false });
+  const option = (o: SeasonEndView['options'][number]) => `<button type="button" role="radio" aria-checked="${summer.focus === o.focus}" class="focus ${o.focus} ${summer.focus === o.focus ? 'on' : ''}" data-focus="${o.focus}"${summer.sent ? ' disabled' : ''}>
       <strong>${FOCUS_TEXT[o.focus][0]}</strong><span class="muted small">${FOCUS_TEXT[o.focus][1]}</span>
     </button>`;
   return `<div class="season-end">
@@ -384,8 +387,9 @@ function seasonEndHtml(e: SeasonEndView): string {
     <p class="small">${esc(verdict)}</p>
     <p class="muted small">Players age and leave over the summer, and every club loses some strength. You won't be told whether it hit your attack or your defence: the goals are the clue. Lots at both ends suggests you lean attacking; tight, low-scoring games suggest you lean defensive.</p>
     <p class="small strong">Where should the summer's work go?</p>
-    <div class="focus-row">${e.options.map(option).join('')}</div>
-    ${e.canRetire ? '<p class="muted small center">Choosing a focus carries on: defend the title.</p>' : ''}
+    <div class="focus-row" role="radiogroup">${e.options.map(option).join('')}</div>
+    <button type="button" id="nextSeason" class="primary"${summer.focus && !summer.sent ? '' : ' disabled'}>Start next season</button>
+    ${e.canRetire ? '<p class="muted small center">Start next season to defend the title.</p>' : ''}
     ${e.canRetire ? `<button type="button" id="newCareer" class="secondary">Start a new career</button>` : ''}
     <p class="small"><button type="button" class="link" data-copy="${esc(e.summary)}">Copy summary</button> <span class="muted">${esc(e.summary)}</span></p>
     </div>
@@ -492,8 +496,12 @@ app.addEventListener('click', (e) => {
     saveUi();
     render();
   } else if (button.dataset.focus) {
-    app.querySelectorAll<HTMLButtonElement>('[data-focus]').forEach((b) => (b.disabled = true));
-    send({ type: 'chooseFocus', focus: button.dataset.focus as Focus });
+    summer.focus = button.dataset.focus as Focus;
+    render();
+  } else if (button.id === 'nextSeason' && summer.focus && !summer.sent) {
+    summer.sent = true;
+    render();
+    send({ type: 'chooseFocus', focus: summer.focus });
   } else if (button.dataset.copy) {
     send({ type: 'copy', text: button.dataset.copy });
   } else if (button.id === 'newCareer') {
