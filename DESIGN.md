@@ -340,13 +340,13 @@ All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned wi
 
 ### Status bar
 
-`⚽ ASH 2–1 RED 67'`, which you can click to open the sidebar box.
+`⚽ ASH 2–1 HOL 67'`, which you can click to open the sidebar box.
 
 ### Full-time overlay
 
 For your club's matches only. A result card **slides over the sidebar box itself** (not a VS Code notification), stays for **5 seconds** (3 seconds at 30s matches), then fades and the next matchday starts. No click needed.
 
-> **FT: Ashby Rovers 2–1 Holtwick Town**
+> **FT: Ashminster City 2–1 AFC Holtbury**
 > Okafor 23', Lind 67' · Marsh 81'
 
 - Nothing appears over your code or in VS Code's notification list, so it never interrupts work.
@@ -403,12 +403,21 @@ Real club names, nicknames, crests and kits are trademarks. Close imitations of 
 
 ### Approach
 
-1. **Fictional towns:** built from real place-name pieces (*Ash-, Brad-, Holt-, Kings-, -by, -ford, -wick, -ton, -bridge, -ham, -field*) into plausible towns that **don't exist**, e.g. *Ashby Vale, Holtwick, Kingsbridge Moor*.
+1. **Fictional towns:** built from real place-name pieces (*Ash-, Brad-, Holt-, Kings-, -by, -ford, -wick, -ton, -bridge, -ham, -field*) into plausible towns that **don't exist**, e.g. *Ashminster, Holtbury, Draybridge, Kingsworth*. (The original examples Ashby, Holtwick and Kingsbridge all turned out to be real places.)
 2. **Suffixes:** *United, City, Town, Rovers, Athletic, Wanderers, Albion, County, Rangers*, plus *FC* or *AFC*.
 3. **Checked against real clubs:** every one of the 100 names is checked against club lists for the English pyramid (Premier League down through non-league), the Scottish, Welsh and Northern Irish leagues, and major European clubs. Towns are preferably not real UK places at all.
 4. **Blocklist:** the same club list is built into the name generator, so it can never produce a real club.
 5. **Fixed world:** one curated set of 100 clubs, each with generated colours and a 3-letter code (ASH, HOL…), so the world feels consistent across careers.
 6. **Your club:** a generated name you can edit at setup (the blocklist doesn't apply to names you type yourself).
+
+**How the names were checked (M4, Oct 2026).** Towns were generated from prefix + ending pieces, then a town was rejected if it:
+- appears in Wikipedia's lists of football clubs in England (down through non-league), Scotland, Wales or Northern Ireland, or its lists of towns and cities in England, Wales, Scotland (burghs), Northern Ireland and the UK;
+- has a Wikipedia page of exactly that title (which catches almost every real UK village, and many abroad);
+- is one letter away from any real club or place on those lists, or two letters from the town of any EFL, Scottish league, top Welsh/NI or major European club (this caught e.g. *Brenford*, *Selford*, *Tadcester*).
+
+1,868 candidates → 387 with no Wikipedia page → 316 clean → 100 hand-picked for the world, 216 kept for generating your club's name. The real-club list (2,816 names) and famous towns are built into the generator (`src/sports/football/data/blocklist.ts`). `npx tsx tools/check-names.ts --online` re-runs the checks.
+
+Players get generated names from a mixed pool of first names and surnames (English, Scottish, Irish, Welsh, West African, French, Iberian, Italian, Nordic, Dutch, Polish and more), with no repeated surname in a squad.
 
 ### User renaming 🔵 LATER
 
