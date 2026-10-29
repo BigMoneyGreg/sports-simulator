@@ -5,6 +5,13 @@ import type { MatchOptions, MatchOutcome, SportModule, TeamSheet } from '../../c
 export const TUNING = {
   baseXg: 1.13,
   slope: 0.25,
+  /**
+   * Gaps between attack and defence up to this count in full; only
+   * `gapBeyond` of the rest counts. League matches rarely go past it, but a
+   * cup can pair teams 60 apart, and without it they ended 9–1.
+   */
+  gapKnee: 32,
+  gapBeyond: 0.3,
   homeAdvantage: 1.14,
   awayFactor: 0.9,
   /** Form on the day: each side's multiplier is drawn from 1 ± this. */
@@ -79,7 +86,10 @@ export function effectiveStats(team: Pick<TeamSheet, 'attack' | 'defence'>): { a
 /** Expected goals per match for a side before form, cards and timing. */
 export function expectedGoals(attack: number, opponentDefence: number, venue: 'home' | 'away' | 'neutral'): number {
   const venueFactor = venue === 'home' ? TUNING.homeAdvantage : venue === 'away' ? TUNING.awayFactor : 1;
-  return TUNING.baseXg * Math.exp((TUNING.slope * (attack - opponentDefence)) / 10) * venueFactor;
+  const gap = attack - opponentDefence;
+  const excess = Math.max(0, Math.abs(gap) - TUNING.gapKnee);
+  const counted = Math.sign(gap) * (Math.abs(gap) - excess * (1 - TUNING.gapBeyond));
+  return TUNING.baseXg * Math.exp((TUNING.slope * counted) / 10) * venueFactor;
 }
 
 export function createMatch(home: TeamSheet, away: TeamSheet, options: MatchOptions, rng: Rng): FootballMatch {
