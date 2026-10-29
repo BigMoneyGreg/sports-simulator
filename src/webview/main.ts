@@ -248,7 +248,7 @@ function headerHtml(v: GameView): string {
   const next = h.durations[(h.durations.indexOf(h.duration) + 1) % h.durations.length];
   return `<header class="head card" data-accent="${esc(h.club.colours[0])}">
     <div class="club">${swatch(h.club, 'crest')}<div class="grow"><div class="name">${esc(h.club.name)}</div>
-      <div class="muted small where"><span class="wide">League </span><span class="slim">L</span>${h.tier} · ${ordinal(h.position)}</div></div></div>
+      <div class="muted small where"><span class="wide">League </span><span class="slim">L</span>${h.tier} · ${ordinal(h.position)} · <span title="League games played">${h.played}/${h.games}</span></div></div></div>
     <div class="right">
       <span class="form" aria-label="Form">${dots}</span>
       <span class="controls">

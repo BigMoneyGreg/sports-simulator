@@ -178,6 +178,9 @@ export interface HeaderView {
   club: TeamBadge;
   tier: number;
   position: number;
+  /** League games played and in the season, e.g. 7 of 38. */
+  played: number;
+  games: number;
   form: ('W' | 'D' | 'L')[];
   paused: boolean;
   season: number;

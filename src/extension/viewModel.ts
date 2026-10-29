@@ -32,6 +32,8 @@ export function buildView(game: Game, suggestedName: () => string, options: View
       club: badge(career, me.id),
       tier,
       position: myRow.pos,
+      played: myRow.played,
+      games: leagueRounds(season),
       form: myTable.form.slice(-5),
       paused: game.paused,
       season: season.number,
