@@ -183,7 +183,7 @@ The bands make movement feel real:
 
 ### Every club, every season
 
-1. **Decline:** every club, including yours, loses **10** rating (ageing, players leaving), which is **20 stat points**. For your club it lands **unevenly** between attack and defence (a key striker leaves, the defence ages): typically something like *Attack −14 · Defence −6*, sometimes more lopsided, leaning slightly towards your stronger side. It's random each season, so you have to watch the season report and adjust.
+1. **Decline:** every club, including yours, loses **10** rating (ageing, players leaving), which is **20 stat points**, at the end of the season. For your club it lands **unevenly and randomly** between attack and defence (a key striker leaves, the defence ages): typically something like attack −14 / defence −6, sometimes more lopsided. **You're never told the split.** You see only the overall drop, and your attack and defence numbers are hidden once the career starts. You work it out from results: if you put 5 into each for several seasons while the drain keeps hitting attack, your team scores less and less, and the goals column tells you.
 2. **Gains:** clubs regain rating based on **how they finished compared with what was expected**. The average gain is **+10**.
 3. **Ratings carry forward** into the next season for every club, so clubs rise and fall over the years like real life.
 
@@ -327,6 +327,7 @@ All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned wi
 ### Sidebar box (Explorer view, bottom-left by default)
 
 - **Header:** club name, league, position, form (last 5 results as W/D/L dots), ▶/⏸ button
+- **Club tab:** rating, this season's goals scored and conceded against the league average (the only clue to the drain), rival, trophies, records, history
 - **Live match:** scoreboard (crests, score, clock) and a match report like a real game summary: goals prominent, cards small and greyed, half-time and full-time markers. No running commentary
 - **Tabs:** Match · Table · Fixtures · Club (stats, trophies, history)
 - **Table:** promotion, play-off and relegation places highlighted
@@ -363,8 +364,8 @@ This is the **only thing in Sports Simulator that asks for your attention**, bec
 Screen contents:
 
 1. Final table with promotion, play-offs and relegation
-2. **Season report:** goals scored and conceded against the league average, best and worst runs, top scorer, and a one-line verdict (*"You conceded 61, league average 48. Defence was your weakest area."*)
-3. Decline applied (shown clearly)
+2. **Season report:** goals scored and conceded against the league average, best and worst runs, top scorer. No verdict: reading it is the player's job.
+3. Decline: the overall rating drop only (e.g. 55 → 45), never the attack/defence split
 4. Points earned → allocate to attack and defence → confirm → next season starts
 
 ### Copy summary button
@@ -542,6 +543,7 @@ In rough priority order:
 | Two stats (attack, defence); chemistry removed (M8) | A simple, readable decision: score more or concede less, judged from the season report. M3 had shown chemistry either did nothing or needed a complicated model to matter |
 | Free lean of ±5, then the weak side is exploited | Leaning is a real style choice, but a side drained too far needs fixing; without it attack and defence are interchangeable and the split doesn't matter |
 | Uneven, random decline between attack and defence | Creates something to read and fix each season; tuned so ignoring it (even split) roughly holds and fixing it climbs |
+| The drain's split and the attack/defence numbers are hidden | The decision should come from reading results (goals for and against), not from a number telling you what to fix |
 | AI clubs keep a fixed style shape, 5 beyond the free lean | AI stats otherwise drifted apart every season, widening gaps within leagues (too many thrashings); a fixed shape keeps AI equally strong for their rating |
 | AI ceiling above 93 | Rank-based expectation can't pull back a club far ahead of the rest; without it 4–6 AI clubs sat above 95 |
 | AI promotion investment (+4) | Promoted clubs finished in the bottom half 91% of the time against ~78% in the real Premier League |

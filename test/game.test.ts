@@ -132,9 +132,11 @@ describe('season end view', () => {
     const e = v.seasonEnd;
     expect(e.table.rows).toHaveLength(20);
     expect(e.report.record).toMatch(/^\d+W \d+D \d+L$/);
-    expect(e.report.verdict.length).toBeGreaterThan(20);
-    const d = e.decline.byStat;
-    expect(d.attack + d.defence).toBeCloseTo(20);
+    // Only the overall drop is shown; the attack/defence split stays hidden.
+    expect(Object.keys(e.decline).sort()).toEqual(['ratingAfter', 'ratingBefore']);
+    expect(e.decline.ratingBefore - e.decline.ratingAfter).toBeCloseTo(10);
+    expect(JSON.stringify(v.club)).not.toMatch(/"attack"|"defence"/);
+    expect(v.club.goals.played).toBe(38);
     expect(e.room.attack + e.room.defence).toBeGreaterThanOrEqual(e.points.total);
     expect(e.playoffs?.semis).toHaveLength(2);
 

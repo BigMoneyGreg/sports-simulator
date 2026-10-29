@@ -309,9 +309,6 @@ function seasonEndHtml(e: SeasonEndView): string {
   if (alloc.season !== e.season) Object.assign(alloc, { season: e.season, attack: 0, defence: 0 });
   const spent = STATS.reduce((t, k) => t + alloc[k], 0);
   const left = e.points.total - spent;
-  const after = (k: StatKey) => e.stats[k] + alloc[k];
-  const mean = STATS.reduce((t, k) => t + after(k), 0) / 3;
-  const weak = STATS.filter((k) => mean - after(k) > e.tolerance);
   const r = e.report;
   const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0');
   const breakdown = [
@@ -325,13 +322,11 @@ function seasonEndHtml(e: SeasonEndView): string {
     .join(' · ');
   const statRow = (k: StatKey) => `<div class="alloc-row">
       <span>${STAT_LABEL[k]}</span>
-      <span class="muted small">−${Math.round(e.decline.byStat[k])}</span>
       <button type="button" class="step" data-alloc="${k}" data-delta="-5" ${alloc[k] < 1 ? 'disabled' : ''} aria-label="Take 5 from ${STAT_LABEL[k]}">−5</button>
       <button type="button" class="step" data-alloc="${k}" data-delta="-1" ${alloc[k] < 1 ? 'disabled' : ''} aria-label="Take 1 from ${STAT_LABEL[k]}">−</button>
-      <strong class="${weak.includes(k) ? 'bad' : ''}">${Math.round(after(k))}</strong>
+      <strong>+${alloc[k]}</strong>
       <button type="button" class="step" data-alloc="${k}" data-delta="1" ${left < 1 || alloc[k] >= e.room[k] ? 'disabled' : ''} aria-label="Add 1 to ${STAT_LABEL[k]}">+</button>
       <button type="button" class="step" data-alloc="${k}" data-delta="5" ${left < 1 || alloc[k] >= e.room[k] ? 'disabled' : ''} aria-label="Add 5 to ${STAT_LABEL[k]}">+5</button>
-      <span class="muted small added">${alloc[k] ? `+${alloc[k]}` : ''}</span>
     </div>`;
   return `<div class="season-end">
     <div class="card hero ${e.outcome ?? ''}">
@@ -349,13 +344,12 @@ function seasonEndHtml(e: SeasonEndView): string {
       <dt>Worst run</dt><dd>${esc(r.worstRun)}</dd>
       ${r.topScorer ? `<dt>Top scorer</dt><dd>${esc(r.topScorer)}</dd>` : ''}
     </dl>
-    <p class="verdict">${esc(r.verdict)}</p>
     </div>
 
     <div class="card">
     <h3 class="sub first">Decline</h3>
-    <p class="small">Every club loses about 10 rating a season (20 stat points), split unevenly. Yours: ${STATS.map((k) => `${STAT_LABEL[k]} −${Math.round(e.decline.byStat[k])}`).join(' · ')}.
-      Rating ${Math.round(e.decline.ratingBefore)} → ${Math.round(e.decline.ratingAfter)}.</p>
+    <p class="small">Players age and leave: every club loses 10 rating a season. Rating ${Math.round(e.decline.ratingBefore)} → ${Math.round(e.decline.ratingAfter)}.</p>
+    <p class="muted small">How it split between attack and defence isn't shown. Your results are the clue: compare what you scored and conceded with the league average.</p>
 
     </div>
 
@@ -368,7 +362,6 @@ function seasonEndHtml(e: SeasonEndView): string {
       <button type="button" class="link" id="allocEven">Even split</button>
       <button type="button" class="link" id="allocClear">Clear</button>
     </div>
-    ${weak.length ? `<p class="hint bad">${weak.map((k) => STAT_LABEL[k]).join(' and ')} ${weak.length > 1 ? 'lag' : 'lags'} behind the rest: opponents will exploit it.</p>` : ''}
     <button type="button" id="confirmAlloc" class="primary" ${left === 0 ? '' : 'disabled'}>${e.canRetire ? 'Carry on: defend the title' : `Start season ${e.season + 1}`}</button>
     ${e.canRetire ? `<button type="button" id="newCareer" class="secondary">Start a new career</button>` : ''}
     <p class="small"><button type="button" class="link" data-copy="${esc(e.summary)}">Copy summary</button> <span class="muted">${esc(e.summary)}</span></p>
@@ -394,13 +387,15 @@ function fixturesHtml(fixtures: FixtureView[]): string {
 function clubHtml(v: GameView): string {
   const c = v.club;
   const r = c.records;
-  const bar = (label: string, key: StatKey) =>
-    `<div class="stat"><span>${label}</span><span class="bar"><span data-width="${(c.stats[key] / 99) * 100}"></span></span><strong>${c.stats[key]}</strong></div>`;
+  const g = c.goals;
   return `<div class="clubcard card" data-accent="${esc(c.colours[0])}">
     <div class="club">${swatch(c, 'crest')}<div><div class="name">${esc(c.name)}</div><div class="muted small">${esc(c.short)} · League ${c.tier} · Season ${c.season}</div></div></div>
     <div class="rating"><span class="big">${c.rating}</span><span class="muted small">rating · expected ${ordinal(c.expected)} · ${esc(c.difficulty)}</span></div>
-    ${bar('Attack', 'attack')}${bar('Defence', 'defence')}
-    ${c.weakSide ? `<p class="hint bad">Your ${c.weakSide} has fallen too far behind: opponents are exploiting it. Strengthen it at the end of the season.</p>` : ''}
+    <dl class="report">
+      <dt>Scored</dt><dd>${g.scored} <span class="muted">(league avg ${g.average})</span></dd>
+      <dt>Conceded</dt><dd>${g.conceded} <span class="muted">(league avg ${g.average})</span></dd>
+    </dl>
+    <p class="muted small">After ${g.played} league match${g.played === 1 ? '' : 'es'} this season.</p>
     ${c.rival ? `<p class="small">Rival: ${swatch(c.rival)}${esc(c.rival.name)}</p>` : ''}
   </div>
   <div class="card">

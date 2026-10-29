@@ -117,14 +117,13 @@ export interface ClubView {
   short: string;
   colours: [string, string];
   rating: number;
-  stats: Record<StatKey, number>;
+  /** This season's goals against the league average, the only clue to where the drain hit. */
+  goals: { scored: number; conceded: number; average: number; played: number };
   tier: number;
   difficulty: Difficulty;
   season: number;
   expected: number;
   rival?: TeamBadge;
-  /** Set when attack and defence are far enough apart that the weak side is exploited. */
-  weakSide?: StatKey;
   cabinet: CabinetView;
   records: RecordsView;
   history: HistoryRowView[];
@@ -188,14 +187,12 @@ export interface SeasonEndView {
     bestRun: string;
     worstRun: string;
     topScorer?: string;
-    verdict: string;
   };
-  decline: { byStat: Record<StatKey, number>; ratingBefore: number; ratingAfter: number; hardest: StatKey };
+  /** Only the overall drop is shown; how it split between attack and defence stays hidden. */
+  decline: { ratingBefore: number; ratingAfter: number };
   points: { total: number; base: number; performance: number; bonus: number; boosted: boolean };
-  /** Stats after the decline (unrounded) and how many points each can still take. */
-  stats: Record<StatKey, number>;
+  /** How many points each stat can still take before 99. */
   room: Record<StatKey, number>;
-  tolerance: number;
   summary: string;
   /** Won League 1: offer to start a new career instead of carrying on. */
   canRetire: boolean;
