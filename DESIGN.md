@@ -486,6 +486,10 @@ Each milestone finishes in a working state.
 | **M7** | Polish | Full-time overlay, form dots, rival/derby, trophy cabinet, history, records, copy summary, settings |
 | **M8** | Personal trial | Use it daily for two weeks; fix what's boring, annoying or unrealistic |
 
+**M8 progress (29 Oct 2026):** trial under way and going well. Done so far: two-stat model and summer focus, league picker, no rating numbers, badge colour picker, responsive box (header-only at its narrowest), Start next season button, games played in the header, and a visual pass (live table arrows, goal flash, sticky header, fixtures scroll, form tooltips). Marketplace groundwork: icon, README with screenshots and how to play, `vsce package` works (61 KB).
+
+**Before publishing (M9):** create a Marketplace publisher and set `publisher` in package.json; choose a licence (currently `UNLICENSED`, `private: true`); make the GitHub repo public (README screenshots load from it); push `main`; bump the version; `npx @vscode/vsce publish`.
+
 ---
 
 ## 14. Later 🔵
