@@ -342,6 +342,15 @@ For your club's matches only. A result card **slides over the sidebar box itself
 
 ### End-of-season screen
 
+This is the **only thing in Sideline that asks for your attention**, because it needs a decision.
+
+- When the season ends (after the play-offs), **the game waits**. Nothing continues until you've allocated your points.
+- The end-of-season screen opens **inside the Sideline box**.
+- If the box is hidden or collapsed, **one VS Code notification** appears: *"Season 4 over — 3rd in League 4. Allocate your points"*, with an **Open Sideline** button. This is the only VS Code notification Sideline ever shows.
+- The status bar shows `⚽ Season over — allocate points` until you do.
+
+Screen contents:
+
 1. Final table with promotion, play-offs and relegation
 2. **Season report:** goals scored and conceded against the league average, best and worst runs, top scorer, and a one-line verdict (*"You conceded 61, league average 48. Defence was your weakest area."*)
 3. Decline applied (shown clearly)
@@ -505,6 +514,7 @@ In rough priority order:
 | Pause when VS Code closes | You never miss matches; no catch-up simulation |
 | Fictional club names only, checked against real club lists | Avoid trademark issues; renaming handled locally later |
 | Engine runs in extension host | Game and status bar keep running without the sidebar open |
+| End of season is the only VS Code notification; the game waits for your allocation | It's the one moment that needs a decision; everything else stays in the box |
 | Full-time result as an overlay inside the sidebar box, not a VS Code notification | Never covers code or clutters notifications; status bar covers the hidden case |
 | Sport-agnostic core + sport modules | Rugby/cricket can be added later without a rewrite |
 | One extension for all sports (later) | One codebase; keywords handle discovery |
