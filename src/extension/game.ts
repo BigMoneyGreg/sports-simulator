@@ -3,6 +3,8 @@
 
 import {
   allocatePoints,
+  focusAllocation,
+  type Focus,
   completeRound,
   endSeason,
   isSeasonOver,
@@ -141,6 +143,11 @@ export class Game {
     this.save();
     this.host.changed();
     if (!paused) this.run();
+  }
+
+  chooseFocus(focus: Focus): void {
+    if (!this.career?.pending) return;
+    this.allocate(focusAllocation(this.career.clubs[this.career.playerClubId], this.career.pending.points, focus));
   }
 
   allocate(allocation: Record<Stat, number>): void {

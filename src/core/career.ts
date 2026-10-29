@@ -519,6 +519,23 @@ export function fillAllocation(club: Club, points: number, weights: Record<Stat,
   return out;
 }
 
+/** The player's one summer decision: which side to strengthen. */
+export type Focus = 'attack' | 'balanced' | 'defence';
+export const FOCUSES: readonly Focus[] = ['attack', 'balanced', 'defence'];
+
+/** Splits the points for a focus: 75/25 towards the chosen side, or 50/50. */
+export function focusAllocation(club: Club, points: number, focus: Focus): Record<Stat, number> {
+  const share = RATING_TUNING.focusShare;
+  const weights = focus === 'balanced' ? { attack: 1, defence: 1 } : focus === 'attack' ? { attack: share, defence: 1 - share } : { attack: 1 - share, defence: share };
+  return fillAllocation(club, points, weights);
+}
+
+/** Spends the summer's points on a focus and starts the next season. */
+export function chooseFocus(career: Career, focus: Focus): void {
+  if (!career.pending) throw new Error('no points to allocate');
+  allocatePoints(career, focusAllocation(career.clubs[career.playerClubId], career.pending.points, focus));
+}
+
 /**
  * Applies the player's allocation, rebalances the AI so the total rating is
  * unchanged, records the season and starts the next one.

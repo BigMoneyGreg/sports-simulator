@@ -4,13 +4,13 @@ import {
   type Difficulty,
   type Duration,
   type FixtureView,
+  type Focus,
   type FullTimeView,
   type GameView,
   type LiveMatchView,
   type PlayoffView,
   type SeasonEndView,
   type SetupView,
-  type StatKey,
   type TableView,
   type TeamBadge,
   type TimelineView,
@@ -171,9 +171,6 @@ function updateSetupRating(): void {
 // ---------------------------------------------------------------------------
 // Game
 
-const STATS: StatKey[] = ['attack', 'defence'];
-const STAT_LABEL: Record<StatKey, string> = { attack: 'Attack', defence: 'Defence' };
-const alloc = { season: 0, attack: 0, defence: 0 };
 
 function renderOverlay(ft: FullTimeView | null): void {
   if (!ft) {
@@ -306,9 +303,6 @@ function playoffHtml(p: PlayoffView): string {
 }
 
 function seasonEndHtml(e: SeasonEndView): string {
-  if (alloc.season !== e.season) Object.assign(alloc, { season: e.season, attack: 0, defence: 0 });
-  const spent = STATS.reduce((t, k) => t + alloc[k], 0);
-  const left = e.points.total - spent;
   const r = e.report;
   const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0');
   const breakdown = [
@@ -320,14 +314,15 @@ function seasonEndHtml(e: SeasonEndView): string {
   ]
     .filter(Boolean)
     .join(' · ');
-  const statRow = (k: StatKey) => `<div class="alloc-row">
-      <span>${STAT_LABEL[k]}</span>
-      <button type="button" class="step" data-alloc="${k}" data-delta="-5" ${alloc[k] < 1 ? 'disabled' : ''} aria-label="Take 5 from ${STAT_LABEL[k]}">−5</button>
-      <button type="button" class="step" data-alloc="${k}" data-delta="-1" ${alloc[k] < 1 ? 'disabled' : ''} aria-label="Take 1 from ${STAT_LABEL[k]}">−</button>
-      <strong>+${alloc[k]}</strong>
-      <button type="button" class="step" data-alloc="${k}" data-delta="1" ${left < 1 || alloc[k] >= e.room[k] ? 'disabled' : ''} aria-label="Add 1 to ${STAT_LABEL[k]}">+</button>
-      <button type="button" class="step" data-alloc="${k}" data-delta="5" ${left < 1 || alloc[k] >= e.room[k] ? 'disabled' : ''} aria-label="Add 5 to ${STAT_LABEL[k]}">+5</button>
-    </div>`;
+  const FOCUS_TEXT: Record<Focus, [string, string]> = {
+    attack: ['Focus attack', 'Score more'],
+    balanced: ['Balanced', 'Keep things as they are'],
+    defence: ['Focus defence', 'Concede less'],
+  };
+  const option = (o: SeasonEndView['options'][number]) => `<button type="button" class="focus ${o.focus}" data-focus="${o.focus}">
+      <strong>${FOCUS_TEXT[o.focus][0]}</strong><span class="small">${FOCUS_TEXT[o.focus][1]}</span>
+      <span class="muted small">+${o.attack} att · +${o.defence} def</span>
+    </button>`;
   return `<div class="season-end">
     <div class="card hero ${e.outcome ?? ''}">
       <h2 class="headline">${esc(e.headline)}</h2>
@@ -340,6 +335,7 @@ function seasonEndHtml(e: SeasonEndView): string {
       <dt>Record</dt><dd>${esc(r.record)} · ${r.points} pts</dd>
       <dt>Scored</dt><dd>${r.goalsFor} <span class="muted">(league avg ${r.avgFor})</span></dd>
       <dt>Conceded</dt><dd>${r.goalsAgainst} <span class="muted">(league avg ${r.avgAgainst})</span></dd>
+      <dt>Goals a game</dt><dd>${r.perGame} <span class="muted">in your matches (league ${r.leaguePerGame})</span></dd>
       <dt>Best run</dt><dd>${esc(r.bestRun)}</dd>
       <dt>Worst run</dt><dd>${esc(r.worstRun)}</dd>
       ${r.topScorer ? `<dt>Top scorer</dt><dd>${esc(r.topScorer)}</dd>` : ''}
@@ -349,20 +345,15 @@ function seasonEndHtml(e: SeasonEndView): string {
     <div class="card">
     <h3 class="sub first">Decline</h3>
     <p class="small">Players age and leave: every club loses 10 rating a season. Rating ${Math.round(e.decline.ratingBefore)} → ${Math.round(e.decline.ratingAfter)}.</p>
-    <p class="muted small">How it split between attack and defence isn't shown. Your results are the clue: compare what you scored and conceded with the league average.</p>
+    <p class="muted small">How it split between attack and defence isn't shown. Your results are the clue: lots of goals at both ends suggests you lean attacking; tight, low-scoring games suggest you lean defensive.</p>
 
     </div>
 
     <div class="card accent-card">
-    <h3 class="sub first">Strengthen: ${e.points.total} points</h3>
-    <p class="muted small">Rating gain ${esc(breakdown)}${e.points.boosted ? ' · plus your difficulty boost' : ''}. Each point of gain = 2 points to spend; 1 point = +1 to a stat.</p>
-    <div class="alloc">${STATS.map(statRow).join('')}</div>
-    <div class="row alloc-actions">
-      <span class="${left === 0 ? '' : 'strong'}">${left} left</span>
-      <button type="button" class="link" id="allocEven">Even split</button>
-      <button type="button" class="link" id="allocClear">Clear</button>
-    </div>
-    <button type="button" id="confirmAlloc" class="primary" ${left === 0 ? '' : 'disabled'}>${e.canRetire ? 'Carry on: defend the title' : `Start season ${e.season + 1}`}</button>
+    <h3 class="sub first">Summer: ${e.points.total} points to spend</h3>
+    <p class="muted small">Rating gain ${esc(breakdown)}${e.points.boosted ? ' · plus your difficulty boost' : ''}. Where should the summer's work go?</p>
+    <div class="focus-row">${e.options.map(option).join('')}</div>
+    ${e.canRetire ? '<p class="muted small center">Choosing a focus carries on: defend the title.</p>' : ''}
     ${e.canRetire ? `<button type="button" id="newCareer" class="secondary">Start a new career</button>` : ''}
     <p class="small"><button type="button" class="link" data-copy="${esc(e.summary)}">Copy summary</button> <span class="muted">${esc(e.summary)}</span></p>
     </div>
@@ -468,36 +459,15 @@ app.addEventListener('click', (e) => {
     ui.tableTier = Number(button.dataset.tier);
     saveUi();
     render();
-  } else if (button.dataset.alloc && view?.screen === 'game' && view.seasonEnd) {
-    const e = view.seasonEnd;
-    const k = button.dataset.alloc as StatKey;
-    const left = e.points.total - STATS.reduce((t, s) => t + alloc[s], 0);
-    const delta = Number(button.dataset.delta);
-    alloc[k] = Math.max(0, Math.min(alloc[k] + Math.min(delta, left), e.room[k]));
-    render();
-  } else if (button.id === 'allocEven' && view?.screen === 'game' && view.seasonEnd) {
-    const e = view.seasonEnd;
-    STATS.forEach((k) => (alloc[k] = 0));
-    let left = e.points.total;
-    for (let guard = 0; left > 0 && guard < 400; guard++) {
-      const k = STATS[guard % 3];
-      if (alloc[k] < e.room[k]) {
-        alloc[k]++;
-        left--;
-      }
-    }
-    render();
-  } else if (button.id === 'allocClear') {
-    STATS.forEach((k) => (alloc[k] = 0));
-    render();
+  } else if (button.dataset.focus) {
+    app.querySelectorAll<HTMLButtonElement>('[data-focus]').forEach((b) => (b.disabled = true));
+    send({ type: 'chooseFocus', focus: button.dataset.focus as Focus });
   } else if (button.dataset.copy) {
     send({ type: 'copy', text: button.dataset.copy });
   } else if (button.id === 'newCareer') {
     send({ type: 'newCareer' });
   } else if (button.id === 'resetCareer') {
     send({ type: 'resetCareer' });
-  } else if (button.id === 'confirmAlloc') {
-    send({ type: 'allocate', allocation: { attack: alloc.attack, defence: alloc.defence } });
   } else if (button.id === 'speed') {
     send({ type: 'setDuration', duration: button.dataset.next as Duration });
   } else if (button.id === 'pause') {

@@ -1,12 +1,12 @@
-import { leagueRounds, type Career, type Playoff, type SeasonRecord } from '../core/career';
+import { FOCUSES, focusAllocation, leagueRounds, type Career, type Playoff, type SeasonRecord } from '../core/career';
 import { emptyRecords, topScorers } from '../core/records';
-import { MAX_STAT, rating, STATS } from '../core/club';
+import { rating } from '../core/club';
 import { recordResult, sortTable, zone, type Fixture, type TableRow } from '../core/league';
 import { matchClock, timeline } from '../sports/football/commentary';
 import { outcome, TUNING, type SideKey } from '../sports/football/match';
 import { surname, townName } from '../sports/football/names';
 import { DURATIONS, type Duration } from '../shared/view';
-import type { CabinetView, ClubView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, StatKey, TableView, TeamBadge, View } from '../shared/view';
+import type { CabinetView, ClubView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, TableView, TeamBadge, View } from '../shared/view';
 import { fullTimePause } from './game';
 import type { Game } from './game';
 
@@ -195,7 +195,6 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
     .map((p) => ({ name: p.name, goals: s.scorers[p.id] ?? 0 }))
     .sort((a, b) => b.goals - a.goals)[0];
 
-  const room = Object.fromEntries(STATS.map((k) => [k, Math.max(0, Math.floor(MAX_STAT - me[k] + 1e-9))])) as Record<StatKey, number>;
 
   const headlines: Record<NonNullable<SeasonEndView['outcome']>, string> = {
     champion: end.tier === 1 ? 'Champions of League 1!' : `League ${end.tier} champions!`,
@@ -225,13 +224,15 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
       goalsAgainst: row.goalsAgainst,
       avgFor: Math.round(avgFor),
       avgAgainst: Math.round(avgAgainst),
+      perGame: Math.round(((row.goalsFor + row.goalsAgainst) / row.played) * 10) / 10,
+      leaguePerGame: Math.round(((2 * avgFor) / row.played) * 10) / 10,
       bestRun,
       worstRun,
       topScorer: scorer && scorer.goals > 0 ? `${scorer.name} (${scorer.goals})` : undefined,
     },
     decline: { ratingBefore: ratingAfter + end.decline, ratingAfter },
     points: { total: end.points, base: 10, performance: end.performance, bonus: end.bonus, boosted: end.boost > 0 },
-    room,
+    options: FOCUSES.map((focus) => ({ focus, ...focusAllocation(me, end.points, focus) })),
     summary: summaryLine({ season: end.season, tier: end.tier, position: end.position, won: row.won, drawn: row.drawn, lost: row.lost, outcome: end.outcome }),
     canRetire: end.outcome === 'champion',
   };

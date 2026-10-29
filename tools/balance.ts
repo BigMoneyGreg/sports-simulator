@@ -6,8 +6,8 @@
  *   npm run balance -- --quick fewer seeds and seasons
  *   npm run balance -- --only=world,climb
  */
-import { allocatePoints, fillAllocation, newCareer, nextRound, playRound, endSeason, type Career, type RoundResult } from '../src/core/career';
-import { rating, STATS, type Stat } from '../src/core/club';
+import { allocatePoints, focusAllocation, newCareer, nextRound, playRound, endSeason, type Career, type Focus, type RoundResult } from '../src/core/career';
+import { rating, type Stat } from '../src/core/club';
 import { band, LEAGUE_COUNT, sortTable } from '../src/core/league';
 import { totalRating, type Difficulty } from '../src/core/ratings';
 import { Rng } from '../src/core/rng';
@@ -21,31 +21,30 @@ const MAX_CLIMB = quick ? 45 : 70;
 // ---------------------------------------------------------------------------
 // Player strategies
 
+// Players only ever see results, so strategies pick a summer focus from them.
 type Strategy = (career: Career, rng: Rng) => Record<Stat, number>;
 
-/** Fixes weaknesses: tops up the lowest stats first, then spreads the rest. */
+const spend = (career: Career, focus: Focus) => focusAllocation(career.clubs[career.playerClubId], career.pending!.points, focus);
+
+/**
+ * Reads the season like a player would: lots of goals at both ends means the
+ * side leans attacking (shore up defence); tight, low-scoring games mean it
+ * leans defensive (focus attack). Only acts on a clear signal.
+ */
 const smart: Strategy = (career) => {
-  const me = career.clubs[career.playerClubId];
-  const points = career.pending!.points;
-  const target = { ...me };
-  let left = points;
-  while (left > 0) {
-    const lowest = [...STATS].filter((s) => target[s] < 99).sort((a, b) => target[a] - target[b])[0];
-    if (!lowest) break;
-    target[lowest] += 1;
-    left--;
-  }
-  const weights = { attack: target.attack - me.attack, defence: target.defence - me.defence };
-  return fillAllocation(me, points, weights);
+  const table = career.season.leagues[career.pending!.tier - 1].table;
+  const me = table.find((r) => r.clubId === career.playerClubId)!;
+  const avg = table.reduce((t, r) => t + r.goalsFor, 0) / table.length;
+  const extraGoals = me.goalsFor + me.goalsAgainst - 2 * avg;
+  if (Math.abs(extraGoals) < 14) return spend(career, 'balanced');
+  return spend(career, extraGoals > 0 ? 'defence' : 'attack');
 };
 
-const even: Strategy = (career) => fillAllocation(career.clubs[career.playerClubId], career.pending!.points, { attack: 1, defence: 1 });
+/** Always balanced: never reads the results. */
+const even: Strategy = (career) => spend(career, 'balanced');
 
-/** Dumps everything into one stat, picked at random each season. */
-const careless: Strategy = (career, rng) => {
-  const pick = rng.pick(STATS);
-  return fillAllocation(career.clubs[career.playerClubId], career.pending!.points, { attack: 0, defence: 0, [pick]: 1 });
-};
+/** One-track: always focuses attack, whatever the results say. */
+const careless: Strategy = (career) => spend(career, 'attack');
 
 const STRATEGIES = { smart, even, careless };
 type StrategyName = keyof typeof STRATEGIES;

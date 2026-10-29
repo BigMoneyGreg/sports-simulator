@@ -1004,3 +1004,42 @@ table.league {
     transition: width 0.4s ease;
   }
 }
+
+/* Summer focus choice */
+
+.focus-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.focus {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+  text-align: center;
+}
+
+.focus:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.focus:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.focus.attack strong {
+  color: var(--vscode-charts-orange, #d18616);
+}
+
+.focus.defence strong {
+  color: var(--vscode-charts-blue, #58a6ff);
+}

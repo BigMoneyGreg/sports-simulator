@@ -17,7 +17,7 @@ Football management with almost nothing to manage. Your only decisions are:
 
 1. **How good your club is at the start:** a rating from 0 to 99, which also decides your league and how hard it is
 2. **How long a match lasts:** 30 seconds, 1, 2 or 5 real minutes
-3. **Where to spend points:** attack or defence, at the end of each season
+3. **Where to focus each summer:** attack, defence or balanced
 
 Everything else runs by itself: fixtures, matches, commentary, tables, scorers, play-offs, promotion and relegation, and the other 99 clubs rising and falling. You glance at it between tasks, react at the end of each season, and build a club history worth keeping.
 
@@ -55,7 +55,7 @@ End of season
   └─ final table, promotion / relegation
   └─ season report (what went well, what didn't)
   └─ decline applied to every club
-  └─ earn points → spend on Attack / Defence
+  └─ choose a summer focus: attack · balanced · defence
   └─ trophies & records updated
         │
         ▼
@@ -305,7 +305,7 @@ Total rating across all 100 clubs is **fixed**: the overall average stays **exac
 - **Promotion investment:** an AI club gains **+4** rating when promoted, so promoted sides can compete. Tuned so about 80% of promoted clubs finish in the bottom half of their new league (Premier League, last decade: about 78%).
 - **Small random variation** each season, so AI clubs don't move mechanically.
 
-Your gain is given as points to allocate between attack and defence (2 points = +1 rating, 1 point = +1 to a stat), and you can't go above 99.
+Your gain becomes points (2 points = +1 rating, 1 point = +1 to a stat), spent by your summer focus: 70/30 towards attack or defence, or 50/50. Nothing goes above 99. 70/30 rather than 75/25 because one season of goals is a noisy read: at 75/25 a misread swung the balance so far that reading results stopped paying (balance tool, M8).
 
 All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned with the balance tool.
 
@@ -358,15 +358,15 @@ This is the **only thing in Sports Simulator that asks for your attention**, bec
 
 - When the season ends (after the play-offs), **the game waits**. Nothing continues until you've allocated your points.
 - The end-of-season screen opens **inside the Sports Simulator box**.
-- If the box is hidden or collapsed, **one VS Code notification** appears: *"Season 4 over — 3rd in League 4. Allocate your points"*, with an **Open Sports Simulator** button. This is the only VS Code notification Sports Simulator ever shows.
+- If the box is hidden or collapsed, **one VS Code notification** appears with the result and the clue, e.g. *"Season 4 over: 3rd in League 4. Scored 52, conceded 61 (league average 48). Where to focus this summer?"*, and buttons **Focus attack · Balanced · Focus defence · Open**. This is the only VS Code notification Sports Simulator ever shows.
 - The status bar shows `⚽ Season over — allocate points` until you do.
 
 Screen contents:
 
 1. Final table with promotion, play-offs and relegation
-2. **Season report:** goals scored and conceded against the league average, best and worst runs, top scorer. No verdict: reading it is the player's job.
+2. **Season report:** goals scored and conceded against the league average, goals a game in your matches against the league's, best and worst runs, top scorer. No verdict: reading it is the player's job (lots of goals at both ends = leaning attacking).
 3. Decline: the overall rating drop only (e.g. 55 → 45), never the attack/defence split
-4. Points earned → allocate to attack and defence → confirm → next season starts
+4. Summer focus: three buttons (**Focus attack · Balanced · Focus defence**). Focus puts 70% of the points into that side and 30% into the other; Balanced splits 50/50. Clicking starts the next season
 
 ### Copy summary button
 
@@ -543,6 +543,7 @@ In rough priority order:
 | Two stats (attack, defence); chemistry removed (M8) | A simple, readable decision: score more or concede less, judged from the season report. M3 had shown chemistry either did nothing or needed a complicated model to matter |
 | Free lean of ±5, then the weak side is exploited | Leaning is a real style choice, but a side drained too far needs fixing; without it attack and defence are interchangeable and the split doesn't matter |
 | Uneven, random decline between attack and defence | Creates something to read and fix each season; tuned so ignoring it (even split) roughly holds and fixing it climbs |
+| Summer focus (attack · balanced · defence, 70/30) instead of assigning points | One simple decision that matches what a player can know with hidden stats; exact points were false precision |
 | The drain's split and the attack/defence numbers are hidden | The decision should come from reading results (goals for and against), not from a number telling you what to fix |
 | AI clubs keep a fixed style shape, 5 beyond the free lean | AI stats otherwise drifted apart every season, widening gaps within leagues (too many thrashings); a fixed shape keeps AI equally strong for their rating |
 | AI ceiling above 93 | Rank-based expectation can't pull back a club far ahead of the rest; without it 4–6 AI clubs sat above 95 |

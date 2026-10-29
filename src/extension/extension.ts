@@ -41,11 +41,21 @@ export function activate(context: vscode.ExtensionContext): void {
     changed: refresh,
     seasonOver: (end) => {
       if (sidebar.visible) return;
-      const pos = ordinal(end.position);
+      // The one notification: the result, the clue (goals v league average) and the summer choice.
+      const table = game!.career!.season.leagues[end.tier - 1].table;
+      const me = table.find((r) => r.clubId === game!.career!.playerClubId)!;
+      const avg = Math.round(table.reduce((t, r) => t + r.goalsFor, 0) / table.length);
+      const choices = { 'Focus attack': 'attack', Balanced: 'balanced', 'Focus defence': 'defence' } as const;
       void vscode.window
-        .showInformationMessage(`Season ${end.season} over — ${pos} in League ${end.tier}. Allocate your points`, 'Open Sports Simulator')
+        .showInformationMessage(
+          `Season ${end.season} over: ${ordinal(end.position)} in League ${end.tier}. Scored ${me.goalsFor}, conceded ${me.goalsAgainst} (league average ${avg}). Where to focus this summer?`,
+          ...Object.keys(choices),
+          'Open',
+        )
         .then((choice) => {
-          if (choice) void vscode.commands.executeCommand('sportsSimulator.open');
+          if (!choice) return;
+          if (choice === 'Open') void vscode.commands.executeCommand('sportsSimulator.open');
+          else if (game!.career?.pending?.season === end.season) game!.chooseFocus(choices[choice as keyof typeof choices]);
         });
     },
   });
@@ -83,14 +93,8 @@ export function activate(context: vscode.ExtensionContext): void {
       case 'resetCareer':
         void vscode.commands.executeCommand('sportsSimulator.resetCareer');
         return;
-      case 'allocate':
-        try {
-          game!.allocate(message.allocation);
-        } catch (err) {
-          // The webview enforces the rules; a stale or invalid allocation just re-sends the view.
-          console.warn('Sports Simulator: allocation rejected', err);
-          refresh();
-        }
+      case 'chooseFocus':
+        game!.chooseFocus(message.focus);
         return;
     }
   }

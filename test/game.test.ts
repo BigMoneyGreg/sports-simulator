@@ -137,7 +137,10 @@ describe('season end view', () => {
     expect(e.decline.ratingBefore - e.decline.ratingAfter).toBeCloseTo(10);
     expect(JSON.stringify(v.club)).not.toMatch(/"attack"|"defence"/);
     expect(v.club.goals.played).toBe(38);
-    expect(e.room.attack + e.room.defence).toBeGreaterThanOrEqual(e.points.total);
+    expect(e.options.map((o) => o.focus)).toEqual(['attack', 'balanced', 'defence']);
+    for (const o of e.options) expect(o.attack + o.defence).toBe(e.points.total);
+    const focused = e.options[0];
+    expect(focused.attack).toBeGreaterThan(focused.defence);
     expect(e.playoffs?.semis).toHaveLength(2);
 
     expect(() => game.allocate({ attack: e.points.total + 1, defence: 0 })).toThrow();

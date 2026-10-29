@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   allocatePoints,
   completeRound,
+  chooseFocus,
   fillAllocation,
+  focusAllocation,
   isSeasonOver,
   newCareer,
   nextRound,
@@ -284,5 +286,34 @@ describe('allocation and decline', () => {
       spread += Math.abs(d.attack - d.defence);
     }
     expect(spread / 200).toBeGreaterThan(2);
+  });
+});
+
+describe('summer focus', () => {
+  it('splits 70/30 towards the chosen side, 50/50 when balanced', () => {
+    const club = { attack: 50, defence: 50 } as Club;
+    expect(focusAllocation(club, 30, 'attack')).toEqual({ attack: 21, defence: 9 });
+    expect(focusAllocation(club, 30, 'defence')).toEqual({ attack: 9, defence: 21 });
+    expect(focusAllocation(club, 32, 'balanced')).toEqual({ attack: 16, defence: 16 });
+    const odd = focusAllocation(club, 31, 'attack');
+    expect(odd.attack + odd.defence).toBe(31);
+  });
+
+  it('never pushes a stat past 99', () => {
+    const club = { attack: 95, defence: 60 } as Club;
+    const a = focusAllocation(club, 30, 'attack');
+    expect(a.attack).toBe(4);
+    expect(a.defence).toBe(26);
+  });
+
+  it('applies the focus and starts the next season', () => {
+    const c = newCareer({ rating: 40, difficulty: 'medium', seed: 12 }, footballSport);
+    playSeason(c, footballSport);
+    const before = { ...c.clubs[0] };
+    const points = c.pending!.points;
+    chooseFocus(c, 'defence');
+    expect(c.season.number).toBe(2);
+    expect(c.clubs[0].defence - before.defence).toBeGreaterThan(c.clubs[0].attack - before.attack);
+    expect(c.clubs[0].defence - before.defence + c.clubs[0].attack - before.attack).toBe(points);
   });
 });

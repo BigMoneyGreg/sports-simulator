@@ -7,6 +7,7 @@ export const DURATIONS: Duration[] = ['30s', '1m', '2m', '5m'];
 export const DURATION_LABELS: Record<Duration, string> = { '10s': '10s', '30s': '30s', '1m': '1 min', '2m': '2 min', '5m': '5 min' };
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type StatKey = 'attack' | 'defence';
+export type Focus = 'attack' | 'balanced' | 'defence';
 export type Zone = 'champion' | 'promotion' | 'playoff' | 'relegation' | null;
 
 export interface TeamBadge {
@@ -184,6 +185,9 @@ export interface SeasonEndView {
     goalsAgainst: number;
     avgFor: number;
     avgAgainst: number;
+    /** Goals per game in the club's matches (both teams), against the league's. */
+    perGame: number;
+    leaguePerGame: number;
     bestRun: string;
     worstRun: string;
     topScorer?: string;
@@ -191,8 +195,8 @@ export interface SeasonEndView {
   /** Only the overall drop is shown; how it split between attack and defence stays hidden. */
   decline: { ratingBefore: number; ratingAfter: number };
   points: { total: number; base: number; performance: number; bonus: number; boosted: boolean };
-  /** How many points each stat can still take before 99. */
-  room: Record<StatKey, number>;
+  /** The three summer choices and how each would split the points. */
+  options: { focus: Focus; attack: number; defence: number }[];
   summary: string;
   /** Won League 1: offer to start a new career instead of carrying on. */
   canRetire: boolean;
@@ -220,7 +224,7 @@ export type ToHost =
   | { type: 'suggestName' }
   | { type: 'togglePause' }
   | { type: 'setDuration'; duration: Duration }
-  | { type: 'allocate'; allocation: Record<StatKey, number> }
+  | { type: 'chooseFocus'; focus: Focus }
   | { type: 'copy'; text: string }
   | { type: 'newCareer' }
   | { type: 'resetCareer' };

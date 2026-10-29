@@ -30,6 +30,12 @@ export const RATING_TUNING = {
   promotedBoost: 4,
   /** Points the player allocates per point of rating gained (1 point = +1 to a stat). */
   pointsPerRating: 2,
+  /**
+   * Share of the summer's points that go to the side the player focuses on.
+   * 70/30 rather than 75/25: one season's goals are a noisy read, and at 75/25
+   * a misread swings the balance so far that reading results stopped paying.
+   */
+  focusShare: 0.7,
 };
 
 /** Rank by rating within a league: the highest-rated club is expected 1st. */
