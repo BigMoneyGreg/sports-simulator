@@ -14,3 +14,17 @@ A football management sim that lives in a small box in your VS Code sidebar. Pic
 - Pauses when VS Code closes, so you never miss a match
 
 All club and player names are fictional.
+
+## Development
+
+```sh
+npm install
+npm run build          # bundles dist/extension.js and dist/webview.js
+npm test               # unit tests (Vitest)
+npm run test:integration   # launches your installed VS Code with a throwaway profile
+npm run balance        # headless balance check against DESIGN.md §5 and §7 (add --quick)
+npm run check-names    # re-checks club names against real clubs (add -- --online)
+npm run preview        # renders the webview with sample states in dist/preview/
+```
+
+Press **F5** in VS Code ("Run Sideline") to try it in an Extension Development Host; the Sideline box appears in the Explorer.
