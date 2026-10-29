@@ -58,11 +58,15 @@ export interface HistoryRowView {
   record: string;
   points: number;
   outcome: SeasonOutcome;
+  /** How far the player went in each competition that season. */
+  cups: CupRunView[];
   summary: string;
 }
 
 export interface CabinetView {
   titles: { tier: number; seasons: number[] }[];
+  cups: number[];
+  championships: number[];
   promotions: number;
   playoffWins: number;
 }
@@ -102,11 +106,13 @@ export interface TableView {
 
 export interface FixtureView {
   label: string;
-  /** Opponent's name without the club suffix. */
+  /** Opponent's name for tight spaces. */
   town: string;
   opponent: TeamBadge;
   home: boolean;
   result?: string;
+  /** The full result on hover, e.g. "1–1, won 4–1 on penalties". */
+  resultTitle?: string;
   outcome?: 'W' | 'D' | 'L';
   current: boolean;
 }
@@ -199,6 +205,7 @@ export interface SeasonEndView {
     bestRun: string;
     worstRun: string;
     topScorer?: string;
+    cups: CupRunView[];
   };
   points: { total: number; base: number; performance: number; bonus: number; boosted: boolean };
   /** The three summer choices and how each would split the points. */
@@ -219,7 +226,46 @@ export interface GameView {
   waiting: 'seasonOver' | null;
   playoffs: PlayoffView[];
   seasonEnd: SeasonEndView | null;
+  cups: CupsView;
   fullTime: FullTimeView | null;
+}
+
+/** How far the player went in a competition, e.g. Nations Cup: Quarter-final. */
+export interface CupRunView {
+  name: string;
+  run: string;
+}
+
+export interface CupTieView {
+  home: TeamBadge;
+  away: TeamBadge;
+  /** Each leg's score from the first leg's home side, e.g. "2–1 (aet)". */
+  legs: string[];
+  aggregate?: string;
+  winner?: 'home' | 'away';
+  mine: boolean;
+}
+
+export interface CupGroupView {
+  name: string;
+  rows: { pos: number; club: TeamBadge; town: string; played: number; gd: number; points: number; isPlayer: boolean; through: boolean }[];
+}
+
+export interface CupView {
+  id: 'cup' | 'championship';
+  name: string;
+  /** Where the player stands, in a sentence. */
+  status: string;
+  groups: CupGroupView[];
+  /** Knockout rounds drawn so far, latest first. */
+  rounds: { name: string; ties: CupTieView[] }[];
+  winner?: TeamBadge;
+  pastWinners: { season: number; winner: TeamBadge; runnerUp: TeamBadge }[];
+}
+
+export interface CupsView {
+  cup: CupView;
+  championship: CupView;
 }
 
 export type View = { screen: 'setup'; setup: SetupView } | GameView;

@@ -159,20 +159,19 @@ describe('career', () => {
     expect(() => newCareer({ rating: 50, difficulty: 'hard', seed: 1, split: { attack: 60, defence: 50 } }, footballSport)).toThrow();
   });
 
-  it('plays 38 league rounds then three play-off rounds, then waits', () => {
+  it('plays 38 league rounds with eight cup rounds between them, then three play-off rounds, then waits', () => {
     const c = start();
-    for (let r = 0; r < 38; r++) {
-      const fixtures = nextRound(c)!;
-      expect(fixtures).toHaveLength(50);
+    const sizes: Record<string, number[]> = {};
+    while (nextRound(c)) {
+      const kind = c.season.calendar[c.season.round].kind;
+      (sizes[kind] ??= []).push(nextRound(c)!.length);
       playRound(c, footballSport);
     }
+    expect(sizes.league).toEqual(Array(38).fill(50));
+    expect(sizes.cup).toEqual([32, 16, 8, 4, 4, 2, 2, 1]);
+    expect(sizes.playoff).toEqual([8, 8, 4]);
+    expect(sizes.championship).toBeUndefined();
     for (const l of c.season.leagues) for (const row of l.table) expect(row.played).toBe(38);
-    expect(nextRound(c)).toHaveLength(8);
-    playRound(c, footballSport);
-    expect(nextRound(c)).toHaveLength(8);
-    playRound(c, footballSport);
-    expect(nextRound(c)).toHaveLength(4);
-    playRound(c, footballSport);
     expect(isSeasonOver(c)).toBe(true);
     for (const p of c.season.playoffs) {
       const table = sortTable(c.season.leagues[p.tier - 1].table).map((r) => r.clubId);

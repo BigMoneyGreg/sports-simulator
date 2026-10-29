@@ -14,6 +14,7 @@ import {
   type TableRow,
 } from './league';
 import { applyDecline, bandPull, expectedPositions, normalise, positionBonus, RATING_TUNING, seasonGain, totalRating, type Difficulty } from './ratings';
+import { CHAMPIONSHIP_ENTRANTS, CHAMPIONSHIP_EVERY, CUP_ENTRANTS, cupFixtures, cupRun, cupStages, drawChampionship, drawCup, recordCupResult, type Cup, type CupId } from './cups';
 import { emptyRecords, recordMatch, recordSeasonGoals, type Records } from './records';
 import { Rng } from './rng';
 import type { GoalRecord, MatchOutcome, Player, SportModule, TeamSheet } from './sport';
@@ -90,6 +91,12 @@ export interface PlayerMatch {
   won?: boolean;
 }
 
+/** One matchday of the season. */
+export type Slot = { kind: 'league'; index: number } | { kind: 'playoff'; stage: number } | { kind: CupId; stage: number };
+
+/** League matchdays the cup rounds follow: spread through the season, the final before the last league round. */
+const CUP_AFTER = [3, 8, 13, 18, 23, 28, 32, 36];
+
 export interface Season {
   number: number;
   leagues: LeagueSeason[];
@@ -97,12 +104,23 @@ export interface Season {
   expected: Record<number, number>;
   ratingAtStart: Record<number, number>;
   schedule: Fixture[][];
-  /** Index of the next round to play: league rounds, then up to three play-off rounds. */
+  /** Every matchday in order: league rounds with cup rounds between them, the play-offs, then any World Championship. */
+  calendar: Slot[];
+  /** Index into `calendar` of the next matchday. */
   round: number;
   playoffs: Playoff[];
+  cup: Cup;
+  /** Drawn once the league season ends, in championship years. */
+  championship: Cup | null;
   playerMatches: PlayerMatch[];
   /** Goals per player this season (own goals excluded). */
   scorers: Record<number, number>;
+}
+
+export interface CupWinner {
+  season: number;
+  winner: number;
+  runnerUp: number;
 }
 
 export type SeasonOutcome = 'champion' | 'promoted' | 'playoffWinner' | 'playoffs' | 'relegated' | null;
@@ -124,6 +142,8 @@ export interface SeasonEnd {
   newTier: number;
   /** Club ids per league for next season, League 1 first. */
   nextLeagues: number[][];
+  /** Every club in final standing order, League 1 first: next season's cup seeding. */
+  standing: number[];
   promoted: Record<number, number[]>;
   relegated: Record<number, number[]>;
   playoffWinners: Record<number, number>;
@@ -142,6 +162,9 @@ export interface SeasonRecord {
   points: number;
   outcome: SeasonOutcome;
   topScorer?: { playerId: number; name: string; goals: number };
+  /** How far the player went: "Winners", "Final", …, or absent if not in it. */
+  cup?: string;
+  championship?: string;
   ratingStart: number;
   ratingEnd: number;
 }
@@ -159,6 +182,10 @@ export interface Career {
   pending: SeasonEnd | null;
   history: SeasonRecord[];
   records: Records;
+  /** Past winners of each competition. */
+  honours: { cup: CupWinner[]; championship: CupWinner[] };
+  /** The most recent World Championship, kept to look back on until the next one. */
+  lastChampionship: Cup | null;
   /** The rival club in the player's league, shown on the Club tab. */
   rival: number | null;
 }
@@ -199,10 +226,12 @@ export function newCareer(options: CareerOptions, sport: SportDefinition): Caree
     playerClubId: PLAYER_CLUB_ID,
     totalRating: totalRating(clubs),
     clubs,
-    season: newSeason(1, leagues, clubs, rng),
+    season: newSeason(1, leagues, byRating.map((c) => c.id), clubs, rng),
     pending: null,
     history: [],
     records: emptyRecords(),
+    honours: { cup: [], championship: [] },
+    lastChampionship: null,
     rival: null,
   };
   career.rival = pickRival(career);
@@ -229,7 +258,7 @@ function playerStats(value: number, split?: Record<Stat, number>): Record<Stat, 
   return { ...split };
 }
 
-function newSeason(number: number, leagues: number[][], clubs: Club[], rng: Rng): Season {
+function newSeason(number: number, leagues: number[][], standing: number[], clubs: Club[], rng: Rng): Season {
   const expected: Record<number, number> = {};
   const ratingAtStart: Record<number, number> = {};
   const schedule: Fixture[][] = Array.from({ length: (LEAGUE_SIZE - 1) * 2 }, () => []);
@@ -242,7 +271,27 @@ function newSeason(number: number, leagues: number[][], clubs: Club[], rng: Rng)
     return { tier, clubIds: [...clubIds], table: emptyTable(clubIds) };
   });
   for (const c of clubs) ratingAtStart[c.id] = rating(c);
-  return { number, leagues: leagueSeasons, expected, ratingAtStart, schedule, round: 0, playoffs: [], playerMatches: [], scorers: {} };
+  const calendar: Slot[] = [];
+  schedule.forEach((_, index) => {
+    calendar.push({ kind: 'league', index });
+    CUP_AFTER.forEach((after, stage) => after === index && calendar.push({ kind: 'cup', stage }));
+  });
+  for (let stage = 0; stage < 3; stage++) calendar.push({ kind: 'playoff', stage });
+  if (number % CHAMPIONSHIP_EVERY === 0) cupStages('championship').forEach((_, stage) => calendar.push({ kind: 'championship', stage }));
+  return {
+    number,
+    leagues: leagueSeasons,
+    expected,
+    ratingAtStart,
+    schedule,
+    calendar,
+    round: 0,
+    playoffs: [],
+    cup: drawCup(number, standing.slice(0, CUP_ENTRANTS), rng),
+    championship: null,
+    playerMatches: [],
+    scorers: {},
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -252,30 +301,40 @@ export function leagueRounds(season: Season): number {
   return season.schedule.length;
 }
 
+/** The matchday about to be played, or null when the season is over. */
+export function currentSlot(season: Season): Slot | null {
+  return season.calendar[season.round] ?? null;
+}
+
 /** The fixtures of the next round, or null when the season is over. */
 export function nextRound(career: Career): Fixture[] | null {
   const s = career.season;
-  if (career.pending) return null;
-  if (s.round < s.schedule.length) return s.schedule[s.round];
-  const stage = s.round - s.schedule.length;
-  if (stage === 0) return s.playoffs.length ? s.playoffs.flatMap((p) => p.semis.map((tie) => semiFixture(p.tier, tie, 1))) : null;
-  if (stage === 1) return s.playoffs.flatMap((p) => p.semis.map((tie) => semiFixture(p.tier, tie, 2)));
-  if (stage === 2) {
-    return s.playoffs.map((p) => ({
-      tier: p.tier,
-      home: p.final!.home,
-      away: p.final!.away,
-      kind: 'playoffFinal' as const,
-      options: { neutral: true, knockout: { aggregate: [0, 0] as [number, number] } },
-    }));
+  const slot = currentSlot(s);
+  if (career.pending || !slot) return null;
+  switch (slot.kind) {
+    case 'league':
+      return s.schedule[slot.index];
+    case 'cup':
+      return cupFixtures(s.cup, slot.stage);
+    case 'championship':
+      return cupFixtures(s.championship!, slot.stage);
+    case 'playoff':
+      if (slot.stage === 0) return s.playoffs.flatMap((p) => p.semis.map((tie) => semiFixture(p.tier, tie, 1)));
+      if (slot.stage === 1) return s.playoffs.flatMap((p) => p.semis.map((tie) => semiFixture(p.tier, tie, 2)));
+      return s.playoffs.map((p) => ({
+        tier: p.tier,
+        home: p.final!.home,
+        away: p.final!.away,
+        kind: 'playoffFinal' as const,
+        options: { neutral: true, knockout: { aggregate: [0, 0] as [number, number] } },
+      }));
   }
-  return null;
 }
 
 function semiFixture(tier: number, tie: PlayoffTie, leg: 1 | 2): Fixture {
   if (leg === 1) return { tier, home: tie.low, away: tie.high, kind: 'playoffSemi1', options: {} };
   const [low, high] = tie.leg1!;
-  return { tier, home: tie.high, away: tie.low, kind: 'playoffSemi2', options: { knockout: { aggregate: [high, low] } } };
+  return { tier, home: tie.high, away: tie.low, kind: 'playoffSemi2', secondLeg: true, options: { knockout: { aggregate: [high, low] } } };
 }
 
 export function isSeasonOver(career: Career): boolean {
@@ -300,9 +359,12 @@ export interface RoundResult {
 /** Records a finished round's results and moves the season on. */
 export function completeRound(career: Career, results: RoundResult[]): void {
   const s = career.season;
+  const rng = new Rng(career.rng);
   for (const { fixture, outcome } of results) {
     for (const g of outcome.goals) if (!g.ownGoal) s.scorers[g.playerId] = (s.scorers[g.playerId] ?? 0) + 1;
     if (fixture.kind === 'league') recordResult(s.leagues[fixture.tier - 1].table, fixture.home, fixture.away, outcome);
+    else if (fixture.kind === 'cup') recordCupResult(s.cup, fixture, outcome, rng);
+    else if (fixture.kind === 'championship') recordCupResult(s.championship!, fixture, outcome, rng);
     else recordPlayoff(s, fixture, outcome);
     if (fixture.home === career.playerClubId || fixture.away === career.playerClubId) {
       const record = playerMatch(career, s.round, fixture, outcome);
@@ -320,8 +382,16 @@ export function completeRound(career: Career, results: RoundResult[]): void {
       });
     }
   }
+  const done = currentSlot(s);
   s.round++;
-  if (s.round === s.schedule.length) s.playoffs = drawPlayoffs(s);
+  if (done?.kind === 'league' && done.index === s.schedule.length - 1) {
+    s.playoffs = drawPlayoffs(s);
+    if (s.calendar.some((slot) => slot.kind === 'championship')) {
+      const top = s.leagues.slice(0, 2).flatMap((l) => sortTable(l.table).map((r) => r.clubId));
+      s.championship = drawChampionship(s.number, top.slice(0, CHAMPIONSHIP_ENTRANTS), rng);
+    }
+  }
+  career.rng = rng.state;
 }
 
 function playerMatch(career: Career, round: number, fixture: Fixture, outcome: MatchOutcome): PlayerMatch {
@@ -475,6 +545,7 @@ export function endSeason(career: Career): SeasonEnd {
     outcome: seasonOutcome(tier, pos, s.playoffs, me.id),
     newTier: newTierOf[me.id],
     nextLeagues,
+    standing: finalTables.flatMap((table) => table.map((r) => r.clubId)),
     promoted,
     relegated,
     playoffWinners,
@@ -559,8 +630,15 @@ export function allocatePoints(career: Career, allocation: Record<Stat, number>)
   career.history.push(record);
   recordSeasonGoals((career.records ??= emptyRecords()), record.goalsFor, record.season);
 
+  for (const cup of [career.season.cup, career.season.championship]) {
+    if (cup?.winner === undefined) continue;
+    const final = cup.rounds[cup.rounds.length - 1].ties[0];
+    career.honours[cup.id].push({ season: cup.season, winner: cup.winner, runnerUp: final.high === cup.winner ? final.low : final.high });
+  }
+  if (career.season.championship) career.lastChampionship = career.season.championship;
+
   const rng = new Rng(career.rng);
-  career.season = newSeason(pending.season + 1, pending.nextLeagues, career.clubs, rng);
+  career.season = newSeason(pending.season + 1, pending.nextLeagues, pending.standing, career.clubs, rng);
   career.rival = pickRival(career);
   career.rng = rng.state;
   career.pending = null;
@@ -591,6 +669,8 @@ function seasonRecord(career: Career, pending: SeasonEnd): SeasonRecord {
     points: row.points,
     outcome: pending.outcome,
     topScorer: top && top.goals > 0 ? top : undefined,
+    cup: cupRun(s.cup, me.id) ?? undefined,
+    championship: (s.championship && cupRun(s.championship, me.id)) ?? undefined,
     ratingStart: s.ratingAtStart[me.id],
     ratingEnd: rating(me),
   };

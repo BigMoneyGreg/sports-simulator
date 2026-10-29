@@ -537,7 +537,9 @@ input:focus-visible {
 }
 
 .running {
+  flex: none;
   padding: 0 5px;
+  white-space: nowrap;
   border-radius: 4px;
   background: var(--surface-2);
   font-size: 0.85em;
@@ -910,6 +912,31 @@ table.league {
 
 .bracket li + li {
   border-top: 1px solid var(--line);
+}
+
+.bracket li.me {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.league.group th:nth-child(4),
+.league.group td:nth-child(4) {
+  width: 26px;
+}
+
+.league.group th:nth-child(5),
+.league.group td:nth-child(5) {
+  width: 24px;
+  padding-right: 6px;
+}
+
+.history li .cups {
+  grid-column: 2 / -1;
 }
 
 .bracket .win {

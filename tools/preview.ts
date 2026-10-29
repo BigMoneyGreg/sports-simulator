@@ -5,7 +5,7 @@
  *   npm run build && npx tsx tools/preview.ts [--light]
  *   open dist/preview/index.html?screen=match
  *
- * Screens: setup, match, table, fixtures, club, fullTime, seasonOver, clubLater.
+ * Screens: setup, match, table, fixtures, club, cups, fullTime, seasonOver, championship, clubLater, championshipLater.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -35,7 +35,7 @@ const run = (n = 1) => {
 const game = new Game({ save: () => {}, changed: () => {} }, manual);
 // Read through a function so TypeScript doesn't narrow the phase across calls that change it.
 const phase = () => game.phase;
-const views: Record<string, { view: View; tab?: string }> = {};
+const views: Record<string, { view: View; tab?: string; cup?: string }> = {};
 views.setup = { view: buildView(game) };
 
 game.start({ rating: 55, difficulty: 'medium', seed: 11, team: 'SCO' });
@@ -50,6 +50,7 @@ views.match = { view: live, tab: 'match' };
 views.table = { view: live, tab: 'table' };
 views.fixtures = { view: live, tab: 'fixtures' };
 views.club = { view: live, tab: 'club' };
+views.cups = { view: live, tab: 'cups' };
 
 while (phase() === 'live') run();
 views.fullTime = { view: buildView(game), tab: 'match' };
@@ -63,6 +64,8 @@ for (let season = 0; season < 3; season++) {
   game.allocate(fillAllocation(c.clubs[c.playerClubId], c.pending!.points, { attack: 1, defence: 1 }));
   while (phase() !== 'seasonOver') run();
 }
+// Season 4 ends with the World Championship.
+views.championship = { view: buildView(game), tab: 'cups', cup: 'championship' };
 {
   const c = game.career!;
   game.allocate(fillAllocation(c.clubs[c.playerClubId], c.pending!.points, { attack: 1, defence: 1 }));
@@ -72,6 +75,7 @@ for (let season = 0; season < 3; season++) {
   }
 }
 views.clubLater = { view: buildView(game), tab: 'club' };
+views.championshipLater = { view: buildView(game), tab: 'cups', cup: 'championship' };
 writeFileSync(join(out, 'views.js'), `window.__views = ${JSON.stringify(views)};`);
 
 const dark = {
@@ -125,7 +129,7 @@ writeFileSync(
 <script>
   const screen = new URLSearchParams(location.search).get('screen') || 'match';
   const entry = window.__views[screen];
-  window.acquireVsCodeApi = () => ({ postMessage() {}, getState: () => ({ tab: entry.tab || 'match' }), setState() {} });
+  window.acquireVsCodeApi = () => ({ postMessage() {}, getState: () => ({ tab: entry.tab || 'match', cup: entry.cup || 'cup' }), setState() {} });
 </script>
 <script src="../webview.js"></script>
 <script>window.postMessage({ type: 'view', view: entry.view }, '*');</script>

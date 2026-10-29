@@ -7,14 +7,19 @@ export const PROMOTED_AUTOMATICALLY = 2;
 export const PLAYOFF_PLACES = [3, 4, 5, 6] as const;
 export const RELEGATED = 3;
 
-export type RoundKind = 'league' | 'playoffSemi1' | 'playoffSemi2' | 'playoffFinal';
+export type RoundKind = 'league' | 'playoffSemi1' | 'playoffSemi2' | 'playoffFinal' | 'cup' | 'championship';
 
 export interface Fixture {
+  /** The league, or 0 for cup matches. */
   tier: number;
   home: number;
   away: number;
   kind: RoundKind;
   options: MatchOptions;
+  /** Cup matches: which stage of the competition. */
+  stage?: number;
+  /** The second leg of a two-legged tie. */
+  secondLeg?: boolean;
 }
 
 export interface TableRow {

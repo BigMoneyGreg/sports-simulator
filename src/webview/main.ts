@@ -1,5 +1,6 @@
 import {
   DURATION_LABELS,
+  type CupView,
   type Difficulty,
   type Duration,
   type FixtureView,
@@ -33,13 +34,14 @@ overlay.setAttribute('aria-live', 'polite');
 document.body.appendChild(overlay);
 let overlayKey = '';
 
-type Tab = 'match' | 'table' | 'fixtures' | 'club';
+type Tab = 'match' | 'table' | 'fixtures' | 'cups' | 'club';
 interface UiState {
   tab: Tab;
   tableTier: number | null;
+  cup: CupView['id'];
 }
 
-const ui: UiState = { tab: 'match', tableTier: null, ...((vscode.getState() as Partial<UiState>) ?? {}) };
+const ui: UiState = { tab: 'match', tableTier: null, cup: 'cup', ...((vscode.getState() as Partial<UiState>) ?? {}) };
 let view: View | null = null;
 /** The summer focus picked but not yet confirmed, and the season it belongs to. */
 const summer = { season: 0, focus: null as Focus | null, sent: false };
@@ -235,6 +237,7 @@ function renderGame(v: GameView): void {
     ['match', 'Match'],
     ['table', 'Table'],
     ['fixtures', 'Fixtures'],
+    ['cups', 'Cups'],
     ['club', 'Team'],
   ];
   const nav = `<nav class="tabs" role="tablist">${tabs
@@ -325,6 +328,8 @@ function panelParts(v: GameView): string[] {
     }
     case 'fixtures':
       return [fixturesHtml(v.fixtures)];
+    case 'cups':
+      return cupParts(v);
     case 'club':
       return [clubHtml(v)];
   }
@@ -395,6 +400,46 @@ function playoffHtml(p: PlayoffView): string {
   return `<h3 class="sub">League ${p.tier} play-offs</h3><ul class="bracket card flush">${p.semis.map(tie).join('')}${final}</ul>`;
 }
 
+/** The Nations Cup or the World Championship: where you stand, the draw so far (latest round first), the groups and past winners. */
+function cupParts(v: GameView): string[] {
+  const c = ui.cup === 'championship' ? v.cups.championship : v.cups.cup;
+  const toggle = `<div class="seg chips">${[v.cups.cup, v.cups.championship]
+    .map((x) => `<button type="button" class="${x.id === c.id ? 'on' : ''}" data-cup="${x.id}">${esc(x.name)}</button>`)
+    .join('')}</div>`;
+  const status = `<div class="card"><p class="small first">${esc(c.status)}</p>${
+    c.winner ? `<p class="small">🏆 Winners: ${swatch(c.winner)}<strong>${esc(c.winner.name)}</strong></p>` : ''
+  }</div>`;
+  const tie = (t: CupView['rounds'][number]['ties'][number]) => {
+    const side = (b: typeof t.home, won: boolean) => `${swatch(b)}${won ? `<strong>${esc(b.short)}</strong>` : esc(b.short)}`;
+    return `<li class="${t.mine ? 'me' : ''}"><span>${side(t.home, t.winner === 'home')} v ${side(t.away, t.winner === 'away')}</span>
+      <span class="muted">${t.legs.map(esc).join(', ') || 'to play'}${t.aggregate ? ` · ${esc(t.aggregate)}` : ''}</span></li>`;
+  };
+  const rounds = c.rounds.map(
+    (r) => `<h3 class="sub">${esc(r.name)}</h3><ul class="bracket card flush">${[...r.ties]
+      .sort((a, b) => Number(b.mine) - Number(a.mine))
+      .map(tie)
+      .join('')}</ul>`,
+  );
+  const groups = c.groups.length
+    ? `<h3 class="sub">Groups</h3><div class="groups">${c.groups
+        .map(
+          (g) => `<table class="league group card flush"><thead><tr><th></th><th>Group ${esc(g.name)}</th><th>P</th><th>GD</th><th>Pts</th></tr></thead><tbody>${g.rows
+            .map(
+              (r) =>
+                `<tr class="${r.through ? 'promotion' : ''} ${r.isPlayer ? 'me' : ''}"><td class="pos">${r.pos}</td><td class="team">${swatch(r.club)}${esc(r.town)}</td><td>${r.played}</td><td>${r.gd > 0 ? '+' : ''}${r.gd}</td><td class="pts">${r.points}</td></tr>`,
+            )
+            .join('')}</tbody></table>`,
+        )
+        .join('')}</div>`
+    : '';
+  const past = c.pastWinners.length
+    ? `<h3 class="sub">Past winners</h3><ul class="cabinet card">${c.pastWinners
+        .map((w) => `<li>S${w.season} ${swatch(w.winner)}<strong>${esc(w.winner.name)}</strong> <span class="muted small">beat ${esc(w.runnerUp.name)}</span></li>`)
+        .join('')}</ul>`
+    : '';
+  return [toggle, status, ...rounds, groups, past];
+}
+
 function seasonEndHtml(e: SeasonEndView): string {
   const r = e.report;
   const perf = e.points.performance;
@@ -429,6 +474,7 @@ function seasonEndHtml(e: SeasonEndView): string {
       <dt>Best run</dt><dd>${esc(r.bestRun)}</dd>
       <dt>Worst run</dt><dd>${esc(r.worstRun)}</dd>
       ${r.topScorer ? `<dt>Top scorer</dt><dd>${esc(r.topScorer)}</dd>` : ''}
+      ${r.cups.map((x) => `<dt>${esc(x.name)}</dt><dd>${esc(x.run)}</dd>`).join('')}
     </dl>
     </div>
 
@@ -458,7 +504,7 @@ function fixturesHtml(fixtures: FixtureView[]): string {
       (f) => `<li class="${f.current ? 'current' : ''} ${f.result ? 'played' : ''}"><span class="muted small">${esc(f.label)}</span>
       <span class="opp" title="${esc(f.opponent.name)}">${swatch(f.opponent)}<span class="ellipsis">${esc(f.town)}</span></span>
       <span class="muted small">${f.home ? 'H' : 'A'}</span>
-      <span class="res">${f.result ? `<span class="pill ${f.outcome ?? ''}">${esc(f.result)}</span>` : f.current ? '<span class="pill live">LIVE</span>' : ''}</span></li>`,
+      <span class="res">${f.result ? `<span class="pill ${f.outcome ?? ''}"${f.resultTitle ? ` title="${esc(f.resultTitle)}"` : ''}>${esc(f.result)}</span>` : f.current ? '<span class="pill live">LIVE</span>' : ''}</span></li>`,
     )
     .join('')}</ol>`;
 }
@@ -496,8 +542,10 @@ function clubHtml(v: GameView): string {
   <div class="card">
     <h3 class="sub first">Trophy cabinet</h3>
     ${
-      c.cabinet.titles.length || c.cabinet.promotions
-        ? `<ul class="cabinet">${c.cabinet.titles.map((t) => `<li>🏆 League ${t.tier} champions <span class="muted small">× ${t.seasons.length} (S${t.seasons.join(', S')})</span></li>`).join('')}
+      c.cabinet.titles.length || c.cabinet.promotions || c.cabinet.cups.length || c.cabinet.championships.length
+        ? `<ul class="cabinet">${c.cabinet.championships.length ? `<li>🌍 World champions <span class="muted small">× ${c.cabinet.championships.length} (S${c.cabinet.championships.join(', S')})</span></li>` : ''}
+           ${c.cabinet.cups.length ? `<li>🏆 Nations Cup winners <span class="muted small">× ${c.cabinet.cups.length} (S${c.cabinet.cups.join(', S')})</span></li>` : ''}
+           ${c.cabinet.titles.map((t) => `<li>🏆 League ${t.tier} champions <span class="muted small">× ${t.seasons.length} (S${t.seasons.join(', S')})</span></li>`).join('')}
            ${c.cabinet.promotions ? `<li>⬆ Promotions <span class="muted small">× ${c.cabinet.promotions}</span></li>` : ''}
            ${c.cabinet.playoffWins ? `<li>🎟 Play-off wins <span class="muted small">× ${c.cabinet.playoffWins}</span></li>` : ''}</ul>`
         : '<p class="muted small">Empty for now. Win something!</p>'
@@ -521,7 +569,9 @@ function clubHtml(v: GameView): string {
         ? `<ol class="history">${c.history
             .map(
               (h) => `<li><span>S${h.season}</span><span>L${h.tier} · ${ordinal(h.position)}</span><span class="muted small">${esc(h.record)}</span>
-              <button type="button" class="link small" data-copy="${esc(h.summary)}" title="Copy summary">Copy</button></li>`,
+              <button type="button" class="link small" data-copy="${esc(h.summary)}" title="Copy summary">Copy</button>${
+                h.cups.map((x) => `<span class="muted small cups">${esc(x.name)}: ${esc(x.run)}</span>`).join('')
+              }</li>`,
             )
             .join('')}</ol>`
         : '<p class="muted small">Your first season is under way.</p>'
@@ -551,6 +601,10 @@ app.addEventListener('click', (e) => {
   if (button.dataset.tab) {
     ui.tab = button.dataset.tab as Tab;
     scrollFixtures = true;
+    saveUi();
+    render();
+  } else if (button.dataset.cup) {
+    ui.cup = button.dataset.cup as CupView['id'];
     saveUi();
     render();
   } else if (button.dataset.tier) {
