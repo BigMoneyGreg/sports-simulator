@@ -13,6 +13,7 @@ import {
   type TableRow,
 } from './league';
 import { applyDecline, bandPull, expectedPositions, normalise, positionBonus, RATING_TUNING, seasonGain, totalRating, type Difficulty } from './ratings';
+import { emptyRecords, recordMatch, recordSeasonGoals, type Records } from './records';
 import { Rng } from './rng';
 import type { GoalRecord, MatchOutcome, Player, SportModule, TeamSheet } from './sport';
 
@@ -152,6 +153,9 @@ export interface Career {
   /** Set when the season is over and the player has points to allocate. */
   pending: SeasonEnd | null;
   history: SeasonRecord[];
+  records: Records;
+  /** The rival club in the player's league; matches against it are derbies. */
+  rival: number | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -196,9 +200,22 @@ export function newCareer(options: CareerOptions, sport: SportDefinition): Caree
     season: newSeason(1, leagues, clubs, rng),
     pending: null,
     history: [],
+    records: emptyRecords(),
+    rival: null,
   };
+  career.rival = pickRival(career);
   career.rng = rng.state;
   return career;
+}
+
+/** Keeps the rival while you share a league; otherwise the closest-rated club in your new one. */
+export function pickRival(career: Career): number | null {
+  const league = career.season.leagues.find((l) => l.clubIds.includes(career.playerClubId));
+  if (!league) return null;
+  if (career.rival !== null && career.rival !== undefined && league.clubIds.includes(career.rival)) return career.rival;
+  const mine = rating(career.clubs[career.playerClubId]);
+  const others = league.clubIds.filter((id) => id !== career.playerClubId);
+  return others.sort((a, b) => Math.abs(rating(career.clubs[a]) - mine) - Math.abs(rating(career.clubs[b]) - mine) || a - b)[0] ?? null;
 }
 
 function playerStats(value: number, split?: Record<Stat, number>): Record<Stat, number> {
@@ -286,7 +303,19 @@ export function completeRound(career: Career, results: RoundResult[]): void {
     if (fixture.kind === 'league') recordResult(s.leagues[fixture.tier - 1].table, fixture.home, fixture.away, outcome);
     else recordPlayoff(s, fixture, outcome);
     if (fixture.home === career.playerClubId || fixture.away === career.playerClubId) {
-      s.playerMatches.push(playerMatch(career, s.round, fixture, outcome));
+      const record = playerMatch(career, s.round, fixture, outcome);
+      s.playerMatches.push(record);
+      const me = career.clubs[career.playerClubId];
+      recordMatch((career.records ??= emptyRecords()), {
+        goalsFor: record.goalsFor,
+        goalsAgainst: record.goalsAgainst,
+        opponent: career.clubs[record.opponentId].name,
+        season: s.number,
+        won: record.won,
+        scorers: record.goals
+          .filter((g) => g.for && !g.ownGoal)
+          .map((g) => ({ id: g.playerId, name: me.squad.find((p) => p.id === g.playerId)?.name ?? 'Unknown' })),
+      });
     }
   }
   s.round++;
@@ -505,12 +534,20 @@ export function allocatePoints(career: Career, allocation: Record<Stat, number>)
   for (const s of STATS) me[s] += allocation[s];
 
   normalise(career.clubs, career.totalRating);
-  career.history.push(seasonRecord(career, pending));
+  const record = seasonRecord(career, pending);
+  career.history.push(record);
+  recordSeasonGoals((career.records ??= emptyRecords()), record.goalsFor, record.season);
 
   const rng = new Rng(career.rng);
   career.season = newSeason(pending.season + 1, pending.nextLeagues, career.clubs, rng);
+  career.rival = pickRival(career);
   career.rng = rng.state;
   career.pending = null;
+}
+
+/** The career's history including a just-finished season still awaiting allocation. */
+export function fullHistory(career: Career): SeasonRecord[] {
+  return career.pending ? [...career.history, seasonRecord(career, career.pending)] : career.history;
 }
 
 function seasonRecord(career: Career, pending: SeasonEnd): SeasonRecord {

@@ -29,6 +29,44 @@ export interface LiveMatchView {
   aggregate?: string;
   commentary: CommentaryView[];
   scorers: { home: string[]; away: string[] };
+  derby: boolean;
+}
+
+export interface FullTimeView {
+  home: TeamBadge & { goals: number };
+  away: TeamBadge & { goals: number };
+  note?: string;
+  scorers: string;
+  /** How long the card stays up, in ms. */
+  ms: number;
+  /** Changes for every new full time, so the card animates once per match. */
+  key: string;
+}
+
+export interface HistoryRowView {
+  season: number;
+  tier: number;
+  position: number;
+  record: string;
+  points: number;
+  outcome: SeasonOutcome;
+  summary: string;
+}
+
+export interface CabinetView {
+  titles: { tier: number; seasons: number[] }[];
+  promotions: number;
+  playoffWins: number;
+}
+
+export interface RecordsView {
+  biggestWin?: string;
+  heaviestDefeat?: string;
+  unbeaten: string;
+  winning: string;
+  mostGoals?: string;
+  topScorers: string[];
+  manager: { seasons: number; matches: number; won: number; drawn: number; lost: number; winPct: number; titles: number };
 }
 
 export interface TableRowView {
@@ -56,6 +94,7 @@ export interface TableView {
 
 export interface FixtureView {
   label: string;
+  derby?: boolean;
   opponent: TeamBadge;
   home: boolean;
   result?: string;
@@ -73,6 +112,10 @@ export interface ClubView {
   difficulty: Difficulty;
   season: number;
   expected: number;
+  rival?: TeamBadge;
+  cabinet: CabinetView;
+  records: RecordsView;
+  history: HistoryRowView[];
 }
 
 export interface HeaderView {
@@ -135,6 +178,9 @@ export interface SeasonEndView {
   stats: Record<StatKey, number>;
   room: Record<StatKey, number>;
   tolerance: number;
+  summary: string;
+  /** Won League 1: offer to start a new career instead of carrying on. */
+  canRetire: boolean;
 }
 
 export interface GameView {
@@ -148,6 +194,7 @@ export interface GameView {
   waiting: 'seasonOver' | null;
   playoffs: PlayoffView[];
   seasonEnd: SeasonEndView | null;
+  fullTime: FullTimeView | null;
 }
 
 export type View = { screen: 'setup'; setup: SetupView } | GameView;
@@ -158,6 +205,9 @@ export type ToHost =
   | { type: 'suggestName' }
   | { type: 'togglePause' }
   | { type: 'setDuration'; duration: Duration }
-  | { type: 'allocate'; allocation: Record<StatKey, number> };
+  | { type: 'allocate'; allocation: Record<StatKey, number> }
+  | { type: 'copy'; text: string }
+  | { type: 'newCareer' }
+  | { type: 'resetCareer' };
 
 export type ToWebview = { type: 'view'; view: View } | { type: 'suggestedName'; name: string };

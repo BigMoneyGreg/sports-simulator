@@ -5,10 +5,11 @@
  *   npm run build && npx tsx tools/preview.ts [--light]
  *   open dist/preview/index.html?screen=match
  *
- * Screens: setup, match, table, fixtures, club, seasonOver (see SCREENS below).
+ * Screens: setup, match, table, fixtures, club, fullTime, seasonOver, clubLater.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { fillAllocation } from '../src/core/career';
 import { Game, type Scheduler } from '../src/extension/game';
 import { buildView } from '../src/extension/viewModel';
 import type { View } from '../src/shared/view';
@@ -32,13 +33,15 @@ const run = (n = 1) => {
 };
 
 const game = new Game({ save: () => {}, changed: () => {} }, manual);
+// Read through a function so TypeScript doesn't narrow the phase across calls that change it.
+const phase = () => game.phase;
 const views: Record<string, { view: View; tab?: string }> = {};
 views.setup = { view: buildView(game, () => 'Wexstead Rovers') };
 
 game.start({ rating: 55, difficulty: 'medium', seed: 11, clubName: 'Wexstead Rovers' });
 // Play a few matchdays, then stop mid-match.
 for (let md = 0; md < 6; md++) {
-  while (game.phase === 'live') run();
+  while (phase() === 'live') run();
   run();
 }
 run(64);
@@ -48,8 +51,27 @@ views.table = { view: live, tab: 'table' };
 views.fixtures = { view: live, tab: 'fixtures' };
 views.club = { view: live, tab: 'club' };
 
-while (game.phase !== 'seasonOver') run();
+while (phase() === 'live') run();
+views.fullTime = { view: buildView(game, () => ''), tab: 'match' };
+
+while (phase() !== 'seasonOver') run();
 views.seasonOver = { view: buildView(game, () => ''), tab: 'match' };
+
+// A few seasons in, for the club tab's history and records.
+for (let season = 0; season < 3; season++) {
+  const c = game.career!;
+  game.allocate(fillAllocation(c.clubs[c.playerClubId], c.pending!.points, { attack: 1, defence: 1, chemistry: 1 }));
+  while (phase() !== 'seasonOver') run();
+}
+{
+  const c = game.career!;
+  game.allocate(fillAllocation(c.clubs[c.playerClubId], c.pending!.points, { attack: 1, defence: 1, chemistry: 1 }));
+  for (let md = 0; md < 3; md++) {
+    while (phase() === 'live') run();
+    run();
+  }
+}
+views.clubLater = { view: buildView(game, () => ''), tab: 'club' };
 writeFileSync(join(out, 'views.js'), `window.__views = ${JSON.stringify(views)};`);
 
 const dark = {
@@ -91,7 +113,7 @@ const vars = Object.entries(theme)
 writeFileSync(
   join(out, 'index.html'),
   `<!DOCTYPE html><html><head><meta charset="utf-8">
-<style>html { ${vars} --vscode-font-family: -apple-system, BlinkMacSystemFont, sans-serif; --vscode-font-size: 13px; background: ${theme.background}; } body { width: 280px; border-right: 1px dashed #555; }</style>
+<style>html { ${vars} --vscode-font-family: -apple-system, BlinkMacSystemFont, sans-serif; --vscode-font-size: 13px; background: ${theme.background}; } body { width: 280px; border-right: 1px dashed #555; } .ft-card { animation: none !important; }</style>
 <link rel="stylesheet" href="../../media/sidebar.css"></head>
 <body><div id="app"></div>
 <script src="views.js"></script>

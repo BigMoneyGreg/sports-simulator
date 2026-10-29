@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { fullHistory } from '../core/career';
 import { Rng } from '../core/rng';
 import { suggestClubName } from '../sports/football/names';
 import { DURATIONS, type Duration, type ToHost } from '../shared/view';
@@ -26,7 +27,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const sidebar = new SidebarProvider(context.extensionUri, (message) => handle(message));
 
   const refresh = () => {
-    sidebar.post({ type: 'view', view: buildView(game!, () => suggestedName) });
+    sidebar.post({ type: 'view', view: buildView(game!, () => suggestedName, { fullTimeOverlay: config().get('fullTimeOverlay', true) }) });
     const text = statusText(game!);
     const seasonOver = !!game!.career?.pending;
     statusBar.update(config().get('statusBarScore', true) || seasonOver ? text : null);
@@ -70,6 +71,15 @@ export function activate(context: vscode.ExtensionContext): void {
       case 'setDuration':
         void config().update('matchDuration', message.duration, vscode.ConfigurationTarget.Global);
         return;
+      case 'copy':
+        void vscode.env.clipboard.writeText(message.text).then(() => vscode.window.setStatusBarMessage('Sideline: summary copied', 2000));
+        return;
+      case 'newCareer':
+        void newCareer();
+        return;
+      case 'resetCareer':
+        void vscode.commands.executeCommand('sideline.resetCareer');
+        return;
       case 'allocate':
         try {
           game!.allocate(message.allocation);
@@ -80,6 +90,15 @@ export function activate(context: vscode.ExtensionContext): void {
         }
         return;
     }
+  }
+
+  async function newCareer(): Promise<void> {
+    const answer = await vscode.window.showInformationMessage('Start a new career? This one will be archived with its history and records.', { modal: true }, 'New career');
+    if (answer !== 'New career' || !game!.career) return;
+    const c = game!.career;
+    const history = fullHistory(c);
+    await storage!.archive({ club: c.clubs[c.playerClubId].name, archivedAt: new Date().toISOString(), seasons: history.length, history, records: c.records });
+    game!.reset();
   }
 
   context.subscriptions.push(

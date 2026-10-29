@@ -2,6 +2,16 @@ import type * as vscode from 'vscode';
 import type { SavedGame } from './game';
 
 const KEY = 'sideline.career';
+const ARCHIVE_KEY = 'sideline.archive';
+
+/** What's kept of a finished career (a full Hall of Fame comes later). */
+export interface ArchivedCareer {
+  club: string;
+  archivedAt: string;
+  seasons: number;
+  history: SavedGame['career']['history'];
+  records: SavedGame['career']['records'];
+}
 
 /** The career lives in global state, so it follows you across every project. */
 export class Storage {
@@ -15,6 +25,11 @@ export class Storage {
     } catch {
       return null;
     }
+  }
+
+  archive(entry: ArchivedCareer): Thenable<void> {
+    const list = this.memento.get<ArchivedCareer[]>(ARCHIVE_KEY, []);
+    return this.memento.update(ARCHIVE_KEY, [...list, entry]);
   }
 
   /** Serialised straight away, so later changes to the live objects can't leak into the save. */

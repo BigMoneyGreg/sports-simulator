@@ -1,15 +1,21 @@
-import { leagueRounds, type Career, type Playoff } from '../core/career';
+import { leagueRounds, type Career, type Playoff, type SeasonRecord } from '../core/career';
+import { emptyRecords, topScorers } from '../core/records';
 import { MAX_STAT, rating, STATS } from '../core/club';
 import { recordResult, sortTable, zone, type Fixture, type TableRow } from '../core/league';
 import { commentary, matchClock } from '../sports/football/commentary';
 import { outcome, TUNING, type SideKey } from '../sports/football/match';
 import { surname, townName } from '../sports/football/names';
-import type { FixtureView, GameView, LiveMatchView, PlayoffView, SeasonEndView, StatKey, TableView, TeamBadge, View } from '../shared/view';
+import type { CabinetView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, StatKey, TableView, TeamBadge, View } from '../shared/view';
+import { fullTimePause } from './game';
 import type { Game } from './game';
 
 const COMMENTARY_LINES = 40;
 
-export function buildView(game: Game, suggestedName: () => string): View {
+export interface ViewOptions {
+  fullTimeOverlay: boolean;
+}
+
+export function buildView(game: Game, suggestedName: () => string, options: ViewOptions = { fullTimeOverlay: true }): View {
   const career = game.career;
   if (!career) return { screen: 'setup', setup: { suggestedName: suggestedName(), duration: game.duration } };
   const me = career.clubs[career.playerClubId];
@@ -42,12 +48,94 @@ export function buildView(game: Game, suggestedName: () => string): View {
       difficulty: career.difficulty,
       season: season.number,
       expected: season.expected[me.id],
+      rival: career.rival !== null && career.rival !== undefined ? badge(career, career.rival) : undefined,
+      cabinet: cabinet(career.history),
+      records: recordsView(career),
+      history: [...career.history].reverse().map(historyRow),
     },
     waiting: career.pending ? 'seasonOver' : null,
     playoffs: season.playoffs.map((p) => playoffView(career, p)),
     seasonEnd: career.pending ? buildSeasonEnd(career, tables[tier - 1]) : null,
+    fullTime: options.fullTimeOverlay ? buildFullTime(game) : null,
   };
   return view;
+}
+
+function buildFullTime(game: Game): FullTimeView | null {
+  if (game.phase !== 'fullTime' || !game.lastMatch) return null;
+  const career = game.career!;
+  const { match, fixture } = game.lastMatch;
+  const goals = match.events.flatMap((e) => (e.type === 'goal' ? [e] : []));
+  const name = (id: number) => {
+    const ids = [fixture.home, fixture.away];
+    for (const clubId of ids) {
+      const p = career.clubs[clubId].squad.find((x) => x.id === id);
+      if (p) return surname(p.name);
+    }
+    return '?';
+  };
+  const list = (side: SideKey) =>
+    goals
+      .filter((g) => g.side === side)
+      .map((g) => `${name(g.playerId)} ${g.minute}${g.added ? `+${g.added}` : ''}'${g.ownGoal ? ' og' : ''}`)
+      .join(', ');
+  const home = list('home');
+  const away = list('away');
+  const o = outcome(match);
+  return {
+    home: { ...badge(career, fixture.home), goals: match.home.goals },
+    away: { ...badge(career, fixture.away), goals: match.away.goals },
+    note: o.penalties ? `${o.penalties[0]}–${o.penalties[1]} on penalties` : o.extraTime ? 'after extra time' : undefined,
+    scorers: [home, away].filter(Boolean).join(' · '),
+    ms: fullTimePause(game.duration),
+    key: `${career.season.number}-${career.season.round}`,
+  };
+}
+
+/** One line for sharing: "Season 7 · Champions, League 3 · 26W 7D 5L · Promoted 🏆". */
+export function summaryLine(r: Pick<SeasonRecord, 'season' | 'tier' | 'position' | 'won' | 'drawn' | 'lost' | 'outcome'>): string {
+  const place = r.position === 1 ? `Champions, League ${r.tier}` : `${ordinal(r.position)}, League ${r.tier}`;
+  const tail =
+    r.outcome === 'promoted' ? 'Promoted' : r.outcome === 'playoffWinner' ? 'Promoted via the play-offs' : r.outcome === 'relegated' ? 'Relegated' : r.outcome === 'playoffs' ? 'Lost in the play-offs' : '';
+  return [`Season ${r.season}`, place, `${r.won}W ${r.drawn}D ${r.lost}L`, tail].filter(Boolean).join(' · ') + (r.position === 1 ? ' 🏆' : '');
+}
+
+function historyRow(r: SeasonRecord): HistoryRowView {
+  return { season: r.season, tier: r.tier, position: r.position, record: `${r.won}W ${r.drawn}D ${r.lost}L`, points: r.points, outcome: r.outcome, summary: summaryLine(r) };
+}
+
+function cabinet(history: SeasonRecord[]): CabinetView {
+  const titles = new Map<number, number[]>();
+  for (const h of history) if (h.position === 1) titles.set(h.tier, [...(titles.get(h.tier) ?? []), h.season]);
+  return {
+    titles: [...titles.entries()].sort((a, b) => a[0] - b[0]).map(([tier, seasons]) => ({ tier, seasons })),
+    promotions: history.filter((h) => h.outcome === 'promoted' || h.outcome === 'playoffWinner').length,
+    playoffWins: history.filter((h) => h.outcome === 'playoffWinner').length,
+  };
+}
+
+function recordsView(career: Career): RecordsView {
+  const r = career.records ?? emptyRecords();
+  const score = (m: { goalsFor: number; goalsAgainst: number; opponent: string; season: number }) => `${m.goalsFor}–${m.goalsAgainst} v ${m.opponent} (S${m.season})`;
+  const run = (x: { best: number; bestSeason?: number }, what: string) => (x.best ? `${x.best} ${what}${x.bestSeason ? ` (S${x.bestSeason})` : ''}` : '—');
+  const mg = r.manager;
+  return {
+    biggestWin: r.biggestWin && score(r.biggestWin),
+    heaviestDefeat: r.heaviestDefeat && score(r.heaviestDefeat),
+    unbeaten: run(r.unbeaten, 'matches'),
+    winning: run(r.winning, 'wins'),
+    mostGoals: r.mostGoalsSeason && `${r.mostGoalsSeason.goals} (S${r.mostGoalsSeason.season})`,
+    topScorers: topScorers(r).map((s) => `${s.name} ${s.goals}`),
+    manager: {
+      seasons: career.history.length,
+      matches: mg.matches,
+      won: mg.won,
+      drawn: mg.drawn,
+      lost: mg.lost,
+      winPct: mg.matches ? Math.round((100 * mg.won) / mg.matches) : 0,
+      titles: career.history.filter((h) => h.position === 1).length,
+    },
+  };
 }
 
 function playoffView(career: Career, p: Playoff): PlayoffView {
@@ -155,6 +243,8 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
     stats,
     room,
     tolerance: TUNING.weaknessTolerance,
+    summary: summaryLine({ season: end.season, tier: end.tier, position: end.position, won: row.won, drawn: row.drawn, lost: row.lost, outcome: end.outcome }),
+    canRetire: end.outcome === 'champion',
   };
 }
 
@@ -175,6 +265,11 @@ function roundLabel(career: Career): string {
   const league = leagueRounds(s);
   if (s.round < league) return `MD ${s.round + 1}/${league}`;
   return ['Play-off semi-final, 1st leg', 'Play-off semi-final, 2nd leg', 'Play-off final'][s.round - league] ?? 'Play-offs';
+}
+
+function isDerby(career: Career, f: Pick<Fixture, 'home' | 'away'>): boolean {
+  const rival = career.rival;
+  return rival !== null && rival !== undefined && (f.home === rival || f.away === rival) && (f.home === career.playerClubId || f.away === career.playerClubId);
 }
 
 function competition(fixture: Fixture): string {
@@ -216,6 +311,7 @@ function buildMatch(game: Game): LiveMatchView | null {
     away: { ...badge(career, fixture.away), goals: match.away.goals, isPlayer: fixture.away === career.playerClubId },
     clock: matchClock(match),
     finished: match.period === 'done',
+    derby: isDerby(career, fixture),
     commentary: lines.slice(-COMMENTARY_LINES).reverse().map((l) => ({ clock: l.clock, text: l.text, kind: l.kind, mine: l.side === mySide })),
     scorers,
   };
@@ -288,7 +384,7 @@ function buildFixtures(career: Career, game: Game): FixtureView[] {
 
 function fixtureView(career: Career, label: string, f: Pick<Fixture, 'home' | 'away'>, played: Career['season']['playerMatches'][number] | undefined, current: boolean): FixtureView {
   const home = f.home === career.playerClubId;
-  const view: FixtureView = { label, opponent: badge(career, home ? f.away : f.home), home, current };
+  const view: FixtureView = { label, opponent: badge(career, home ? f.away : f.home), home, current, derby: isDerby(career, f) || undefined };
   if (played) {
     view.result = `${played.goalsFor}–${played.goalsAgainst}${played.penalties ? ` (${played.penalties[0]}–${played.penalties[1]} p)` : ''}`;
     const won = played.won ?? played.goalsFor > played.goalsAgainst;

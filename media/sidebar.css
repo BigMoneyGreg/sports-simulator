@@ -642,3 +642,116 @@ table.league {
   font-size: 0.9em;
   color: var(--win);
 }
+
+/* Full-time overlay */
+
+.ft-layer {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.ft-card {
+  padding: 8px 10px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--vscode-editorWidget-background, var(--vscode-sideBar-background, #252526));
+  color: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
+  box-shadow: 0 4px 14px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.35));
+  animation-name: ft-show;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+.ft-score {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 2px 0;
+  font-weight: 600;
+}
+
+.ft-score .swatch {
+  margin: 0 2px;
+}
+
+@keyframes ft-show {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  6%,
+  85% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ft-card {
+    animation-name: ft-show-still;
+  }
+
+  @keyframes ft-show-still {
+    0%,
+    90% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+}
+
+.derby {
+  margin-left: 4px;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 0.8em;
+  font-weight: 600;
+  color: var(--vscode-badge-foreground, #fff);
+  background: var(--vscode-badge-background, #c8102e);
+}
+
+.secondary {
+  width: 100%;
+  margin-top: 6px;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 2px;
+  color: var(--vscode-button-secondaryForeground, inherit);
+  background: var(--vscode-button-secondaryBackground, transparent);
+}
+
+.cabinet {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cabinet li {
+  padding: 2px 0;
+}
+
+.history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.history li {
+  display: grid;
+  grid-template-columns: 30px 70px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--line);
+}
