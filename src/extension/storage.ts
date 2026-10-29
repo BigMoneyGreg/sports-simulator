@@ -4,7 +4,7 @@ import type { SavedGame } from './game';
 const KEY = 'sportsSimulator.career';
 const ARCHIVE_KEY = 'sportsSimulator.archive';
 
-/** What's kept of a finished career (a full Hall of Fame comes later). */
+/** What's kept of a finished career. */
 export interface ArchivedCareer {
   club: string;
   archivedAt: string;

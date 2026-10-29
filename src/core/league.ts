@@ -118,20 +118,6 @@ export function styleSplit(rating: number, style: 'attacking' | 'balanced' | 'de
   return { attack: rating + sign * l, defence: rating - sign * l };
 }
 
-/** Which league a starting rating lands in. */
-export function tierForRating(rating: number): number {
-  return Math.min(LEAGUE_COUNT, LEAGUE_COUNT - Math.floor(Math.max(0, Math.min(99, rating)) / LEAGUE_SIZE));
-}
-
-/** The setup screen's live label, e.g. "Lower half — League 1" for 85. */
-export function ratingLabel(rating: number): string {
-  const tier = tierForRating(rating);
-  const inBand = Math.round(rating) - band(tier).min;
-  const label =
-    inBand < 5 ? (tier === LEAGUE_COUNT ? 'Bottom of the pyramid' : 'Relegation battle') : inBand < 10 ? 'Lower half' : inBand < 15 ? 'Upper half' : 'Title contender';
-  return `${label} — League ${tier}`;
-}
-
 export type Zone = 'champion' | 'promotion' | 'playoff' | 'relegation' | null;
 
 /** What a finishing position means in a given league. */

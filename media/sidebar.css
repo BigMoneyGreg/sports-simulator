@@ -57,10 +57,6 @@ input:focus-visible {
   min-width: 0;
 }
 
-.bad {
-  color: var(--vscode-errorForeground);
-}
-
 /* Regions patched independently; they don't affect layout. */
 
 .part {
@@ -274,11 +270,6 @@ input:focus-visible {
 
 .row.between {
   justify-content: space-between;
-}
-
-.hint {
-  font-size: 0.9em;
-  color: var(--muted);
 }
 
 .seg {
@@ -800,43 +791,9 @@ table.league {
   border-left: 4px solid var(--club);
 }
 
-.clubcard .rating {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin: 10px 0;
-}
-
 .big {
   font-size: 2em;
   font-weight: 700;
-}
-
-.stat {
-  display: grid;
-  grid-template-columns: 64px 1fr 26px;
-  align-items: center;
-  gap: 8px;
-  margin: 6px 0;
-}
-
-.stat strong {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.bar {
-  height: 7px;
-  border-radius: 4px;
-  background: var(--surface-2);
-  overflow: hidden;
-}
-
-.bar span {
-  display: block;
-  height: 100%;
-  border-radius: 4px;
-  background: var(--club);
 }
 
 .cabinet {
@@ -925,44 +882,6 @@ table.league {
   border-left: 3px solid var(--accent);
   border-radius: 4px;
   background: var(--surface-2);
-}
-
-.alloc-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) repeat(2, 28px) 38px repeat(2, 28px);
-  align-items: center;
-  gap: 3px;
-  margin: 5px 0;
-}
-
-.alloc-row strong {
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-.step {
-  padding: 1px 0;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--surface-2);
-}
-
-.step:hover:not(:disabled) {
-  border-color: var(--accent);
-}
-
-.step:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
-.added {
-  text-align: right;
-}
-
-.alloc-actions {
-  justify-content: space-between;
-  margin-top: 6px;
 }
 
 .strong {
@@ -1057,12 +976,6 @@ table.league {
     100% {
       opacity: 0;
     }
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .bar span {
-    transition: width 0.4s ease;
   }
 }
 

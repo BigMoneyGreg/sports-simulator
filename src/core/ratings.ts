@@ -1,5 +1,5 @@
 import { band, LEAGUE_COUNT, LEAGUE_SIZE } from './league';
-import { clamp, MAX_STAT, rating, shiftRating, STATS, type Club, type Stat } from './club';
+import { MAX_STAT, rating, shiftRating, STATS, type Club, type Stat } from './club';
 import type { Rng } from './rng';
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
@@ -127,8 +127,4 @@ export function normalise(clubs: Club[], target: number): void {
 
 export function totalRating(clubs: Club[]): number {
   return clubs.reduce((t, c) => t + rating(c), 0);
-}
-
-export function displayRating(club: Club): number {
-  return Math.round(clamp(rating(club), 0, MAX_STAT));
 }

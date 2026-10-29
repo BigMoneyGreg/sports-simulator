@@ -111,7 +111,7 @@ export interface SeasonEnd {
   performance: number;
   bonus: number;
   boost: number;
-  /** Rating lost to the decline (shown on the end-of-season screen). */
+  /** Rating lost to the decline. */
   decline: number;
   declineByStat: Record<Stat, number>;
   /** Points to allocate across attack and defence. */
@@ -155,7 +155,7 @@ export interface Career {
   pending: SeasonEnd | null;
   history: SeasonRecord[];
   records: Records;
-  /** The rival club in the player's league; matches against it are derbies. */
+  /** The rival club in the player's league, shown on the Club tab. */
   rival: number | null;
 }
 
@@ -525,7 +525,7 @@ export function fillAllocation(club: Club, points: number, weights: Record<Stat,
 export type Focus = 'attack' | 'balanced' | 'defence';
 export const FOCUSES: readonly Focus[] = ['attack', 'balanced', 'defence'];
 
-/** Splits the points for a focus: 75/25 towards the chosen side, or 50/50. */
+/** Splits the points for a focus: `focusShare` towards the chosen side, or 50/50. */
 export function focusAllocation(club: Club, points: number, focus: Focus): Record<Stat, number> {
   const share = RATING_TUNING.focusShare;
   const weights = focus === 'balanced' ? { attack: 1, defence: 1 } : focus === 'attack' ? { attack: share, defence: 1 - share } : { attack: 1 - share, defence: share };

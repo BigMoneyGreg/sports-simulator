@@ -5,7 +5,6 @@ export type Duration = '30s' | '2m' | '5m';
 export const DURATIONS: Duration[] = ['30s', '2m', '5m'];
 export const DURATION_LABELS: Record<Duration, string> = { '30s': '30 sec', '2m': '2 min', '5m': '5 min' };
 export type Difficulty = 'easy' | 'medium' | 'hard';
-export type StatKey = 'attack' | 'defence';
 export type Focus = 'attack' | 'balanced' | 'defence';
 export type Style = 'attacking' | 'balanced' | 'defensive';
 export type Zone = 'champion' | 'promotion' | 'playoff' | 'relegation' | null;

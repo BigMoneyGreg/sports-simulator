@@ -258,7 +258,7 @@ function climbRun(): void {
   const targets: Record<Difficulty, { smart: [number, number]; even: [number, number] }> = {
     easy: { smart: [5, 6], even: [9, 11] },
     medium: { smart: [7, 9], even: [16, 20] },
-    // Hard has no boost (M8): reaching 99 is meant to be a very long grind at best.
+    // Hard has no boost: reaching 99 is meant to be a very long grind at best.
     hard: { smart: [40, 70], even: [70, 70] },
   };
   for (const difficulty of ['easy', 'medium', 'hard'] as Difficulty[]) {
