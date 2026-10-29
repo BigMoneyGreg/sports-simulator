@@ -1057,3 +1057,7 @@ table.league {
   line-height: 1.2;
   opacity: 0.8;
 }
+
+.expect {
+  margin: 10px 0 8px;
+}

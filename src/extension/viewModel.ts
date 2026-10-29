@@ -1,6 +1,5 @@
 import { FOCUSES, focusAllocation, leagueRounds, type Career, type Playoff, type SeasonRecord } from '../core/career';
 import { emptyRecords, topScorers } from '../core/records';
-import { rating } from '../core/club';
 import { recordResult, sortTable, zone, type Fixture, type TableRow } from '../core/league';
 import { matchClock, timeline } from '../sports/football/commentary';
 import { outcome, type SideKey } from '../sports/football/match';
@@ -46,7 +45,6 @@ export function buildView(game: Game, suggestedName: () => string, options: View
     fixtures: buildFixtures(career, game),
     club: {
       ...badge(career, me.id),
-      rating: Math.round(rating(me)),
       goals: seasonGoals(season.leagues[tier - 1].table, me.id),
       tier,
       difficulty: career.difficulty,
@@ -205,7 +203,6 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
   };
   const headline = end.outcome ? headlines[end.outcome] : `${ordinal(end.position)} in League ${end.tier}.`;
 
-  const ratingAfter = rating(me);
   const myPlayoff = s.playoffs.find((p) => p.tier === end.tier);
   return {
     season: end.season,
@@ -230,7 +227,6 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
       worstRun,
       topScorer: scorer && scorer.goals > 0 ? `${scorer.name} (${scorer.goals})` : undefined,
     },
-    decline: { ratingBefore: ratingAfter + end.decline, ratingAfter },
     points: { total: end.points, base: 10, performance: end.performance, bonus: end.bonus, boosted: end.boost > 0 },
     options: FOCUSES.map((focus) => ({ focus, ...focusAllocation(me, end.points, focus) })),
     summary: summaryLine({ season: end.season, tier: end.tier, position: end.position, won: row.won, drawn: row.drawn, lost: row.lost, outcome: end.outcome }),

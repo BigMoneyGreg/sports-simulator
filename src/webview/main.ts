@@ -305,24 +305,20 @@ function playoffHtml(p: PlayoffView): string {
 
 function seasonEndHtml(e: SeasonEndView): string {
   const r = e.report;
-  const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0');
-  const breakdown = [
-    `Base ${e.points.base}`,
-    e.points.performance === 0
-      ? `Met expectation (${ordinal(e.position)}) 0`
-      : `${e.points.performance > 0 ? 'Beat' : 'Missed'} expectation (${ordinal(e.expected)} → ${ordinal(e.position)}) ${signed(e.points.performance)}`,
-    e.points.bonus ? `Finishing ${ordinal(e.position)} ${signed(e.points.bonus)}` : '',
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  const perf = e.points.performance;
+  const verdict =
+    perf > 0
+      ? `You beat expectations: expected ${ordinal(e.expected)}, finished ${ordinal(e.position)}. Plenty to build with this summer.`
+      : perf < 0
+        ? `You fell short: expected ${ordinal(e.expected)}, finished ${ordinal(e.position)}. Less to build with this summer.`
+        : `You finished where you were expected: ${ordinal(e.position)}.`;
   const FOCUS_TEXT: Record<Focus, [string, string]> = {
-    attack: ['Focus attack', 'Score more'],
-    balanced: ['Balanced', 'Keep things as they are'],
-    defence: ['Focus defence', 'Concede less'],
+    attack: ['Focus attack', 'Most of the work goes into scoring'],
+    balanced: ['Balanced', 'Shared evenly'],
+    defence: ['Focus defence', 'Most of the work goes into defending'],
   };
   const option = (o: SeasonEndView['options'][number]) => `<button type="button" class="focus ${o.focus}" data-focus="${o.focus}">
-      <strong>${FOCUS_TEXT[o.focus][0]}</strong><span class="small">${FOCUS_TEXT[o.focus][1]}</span>
-      <span class="muted small">+${o.attack} att · +${o.defence} def</span>
+      <strong>${FOCUS_TEXT[o.focus][0]}</strong><span class="muted small">${FOCUS_TEXT[o.focus][1]}</span>
     </button>`;
   return `<div class="season-end">
     <div class="card hero ${e.outcome ?? ''}">
@@ -343,16 +339,11 @@ function seasonEndHtml(e: SeasonEndView): string {
     </dl>
     </div>
 
-    <div class="card">
-    <h3 class="sub first">Decline</h3>
-    <p class="small">Players age and leave: every club loses 10 rating a season. Rating ${Math.round(e.decline.ratingBefore)} → ${Math.round(e.decline.ratingAfter)}.</p>
-    <p class="muted small">How it split between attack and defence isn't shown. Your results are the clue: lots of goals at both ends suggests you lean attacking; tight, low-scoring games suggest you lean defensive.</p>
-
-    </div>
-
     <div class="card accent-card">
-    <h3 class="sub first">Summer: ${e.points.total} points to spend</h3>
-    <p class="muted small">Rating gain ${esc(breakdown)}${e.points.boosted ? ' · plus your difficulty boost' : ''}. Where should the summer's work go?</p>
+    <h3 class="sub first">Summer</h3>
+    <p class="small">${esc(verdict)}</p>
+    <p class="muted small">Players age and leave over the summer, and every club loses some strength. You won't be told whether it hit your attack or your defence: the goals are the clue. Lots at both ends suggests you lean attacking; tight, low-scoring games suggest you lean defensive.</p>
+    <p class="small strong">Where should the summer's work go?</p>
     <div class="focus-row">${e.options.map(option).join('')}</div>
     ${e.canRetire ? '<p class="muted small center">Choosing a focus carries on: defend the title.</p>' : ''}
     ${e.canRetire ? `<button type="button" id="newCareer" class="secondary">Start a new career</button>` : ''}
@@ -382,7 +373,7 @@ function clubHtml(v: GameView): string {
   const g = c.goals;
   return `<div class="clubcard card" data-accent="${esc(c.colours[0])}">
     <div class="club">${swatch(c, 'crest')}<div><div class="name">${esc(c.name)}</div><div class="muted small">${esc(c.short)} · League ${c.tier} · Season ${c.season}</div></div></div>
-    <div class="rating"><span class="big">${c.rating}</span><span class="muted small">rating · expected ${ordinal(c.expected)} · ${esc(c.difficulty)}</span></div>
+    <p class="expect">Expected to finish <strong>${ordinal(c.expected)}</strong> this season <span class="muted small">· ${esc(c.difficulty[0].toUpperCase() + c.difficulty.slice(1))}</span></p>
     <dl class="report">
       <dt>Scored</dt><dd>${g.scored} <span class="muted">(league avg ${g.average})</span></dd>
       <dt>Conceded</dt><dd>${g.conceded} <span class="muted">(league avg ${g.average})</span></dd>

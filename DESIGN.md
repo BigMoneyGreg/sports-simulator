@@ -533,6 +533,7 @@ In rough priority order:
 | Football first; other sports only after it's finished | Keeps version 1 small |
 | Unbeaten-run tracker in status bar: **rejected** | Unnecessary; records page covers it |
 | League picker with a random, mid-weighted start instead of a 0–99 rating | Simpler: choose where to start, not a number; a little uncertainty about how good you are |
+| No rating numbers shown to players (M8) | Players have no context for a 0–99 rating. The game shows expected finish, results and plain-English summaries; ratings, points and boosts stay internal |
 | Hard has no boost | Matches its description; reaching 99 from the bottom becomes a near-impossible grind, and that's the point of Hard |
 | Match lengths 30s · 2 min · 5 min | Three clearly different paces; 1 minute dropped |
 | Pause when VS Code closes | You never miss matches; no catch-up simulation |

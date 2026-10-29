@@ -132,10 +132,9 @@ describe('season end view', () => {
     const e = v.seasonEnd;
     expect(e.table.rows).toHaveLength(20);
     expect(e.report.record).toMatch(/^\d+W \d+D \d+L$/);
-    // Only the overall drop is shown; the attack/defence split stays hidden.
-    expect(Object.keys(e.decline).sort()).toEqual(['ratingAfter', 'ratingBefore']);
-    expect(e.decline.ratingBefore - e.decline.ratingAfter).toBeCloseTo(10);
-    expect(JSON.stringify(v.club)).not.toMatch(/"attack"|"defence"/);
+    // Players never see ratings or how the drain split: no numbers reach the webview.
+    expect(JSON.stringify(v.club)).not.toMatch(/"attack"|"defence"|"rating"/);
+    expect(e).not.toHaveProperty('decline');
     expect(v.club.goals.played).toBe(38);
     expect(e.options.map((o) => o.focus)).toEqual(['attack', 'balanced', 'defence']);
     for (const o of e.options) expect(o.attack + o.defence).toBe(e.points.total);

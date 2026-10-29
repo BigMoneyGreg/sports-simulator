@@ -117,7 +117,6 @@ export interface ClubView {
   name: string;
   short: string;
   colours: [string, string];
-  rating: number;
   /** This season's goals against the league average, the only clue to where the drain hit. */
   goals: { scored: number; conceded: number; average: number; played: number };
   tier: number;
@@ -190,8 +189,6 @@ export interface SeasonEndView {
     worstRun: string;
     topScorer?: string;
   };
-  /** Only the overall drop is shown; how it split between attack and defence stays hidden. */
-  decline: { ratingBefore: number; ratingAfter: number };
   points: { total: number; base: number; performance: number; bonus: number; boosted: boolean };
   /** The three summer choices and how each would split the points. */
   options: { focus: Focus; attack: number; defence: number }[];
