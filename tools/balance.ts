@@ -120,7 +120,7 @@ function playSeasonWithStats(career: Career, stats?: MatchStats): void {
     const res = playRound(career, footballSport);
     if (stats) recordMatches(career, res, stats);
   }
-  endSeason(career);
+  endSeason(career, footballSport);
 }
 
 // ---------------------------------------------------------------------------

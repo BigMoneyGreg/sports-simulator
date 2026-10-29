@@ -134,6 +134,21 @@ function cupLine(r: Pick<SeasonRecord, 'cup' | 'championship'>): string | undefi
   return parts.length ? parts.join(' · ') : undefined;
 }
 
+/** The player's summer comings and goings, with a leaver's seasons and goals for the club. */
+function squadChanges(career: Career): SeasonEndView['squad'] {
+  const change = career.pending?.turnover?.find((t) => t.clubId === career.playerClubId);
+  if (!change) return { leaving: [], arriving: [] };
+  const me = career.clubs[career.playerClubId];
+  const season = career.season.number;
+  const leaving = change.out.map((id) => {
+    const p = me.squad.find((x) => x.id === id)!;
+    const seasons = season - (p.joined ?? 1) + 1;
+    const goals = career.records?.scorers[id]?.goals ?? 0;
+    return `${p.name} · ${seasons} season${seasons === 1 ? '' : 's'}${goals ? `, ${goals} goal${goals === 1 ? '' : 's'}` : ''}`;
+  });
+  return { leaving, arriving: change.in.map((p) => p.name) };
+}
+
 /** The season report's line for a competition: how far you went, and who won if it wasn't you. */
 function seasonCupLine(career: Career, cup: Cup): CupRunView {
   const run = cupRun(cup, career.playerClubId) ?? "Didn't qualify";
@@ -281,6 +296,7 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
       cups: [s.cup, s.championship].flatMap((cup) => (cup ? [seasonCupLine(career, cup)] : [])),
     },
     points: { total: end.points, base: 10, performance: end.performance, bonus: end.bonus, boosted: end.boost > 0 },
+    squad: squadChanges(career),
     options: FOCUSES.map((focus) => ({ focus, ...focusAllocation(me, end.points, focus) })),
     summary: summaryLine({ season: end.season, tier: end.tier, position: end.position, won: row.won, drawn: row.drawn, lost: row.lost, outcome: end.outcome }),
     canRetire: end.outcome === 'champion',
@@ -395,6 +411,11 @@ function buildMatch(game: Game): LiveMatchView | null {
   if (match.knockout && fixture.secondLeg) {
     const [h, a] = match.knockout.aggregate;
     view.aggregate = `Aggregate ${h + match.home.goals}–${a + match.away.goals}`;
+  }
+  if (!view.finished) {
+    const me = career.clubs[career.playerClubId];
+    const banned = me.squad.filter((p) => (career.suspended ?? []).includes(p.id)).map((p) => surname(p.name));
+    if (banned.length && (fixture.home === me.id || fixture.away === me.id)) view.suspended = banned;
   }
   const result = view.finished ? outcome(match) : undefined;
   if (result?.penalties) view.penalties = `Pens ${result.penalties[0]}–${result.penalties[1]}`;

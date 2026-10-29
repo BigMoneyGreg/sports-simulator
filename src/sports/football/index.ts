@@ -6,6 +6,7 @@ import { generateSquad, lineup } from './squad';
 export const footballSport: SportDefinition<FootballMatch> = {
   module,
   generateSquad: (rng, firstId, club) => generateSquad(rng, firstId, playerNamer(club.short)),
+  namePlayer: (rng, club, squad) => playerNamer(club.short, squad)(rng),
   lineup,
   world,
 };

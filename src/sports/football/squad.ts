@@ -27,11 +27,13 @@ export function generateSquad(rng: Rng, firstId: number, name: (rng: Rng) => str
   return players;
 }
 
-/** The first-choice players in each position start every match. */
-export function lineup(squad: Player[]): TeamSheet['lineup'] {
+/** The first-choice players in each position start, unless suspended; the next in line steps in. */
+export function lineup(squad: Player[], unavailable: ReadonlySet<number> = new Set()): TeamSheet['lineup'] {
   const out: TeamSheet['lineup'] = [];
   for (const { position, starters } of SQUAD) {
-    for (const p of squad.filter((pl) => pl.position === position).slice(0, starters)) {
+    const inPosition = squad.filter((pl) => pl.position === position);
+    const available = inPosition.filter((pl) => !unavailable.has(pl.id));
+    for (const p of (available.length >= starters ? available : inPosition).slice(0, starters)) {
       out.push({ id: p.id, position: p.position });
     }
   }

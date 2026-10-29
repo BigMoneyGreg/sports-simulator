@@ -417,3 +417,22 @@ describe('AI clubs', () => {
     expect(styles.attacking / total).toBeLessThan(0.55);
   });
 });
+
+describe('AI managers', () => {
+  it('change about one AI club in ten to the other style each summer', () => {
+    let changed = 0;
+    let total = 0;
+    for (let seed = 1; seed <= 10; seed++) {
+      const c = newCareer({ rating: 50, difficulty: 'medium', seed }, footballSport);
+      const before = c.clubs.map((club) => club.style);
+      playSeason(c, footballSport);
+      c.clubs.forEach((club, i) => {
+        if (club.isPlayer) return;
+        total++;
+        if (club.style !== before[i]) changed++;
+      });
+    }
+    expect(changed / total).toBeGreaterThan(0.05);
+    expect(changed / total).toBeLessThan(0.16);
+  });
+});

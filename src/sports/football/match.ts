@@ -295,6 +295,8 @@ export function outcome(m: FootballMatch): MatchOutcome {
     e.type === 'goal' ? [{ side: e.side, playerId: e.playerId, minute: e.minute, added: e.added, ownGoal: e.ownGoal }] : [],
   );
   const result: MatchOutcome = { homeGoals: m.home.goals, awayGoals: m.away.goals, goals };
+  const sentOff = m.events.flatMap((e) => (e.type === 'red' ? [{ side: e.side, playerId: e.playerId }] : []));
+  if (sentOff.length) result.sentOff = sentOff;
   if (m.knockout) {
     const homeTotal = m.home.goals + m.knockout.aggregate[0];
     const awayTotal = m.away.goals + m.knockout.aggregate[1];

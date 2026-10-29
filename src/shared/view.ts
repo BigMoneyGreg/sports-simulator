@@ -39,6 +39,8 @@ export interface LiveMatchView {
   aggregate?: string;
   /** After a shootout, e.g. "Pens 4–2" (home first). */
   penalties?: string;
+  /** The player's men banned for this match, e.g. "Ross". */
+  suspended?: string[];
   timeline: TimelineView[];
 }
 
@@ -223,6 +225,8 @@ export interface SeasonEndView {
     cups: CupRunView[];
   };
   points: { total: number; base: number; performance: number; bonus: number; boosted: boolean };
+  /** The squad's summer changes: "Finlay Ross · 9 seasons, 142 goals" leaving, new names arriving. */
+  squad: { leaving: string[]; arriving: string[] };
   /** The three summer choices and how each would split the points. */
   options: { focus: Focus; attack: number; defence: number }[];
   summary: string;

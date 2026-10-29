@@ -6,6 +6,8 @@ export interface Player {
   name: string;
   position: string;
   number: number;
+  /** The season they joined; the first squad joined in season 1. */
+  joined?: number;
 }
 
 /** What a sport module needs to know about a team for one match. */
@@ -43,6 +45,8 @@ export interface MatchOutcome {
   winner?: 'home' | 'away';
   penalties?: [number, number];
   extraTime?: boolean;
+  /** Players sent off, who miss their team's next match. */
+  sentOff?: { side: 'home' | 'away'; playerId: number }[];
 }
 
 /** The match simulation a sport plugs into the shared league core. */

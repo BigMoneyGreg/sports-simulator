@@ -1410,3 +1410,13 @@ details.fold[open] > summary::before {
   opacity: 0.45;
   cursor: default;
 }
+
+/* Summer squad changes */
+ul.plain {
+  margin: 0;
+  padding-left: 16px;
+}
+
+ul.plain li + li {
+  margin-top: 2px;
+}

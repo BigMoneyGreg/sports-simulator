@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { allocatePoints, fillAllocation, fullHistory, newCareer, playSeason } from '../src/core/career';
+import { allocatePoints, fillAllocation, fullHistory, newCareer, playRound, playSeason, teamSheet } from '../src/core/career';
 import { emptyRecords, recordMatch, topScorers } from '../src/core/records';
 import { Game } from '../src/extension/game';
 import { buildView, summaryLine } from '../src/extension/viewModel';
@@ -112,5 +112,63 @@ describe('full-time overlay', () => {
     expect(off.screen === 'game' && off.fullTime).toBeNull();
     vi.advanceTimersByTime(5100);
     expect(fullTime()).toBeNull();
+  });
+});
+
+describe('squads over time', () => {
+  it('replaces 2–4 players a summer at every club, same positions and shirts, and the summer screen says who', () => {
+    const game = new Game({ save: () => {}, changed: () => {} });
+    game.start({ rating: 50, difficulty: 'medium', seed: 8, team: 'SCO' });
+    const c = game.career!;
+    playSeason(c, footballSport);
+    const before = c.clubs.map((club) => club.squad.map((p) => p.id));
+    const v = buildView(game);
+    if (v.screen !== 'game' || !v.seasonEnd) throw new Error('expected the summer screen');
+    const mine = c.pending!.turnover.find((t) => t.clubId === c.playerClubId)!;
+    expect(v.seasonEnd.squad.leaving).toHaveLength(mine.out.length);
+    expect(v.seasonEnd.squad.leaving[0]).toMatch(/· 1 season/);
+    allocatePoints(c, fillAllocation(c.clubs[0], c.pending!.points, { attack: 1, defence: 1 }));
+    c.clubs.forEach((club, i) => {
+      const changed = club.squad.filter((p) => !before[i].includes(p.id));
+      expect(changed.length).toBeGreaterThanOrEqual(2);
+      expect(changed.length).toBeLessThanOrEqual(4);
+      expect(changed.every((p) => p.joined === 2)).toBe(true);
+      expect(club.squad).toHaveLength(18);
+      expect(new Set(club.squad.map((p) => p.number)).size).toBe(18);
+    });
+  });
+
+  it('keeps a leaver’s goals in the all-time records', () => {
+    const c = newCareer({ rating: 60, difficulty: 'medium', seed: 9, team: 'SCO' }, footballSport);
+    for (let s = 0; s < 4; s++) {
+      playSeason(c, footballSport);
+      allocatePoints(c, fillAllocation(c.clubs[0], c.pending!.points, { attack: 1, defence: 1 }));
+    }
+    const current = new Set(c.clubs[0].squad.map((p) => p.id));
+    expect(Object.keys(c.records.scorers).some((id) => !current.has(Number(id)))).toBe(true);
+  });
+});
+
+describe('suspensions', () => {
+  it('bans a sent-off player from their club’s next match only', () => {
+    const c = newCareer({ rating: 50, difficulty: 'medium', seed: 10, team: 'SCO' }, footballSport);
+    let checked = 0;
+    for (let round = 0; round < 38 && checked < 3; round++) {
+      const results = playRound(c, footballSport);
+      const reds = results.flatMap((r) => (r.outcome.sentOff ?? []).map((x) => ({ ...x, fixture: r.fixture })));
+      if (!reds.length) continue;
+      const red = reds[0];
+      const clubId = red.side === 'home' ? red.fixture.home : red.fixture.away;
+      expect(c.suspended).toContain(red.playerId);
+      expect(teamSheet(c, clubId, footballSport).lineup.map((p) => p.id)).not.toContain(red.playerId);
+      // Their club's next match serves the ban.
+      for (;;) {
+        const next = playRound(c, footballSport);
+        if (next.some((r) => r.fixture.home === clubId || r.fixture.away === clubId)) break;
+      }
+      const sentAgain = c.suspended.includes(red.playerId);
+      if (!sentAgain) checked++;
+    }
+    expect(checked).toBeGreaterThan(0);
   });
 });

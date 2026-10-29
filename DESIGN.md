@@ -110,9 +110,13 @@ Each club has two stats. Every starting rating is 0–99; after that they can dr
 
 AI clubs have a "style", a fixed **shape** around their rating: attacking clubs are +7 attack / −7 defence, defensive clubs the reverse. So AI clubs of the same rating are equally strong but play differently, and they never fix their weak side. Their gap of 14 is about what a player who reads the season carries, so reading holds you level with expectation, and guessing sinks you.
 
-Players are generated (names, positions, shirt numbers). They're flavour only: they score goals, get cards and appear in commentary and records. There is no squad management.
+Players are generated (names, positions, shirt numbers). They're flavour only: they score goals, get cards and appear in commentary and records. There is no squad management, and none of this changes a team's strength.
 
-🔵 LATER: players age and retire, youth players come through, star transfers.
+- **Squads turn over:** each summer 2–4 players leave every club, long servants likeliest, and new names from the country's pool take their positions and shirts. The summer screen lists who's leaving (*Finlay Ross · 9 seasons, 142 goals*) and who's joining. Leavers keep their goals in the all-time records.
+- **Suspensions:** a player sent off misses his club's next match, in any competition; the next man in that position starts. The scoreboard notes it for your matches (*Suspended: Ross*). Bans don't carry over the summer.
+- **AI managers change:** each summer about 1 AI club in 10 switches style (attacking ↔ defensive), so a club's character shifts over a long career.
+
+🔵 LATER: player ages, youth players coming through, star transfers.
 
 ---
 
@@ -523,7 +527,7 @@ Each milestone finishes in a working state.
 In rough priority order:
 
 1. **Continental championships:** in the years between World Championships, by confederation
-2. **Player lifecycle:** ageing, retirement, youth players (still automatic)
+2. **Player lifecycle:** ages and youth players (squads already turn over each summer)
 3. **Other sports in the same extension** (after football is finished): sport choice at setup, separate career per sport, keywords for each sport so it shows up in search
    - **Rugby union:** bonus points, tries/conversions/penalties commentary
    - **Cricket:** most different (formats, overs, innings, draws in multi-day games); highest effort
@@ -590,6 +594,7 @@ In rough priority order:
 | MIT licence | Permissive and the norm for VS Code extensions; anyone can learn from or fork it |
 | Publisher `bigdevgreg`; publish by uploading the `.vsix` by hand | "BigMoneyGreg" was rejected as suspicious by the Marketplace; a token needs an Azure DevOps organisation, which asked for an Azure subscription |
 | Summer: rebuild attack or defence, no balanced option; ranks for goals scored and conceded as the clue | Measured: with a balanced option, guessing and perfect knowledge ended level, so the choice didn't matter. Now reading the ranks beats guessing by over 4 places a season |
+| Squads turn over (2–4 a summer), red cards bring a one-match ban, AI clubs change style (1 in 10 a summer) | A long career should feel lived-in: new names, old servants leaving, rivals changing character. None of it changes strength, so balance is untouched |
 | AI ceiling pull 30% (was 70%) | A 99 champion keeps most of its strength for a few seasons: real-feeling dynasties and a strong rival at the top, without a permanent super-club |
 | Player outside a fixed AI economy; no practical ceiling; flat decline of 10; smaller boost while reigning champion; imbalance costs gradually, steeply above 99 | A great player can chase 200 and unbeaten seasons without draining the world; only near-perfect balance keeps you climbing at the top, so guessers stall |
 | Very large strength gaps count only partly (beyond 32 points, 30% counts) | The open cup draw pairs teams 60 apart; full gaps gave 6+ goal margins in 6% of cup games and scores like 3–10. Now about 3%, with league scoring unchanged |

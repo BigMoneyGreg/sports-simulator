@@ -362,6 +362,7 @@ function scoreboard(m: LiveMatchView): string {
         <div class="clock-big ${m.finished ? 'ft' : 'live'}">${esc(m.clock)}</div></div>${team(m.away, m.awayTown)}</div>
       ${m.aggregate ? `<div class="muted small">${esc(m.aggregate)}</div>` : ''}
       ${m.penalties ? `<div class="pens small">${esc(m.penalties)}</div>` : ''}
+      ${m.suspended ? `<div class="muted small">Suspended: ${m.suspended.map(esc).join(', ')}</div>` : ''}
     </div>`;
 }
 
@@ -490,6 +491,12 @@ function seasonEndHtml(e: SeasonEndView): string {
       ${r.topScorer ? `<dt>Top scorer</dt><dd>${esc(r.topScorer)}</dd>` : ''}
       ${r.cups.map((x) => `<dt>${esc(x.name)}</dt><dd>${esc(x.run)}</dd>`).join('')}
     </dl>
+    ${
+      e.squad.leaving.length
+        ? `<h3 class="sub">Leaving this summer</h3><ul class="plain small">${e.squad.leaving.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+           <p class="muted small">Joining: ${e.squad.arriving.map(esc).join(', ')}</p>`
+        : ''
+    }
     </div>
 
     <div class="card accent-card">

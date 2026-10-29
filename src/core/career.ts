@@ -19,7 +19,7 @@ import { emptyRecords, recordMatch, recordSeasonGoals, type Records } from './re
 import { Rng } from './rng';
 import type { GoalRecord, MatchOutcome, Player, SportModule, TeamSheet } from './sport';
 
-export const CAREER_VERSION = 6;
+export const CAREER_VERSION = 7;
 export const CLUB_COUNT = LEAGUE_COUNT * LEAGUE_SIZE;
 export const PLAYER_CLUB_ID = 0;
 
@@ -35,7 +35,9 @@ export interface ClubIdentity {
 export interface SportDefinition<M = unknown> {
   module: SportModule<M>;
   generateSquad(rng: Rng, firstId: number, club: ClubIdentity): Player[];
-  lineup(squad: Player[]): TeamSheet['lineup'];
+  /** A new player's name for a club, not repeating a surname already in its squad. */
+  namePlayer(rng: Rng, club: ClubIdentity, squad: Player[]): string;
+  lineup(squad: Player[], unavailable?: ReadonlySet<number>): TeamSheet['lineup'];
   /**
    * The world for a career: the player's team (`code`, or a random one), the
    * other `count - 1` teams, strongest first, and the short code of the
@@ -148,7 +150,18 @@ export interface SeasonEnd {
   promoted: Record<number, number[]>;
   relegated: Record<number, number[]>;
   playoffWinners: Record<number, number>;
+  /** This summer's squad changes, every club: who leaves and who replaces them (applied as the next season starts). */
+  turnover: SquadChange[];
 }
+
+export interface SquadChange {
+  clubId: number;
+  out: number[];
+  in: Player[];
+}
+
+/** Players leaving each club each summer, and AI clubs changing style (a new manager). */
+const TURNOVER = { min: 2, max: 4, styleChange: 0.1 };
 
 export interface SeasonRecord {
   season: number;
@@ -187,6 +200,10 @@ export interface Career {
   honours: { cup: CupWinner[]; championship: CupWinner[] };
   /** The most recent World Championship, kept to look back on until the next one. */
   lastChampionship: Cup | null;
+  /** Players sent off, who miss their club's next match. */
+  suspended: number[];
+  /** Id for the next new player. */
+  nextPlayerId: number;
   /** The player's rival for the whole career, shown on the Team tab. */
   rival: number | null;
 }
@@ -233,6 +250,8 @@ export function newCareer(options: CareerOptions, sport: SportDefinition): Caree
     records: emptyRecords(),
     honours: { cup: [], championship: [] },
     lastChampionship: null,
+    suspended: [],
+    nextPlayerId: CLUB_COUNT * 100,
     rival: null,
   };
   career.rival = clubs.find((c) => !c.isPlayer && c.short === world.rival)?.id ?? closestInLeague(career);
@@ -348,7 +367,7 @@ export function playerInRound(career: Career, fixtures: Fixture[]): Fixture | un
 
 export function teamSheet(career: Career, clubId: number, sport: SportDefinition): TeamSheet {
   const c = career.clubs[clubId];
-  return { clubId, attack: c.attack, defence: c.defence, lineup: sport.lineup(c.squad) };
+  return { clubId, attack: c.attack, defence: c.defence, lineup: sport.lineup(c.squad, new Set(career.suspended)) };
 }
 
 export interface RoundResult {
@@ -360,7 +379,12 @@ export interface RoundResult {
 export function completeRound(career: Career, results: RoundResult[]): void {
   const s = career.season;
   const rng = new Rng(career.rng);
+  // A ban is served once the club has played; this round's red cards start new ones.
+  const played = new Set(results.flatMap(({ fixture }) => [fixture.home, fixture.away]));
+  const servedBy = (id: number) => played.has(career.clubs.findIndex((c) => c.squad.some((p) => p.id === id)));
+  career.suspended = (career.suspended ?? []).filter((id) => !servedBy(id));
   for (const { fixture, outcome } of results) {
+    for (const red of outcome.sentOff ?? []) career.suspended.push(red.playerId);
     for (const g of outcome.goals) if (!g.ownGoal) s.scorers[g.playerId] = (s.scorers[g.playerId] ?? 0) + 1;
     if (fixture.kind === 'league') recordResult(s.leagues[fixture.tier - 1].table, fixture.home, fixture.away, outcome);
     else if (fixture.kind === 'cup') recordCupResult(s.cup, fixture, outcome, rng);
@@ -478,7 +502,7 @@ export function playRound<M>(career: Career, sport: SportDefinition<M>): RoundRe
  * and works out the points they have to allocate. The game then waits for
  * `allocatePoints`.
  */
-export function endSeason(career: Career): SeasonEnd {
+export function endSeason(career: Career, sport: SportDefinition): SeasonEnd {
   if (career.pending) return career.pending;
   if (!isSeasonOver(career)) throw new Error('season is not over');
   const s = career.season;
@@ -509,6 +533,7 @@ export function endSeason(career: Career): SeasonEnd {
   // AI clubs: decline and gain, rebuilt in their style's shape, then pulled towards their new league's band.
   for (const club of career.clubs) {
     if (club.isPlayer) continue;
+    if (rng.next() < TURNOVER.styleChange) club.style = club.style === 'attacking' ? 'defensive' : 'attacking';
     const tier = tierOf[club.id];
     const gain = seasonGain(tier, s.expected[club.id], position[club.id], rating(club), rng.normal(0, RATING_TUNING.aiNoise));
     const promotedNow = newTierOf[club.id] < tier;
@@ -553,8 +578,30 @@ export function endSeason(career: Career): SeasonEnd {
     promoted,
     relegated,
     playoffWinners,
+    turnover: career.clubs.map((club) => planTurnover(career, club, sport, rng)),
   };
+  career.rng = rng.state;
   return career.pending;
+}
+
+/** Who leaves a club this summer (long servants are likeliest to go) and who comes in, same positions and shirts. */
+function planTurnover(career: Career, club: Club, sport: SportDefinition, rng: Rng): SquadChange {
+  const season = career.season.number;
+  const count = rng.int(TURNOVER.min, TURNOVER.max);
+  const candidates = [...club.squad];
+  const out: Player[] = [];
+  for (let i = 0; i < count; i++) {
+    const leaver = rng.weighted(candidates, (p) => season - (p.joined ?? 1) + 1);
+    out.push(leaver);
+    candidates.splice(candidates.indexOf(leaver), 1);
+  }
+  const staying = club.squad.filter((p) => !out.includes(p));
+  const incoming: Player[] = [];
+  for (const leaver of out) {
+    const name = sport.namePlayer(rng, club, [...staying, ...incoming]);
+    incoming.push({ id: career.nextPlayerId++, name, position: leaver.position, number: leaver.number, joined: season + 1 });
+  }
+  return { clubId: club.id, out: out.map((p) => p.id), in: incoming };
 }
 
 function seasonOutcome(tier: number, pos: number, playoffs: Playoff[], id: number): SeasonOutcome {
@@ -642,6 +689,15 @@ export function allocatePoints(career: Career, allocation: Record<Stat, number>)
   if (career.season.championship) career.lastChampionship = career.season.championship;
 
   const rng = new Rng(career.rng);
+  for (const change of pending.turnover ?? []) {
+    const club = career.clubs[change.clubId];
+    club.squad = club.squad.map((p) => {
+      const at = change.out.indexOf(p.id);
+      return at < 0 ? p : change.in[at];
+    });
+  }
+  career.suspended = [];
+
   career.season = newSeason(pending.season + 1, pending.nextLeagues, pending.standing, career.clubs, rng);
   career.rng = rng.state;
   career.pending = null;
@@ -682,5 +738,5 @@ function seasonRecord(career: Career, pending: SeasonEnd): SeasonRecord {
 /** Plays out the rest of the season instantly and closes it. */
 export function playSeason(career: Career, sport: SportDefinition): SeasonEnd {
   while (nextRound(career)) playRound(career, sport);
-  return endSeason(career);
+  return endSeason(career, sport);
 }

@@ -24,7 +24,7 @@ import { footballSport } from '../sports/football';
 import { createMatch, isFinished, outcome, step, type FootballMatch } from '../sports/football/match';
 import type { Duration } from '../shared/view';
 
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 
 /** Real milliseconds per match-minute. */
 export const MINUTE_MS: Record<Duration, number> = {
@@ -182,7 +182,7 @@ export class Game {
     this.lastMatch = null;
     for (;;) {
       if (career.pending || isSeasonOver(career)) {
-        const end = endSeason(career);
+        const end = endSeason(career, footballSport);
         this.phase = 'seasonOver';
         this.live = null;
         this.save();
