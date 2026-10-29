@@ -244,11 +244,11 @@ function headerHtml(v: GameView): string {
   const next = h.durations[(h.durations.indexOf(h.duration) + 1) % h.durations.length];
   return `<header class="head card" data-accent="${esc(h.club.colours[0])}">
     <div class="club">${swatch(h.club, 'crest')}<div class="grow"><div class="name">${esc(h.club.name)}</div>
-      <div class="muted small">League ${h.tier} · ${ordinal(h.position)}</div></div></div>
+      <div class="muted small where"><span class="wide">League </span><span class="slim">L</span>${h.tier} · ${ordinal(h.position)}</div></div></div>
     <div class="right">
       <span class="form" aria-label="Form">${dots}</span>
       <span class="controls">
-        <button type="button" id="speed" class="chip" data-next="${next}" title="Match length: ${DURATION_LABELS[h.duration]}. Click for ${DURATION_LABELS[next]}." aria-label="Match length ${DURATION_LABELS[h.duration]}">⏱ ${DURATION_LABELS[h.duration]}</button>
+        <button type="button" id="speed" class="chip" data-next="${next}" title="Match length: ${DURATION_LABELS[h.duration]}. Click for ${DURATION_LABELS[next]}." aria-label="Match length ${DURATION_LABELS[h.duration]}"><span class="wide">⏱ </span>${DURATION_LABELS[h.duration]}</button>
         <button type="button" id="pause" class="chip icon" title="${h.paused ? 'Play' : 'Pause'}" aria-label="${h.paused ? 'Play' : 'Pause'}">${h.paused ? '▶' : '⏸'}</button>
       </span>
     </div>

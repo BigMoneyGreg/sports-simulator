@@ -1112,3 +1112,183 @@ table.league {
 .expect {
   margin: 10px 0 8px;
 }
+
+/*
+ * Responsive: the box is often squeezed into a corner, so it sheds detail as it
+ * shrinks. Narrow drops secondary columns and text; short tightens spacing and
+ * flattens the scoreboard to one line. Scores, clock, position and controls stay.
+ */
+
+.slim {
+  display: none;
+}
+
+.head .where {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 250px) {
+  .wide,
+  .head .form {
+    display: none;
+  }
+
+  .slim {
+    display: inline;
+  }
+
+  body {
+    padding: 6px 6px 10px;
+    font-size: calc(var(--vscode-font-size) * 0.92);
+  }
+
+  .card {
+    padding: 8px;
+  }
+
+  .crest {
+    width: 18px;
+    height: 20px;
+    margin-right: 6px;
+  }
+
+  /* Table: P, GD and Pts are enough. */
+  .league th:nth-child(4),
+  .league td:nth-child(4),
+  .league th:nth-child(5),
+  .league td:nth-child(5),
+  .league th:nth-child(6),
+  .league td:nth-child(6) {
+    display: none;
+  }
+
+  .score .town {
+    display: none;
+  }
+
+  .report-feed li {
+    grid-template-columns: 1fr 34px 1fr;
+  }
+
+  .running {
+    display: none;
+  }
+
+  .fixtures li {
+    grid-template-columns: 34px minmax(0, 1fr) 46px;
+    gap: 4px;
+    padding: 4px 6px;
+  }
+
+  .fixtures li > :nth-child(3) {
+    display: none;
+  }
+}
+
+@media (max-width: 200px) {
+  body {
+    font-size: calc(var(--vscode-font-size) * 0.85);
+  }
+
+  .head .crest,
+  .league th:nth-child(7),
+  .league td:nth-child(7) {
+    display: none;
+  }
+
+  .head .right {
+    gap: 0;
+  }
+
+  .kit {
+    width: 14px;
+    height: 14px;
+  }
+
+  .kit-row {
+    gap: 4px;
+  }
+
+  .badge-pick {
+    gap: 6px;
+  }
+
+  .badge-pick .crest.big {
+    width: 22px;
+    height: 24px;
+  }
+
+  .tabs button {
+    padding: 3px 0;
+  }
+}
+
+@media (max-height: 420px) {
+  body {
+    padding-top: 4px;
+    padding-bottom: 6px;
+  }
+
+  .card {
+    margin-bottom: 6px;
+    padding: 6px 8px;
+  }
+
+  .tabs {
+    margin-bottom: 6px;
+  }
+
+  .head .crest {
+    width: 18px;
+    height: 20px;
+  }
+
+  /* Scoreboard on one line: crest and code beside the score. */
+  .board .comp,
+  .score .town {
+    display: none;
+  }
+
+  .score {
+    margin-top: 0;
+  }
+
+  .score .team {
+    flex-direction: row;
+    justify-content: center;
+    gap: 5px;
+  }
+
+  .score .team:last-child {
+    flex-direction: row-reverse;
+  }
+
+  .crest.big {
+    width: 16px;
+    height: 18px;
+    margin: 0;
+  }
+
+  .report-feed li {
+    padding: 2px 0;
+  }
+}
+
+@media (max-height: 260px) {
+  /* Just the essentials: header, tabs, live score and latest events. */
+  .head .form,
+  .legend {
+    display: none;
+  }
+
+  .head .right {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .clock-big {
+    margin-top: 0;
+  }
+}
