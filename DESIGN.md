@@ -365,7 +365,7 @@ Screen contents:
 1. Final table with promotion, play-offs and relegation
 2. **Season report:** goals scored and conceded against the league average, goals a game in your matches against the league's, best and worst runs, top scorer. No verdict: reading it is the player's job (lots of goals at both ends = leaning attacking).
 3. Decline: the overall rating drop only (e.g. 55 → 45), never the attack/defence split
-4. Summer focus: three buttons (**Focus attack · Balanced · Focus defence**). Focus puts 70% of the points into that side and 30% into the other; Balanced splits 50/50. Clicking starts the next season
+4. Summer focus: three buttons (**Focus attack · Balanced · Focus defence**). Focus puts 70% of the points into that side and 30% into the other; Balanced splits 50/50. Picking one highlights it; a separate **Start next season** button below confirms it
 
 ### Copy summary button
 
