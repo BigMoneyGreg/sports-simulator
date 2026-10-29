@@ -149,3 +149,23 @@ describe('season end view', () => {
     expect(buildView(game, () => '').screen).toBe('game');
   });
 });
+
+describe('match length', () => {
+  it('never changes results: 30 sec, 2 min and 5 min play identically', () => {
+    const play = (duration: '30s' | '2m' | '5m') => {
+      let pending: (() => void) | null = null;
+      const game = new Game({ save: () => {}, changed: () => {} }, { setTimeout: (fn) => ((pending = fn), 1), clearTimeout: () => (pending = null) });
+      game.duration = duration;
+      game.start({ rating: 50, difficulty: 'medium', seed: 77 });
+      for (let i = 0; i < 2000 && game.career!.season.round < 10 && pending; i++) {
+        const fn: () => void = pending;
+        pending = null;
+        fn();
+      }
+      return JSON.stringify(game.career!.season.leagues.map((l) => l.table));
+    };
+    const short = play('30s');
+    expect(play('2m')).toBe(short);
+    expect(play('5m')).toBe(short);
+  });
+});
