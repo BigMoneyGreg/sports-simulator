@@ -6,7 +6,6 @@ export const DURATIONS: Duration[] = ['30s', '2m', '5m'];
 export const DURATION_LABELS: Record<Duration, string> = { '30s': '30 sec', '2m': '2 min', '5m': '5 min' };
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type Focus = 'attack' | 'defence';
-export type Style = 'attacking' | 'balanced' | 'defensive';
 export type Zone = 'champion' | 'promotion' | 'playoff' | 'relegation' | null;
 
 export interface TeamBadge {
@@ -169,8 +168,6 @@ export interface NationOption {
   colours: string[];
   /** The league it starts in by default. */
   tier: number;
-  /** Among the biggest football nations, listed first. */
-  popular: boolean;
 }
 
 export interface SetupView {
@@ -294,7 +291,7 @@ export type View = { screen: 'setup'; setup: SetupView } | GameView;
 
 export type ToHost =
   | { type: 'ready' }
-  | { type: 'startCareer'; team: string; league: number; difficulty: Difficulty; duration: Duration; style: Style }
+  | { type: 'startCareer'; team: string; league: number; difficulty: Difficulty; duration: Duration }
   | { type: 'togglePause' }
   | { type: 'setDuration'; duration: Duration }
   | { type: 'chooseFocus'; focus: Focus }

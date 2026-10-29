@@ -70,9 +70,8 @@ Next season … (won league 1? → carry on, or start a new career)
 |---|---|---|
 | League | 1–5 (buttons) | Where you start. Your rating is random within the league, weighted to mid-table: 50% chance of 40–60% of the way up the league's band, 25% of 20–40%, 25% of 60–80% (never the very top or bottom). Not shown; you find out from the table |
 | Difficulty | Easy / Medium / Hard | *A helpful boost each season* · *A subtle boost each season* · *No extra season boost*: Easy +10, Medium +5, Hard 0 (§7) |
-| Style | Attacking · Balanced · Defensive | Attacking starts attack 5 above the rating and defence 5 below (within the free lean); defensive the reverse |
 | Match duration | 30 sec · 2 min · 5 min | Length of one 90-minute match; can be changed any time from the ⏱ button in the box. Default 2 min |
-| Country | Search box over every nation: the 16 biggest first, then A–Z | Sets the league picker to its usual level (marked *Usual*); any league can be picked, but only once a country is chosen. Preselected from VS Code's display language when it points to one country (German → Germany; plain English doesn't). See §10 |
+| Country | Type to search; matches appear as you type | Sets the league picker to its usual level (marked *Usual*); any league can be picked, but only once a country is chosen. Preselected from VS Code's display language when it points to one country (German → Germany; plain English doesn't). See §10 |
 
 ### Starting position
 
@@ -593,6 +592,7 @@ In rough priority order:
 | Summer explanation behind "How does summer work?"; Club tab hides records that don't exist yet | Keeps the choice and its button in view; no columns of dashes |
 | MIT licence | Permissive and the norm for VS Code extensions; anyone can learn from or fork it |
 | Publisher `bigdevgreg`; publish by uploading the `.vsix` by hand | "BigMoneyGreg" was rejected as suspicious by the Marketplace; a token needs an Azure DevOps organisation, which asked for an Azure subscription |
+| No style choice at setup: every team starts balanced | Its character comes from the summer choices over time; one less decision before the first match |
 | Summer: rebuild attack or defence, no balanced option; ranks for goals scored and conceded as the clue | Measured: with a balanced option, guessing and perfect knowledge ended level, so the choice didn't matter. Now reading the ranks beats guessing by over 4 places a season |
 | Squads turn over (2–4 a summer), red cards bring a one-match ban, AI clubs change style (1 in 10 a summer) | A long career should feel lived-in: new names, old servants leaving, rivals changing character. None of it changes strength, so balance is untouched |
 | AI ceiling pull 30% (was 70%) | A 99 champion keeps most of its strength for a few seasons: real-feeling dynasties and a strong rival at the top, without a permanent super-club |

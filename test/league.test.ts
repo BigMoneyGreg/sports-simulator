@@ -13,7 +13,7 @@ import {
   type Career,
 } from '../src/core/career';
 import { MAX_STAT, MIN_STAT, rating, shiftRating, statsFor, STYLE_TUNING, type Club } from '../src/core/club';
-import { band, doubleRoundRobin, emptyTable, goalRanks, recordResult, sortTable, startRating, styleSplit, zone } from '../src/core/league';
+import { band, doubleRoundRobin, emptyTable, goalRanks, recordResult, sortTable, startRating, zone } from '../src/core/league';
 import { applyDecline, normalise, plateau, positionBonus, RATING_TUNING, seasonGain, totalRating } from '../src/core/ratings';
 import { Rng } from '../src/core/rng';
 import { footballSport } from '../src/sports/football';
@@ -392,12 +392,6 @@ describe('starting position', () => {
     expect(counts.high / 4000).toBeCloseTo(0.25, 1);
   });
 
-  it('turns a style into a free lean that keeps the rating', () => {
-    expect(styleSplit(50, 'attacking', 5)).toEqual({ attack: 55, defence: 45 });
-    expect(styleSplit(50, 'defensive', 5)).toEqual({ attack: 45, defence: 55 });
-    expect(styleSplit(50, 'balanced', 5)).toEqual({ attack: 50, defence: 50 });
-    expect(styleSplit(3, 'attacking', 5)).toEqual({ attack: 6, defence: 0 });
-  });
 });
 
 describe('AI clubs', () => {

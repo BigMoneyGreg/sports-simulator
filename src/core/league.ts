@@ -146,13 +146,6 @@ export function startRating(tier: number, rng: Rng): number {
   return band(tier).min + from + rng.int(0, 3);
 }
 
-/** Starting attack/defence for a style: leaning `lean` either way, or level. */
-export function styleSplit(rating: number, style: 'attacking' | 'balanced' | 'defensive', lean: number): { attack: number; defence: number } {
-  const l = style === 'balanced' ? 0 : Math.min(lean, rating, 99 - rating);
-  const sign = style === 'attacking' ? 1 : -1;
-  return { attack: rating + sign * l, defence: rating - sign * l };
-}
-
 export type Zone = 'champion' | 'promotion' | 'playoff' | 'relegation' | null;
 
 /** What a finishing position means in a given league. */

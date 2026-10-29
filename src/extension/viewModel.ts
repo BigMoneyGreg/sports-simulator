@@ -4,7 +4,7 @@ import { emptyRecords, topScorers } from '../core/records';
 import { goalRanks, LEAGUE_COUNT, LEAGUE_SIZE, recordResult, sortTable, zone, type Fixture, type TableRow } from '../core/league';
 import { matchClock, timeline } from '../sports/football/commentary';
 import { outcome, type SideKey } from '../sports/football/match';
-import { NATIONS, WORLD_ORDER } from '../sports/football/data/nations';
+import { NATIONS } from '../sports/football/data/nations';
 import { naturalTier, shortName, surname } from '../sports/football/names';
 import { DURATIONS, type Duration } from '../shared/view';
 import type { CupRunView, CupsView, CupTieView, CupView, NationOption, CabinetView, ClubView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, TableView, TeamBadge, View } from '../shared/view';
@@ -323,8 +323,6 @@ function rivalView(career: Career, tables: TableView[]): ClubView['rival'] {
   };
 }
 
-const POPULAR = 16;
-
 let nationList: NationOption[] | undefined;
 function nationOptions(): NationOption[] {
   nationList ??= NATIONS.map((n) => ({
@@ -332,7 +330,6 @@ function nationOptions(): NationOption[] {
     name: n.name,
     colours: n.colours,
     tier: naturalTier(n.code, LEAGUE_SIZE, LEAGUE_COUNT),
-    popular: WORLD_ORDER.indexOf(n.code) >= 0 && WORLD_ORDER.indexOf(n.code) < POPULAR,
   })).sort((a, b) => a.name.localeCompare(b.name));
   return nationList;
 }

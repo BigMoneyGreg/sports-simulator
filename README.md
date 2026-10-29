@@ -11,7 +11,7 @@ An international football sim that lives in a small box in your VS Code sidebar.
 
 ## How to play
 
-1. **Start a career.** Open the Sports Simulator box in the Explorer. Pick your country (any of about 210), the league it starts in (its usual level is marked; L1 is the top), a difficulty, a match length and a style.
+1. **Start a career.** Open the Sports Simulator box in the Explorer. Pick your country (any of about 210), the league it starts in (its usual level is marked; L1 is the top), a difficulty and a match length. Your team starts balanced; its character comes from the summers.
 2. **Let it play.** Matches play live while VS Code is open: goals, cards, half-time and full-time. The table moves as goals go in. Pause any time with ⏸.
 3. **Read the results.** You never see ratings. Every summer your squad loses strength, split at random between attack and defence, and you aren't told which side took the hit. Where you ranked for goals scored and conceded is the clue.
 4. **Rebuild one side.** At the end of each season pick *Rebuild attack* or *Rebuild defence*, then press **Start next season**. Pick well and you climb; guess and you'll drift down. Finish above expectations and you have more to build with.

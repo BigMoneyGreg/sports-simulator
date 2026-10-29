@@ -12,7 +12,6 @@ import {
   type PlayoffView,
   type SeasonEndView,
   type SetupView,
-  type Style,
   type TableView,
   type TeamBadge,
   type TimelineView,
@@ -52,7 +51,6 @@ const setup = {
   league: 3,
   difficulty: 'medium' as Difficulty,
   duration: '2m' as Duration,
-  style: 'balanced' as Style,
   /** Defaults are taken from the host once; option clicks must not reset them. */
   initialised: false,
 };
@@ -123,14 +121,12 @@ function nationMatches(nations: NationOption[]): NationOption[] {
 
 /** The search results; redrawn on its own while typing so the search box keeps focus. */
 function nationList(nations: NationOption[]): string {
+  if (!setup.search.trim()) return '';
   const matches = nationMatches(nations);
   if (!matches.length) return '<p class="muted small">No country matches.</p>';
   const option = (n: NationOption) =>
     `<button type="button" role="option" class="nation ${n.code === setup.team ? 'on' : ''}" aria-selected="${n.code === setup.team}" data-team="${n.code}">${swatch(n)}<span class="grow">${esc(n.name)}</span><span class="muted small">L${n.tier}</span></button>`;
-  const rest = matches.slice(0, NATION_LIMIT).map(option).join('') + (matches.length > NATION_LIMIT ? `<p class="muted small">${matches.length - NATION_LIMIT} more: keep typing.</p>` : '');
-  // Before any search, the big football nations come first.
-  if (setup.search.trim()) return rest;
-  return `<p class="group-label">Popular</p>${nations.filter((n) => n.popular).map(option).join('')}<p class="group-label">All countries</p>${rest}`;
+  return matches.slice(0, NATION_LIMIT).map(option).join('') + (matches.length > NATION_LIMIT ? `<p class="muted small">${matches.length - NATION_LIMIT} more: keep typing.</p>` : '');
 }
 
 function renderSetup(v: SetupView): void {
@@ -146,11 +142,11 @@ function renderSetup(v: SetupView): void {
   app.innerHTML = `
   <div class="setup card">
     <h2>New career</h2>
-    <p class="muted">Pick your country and where it starts. Every match plays on its own; each summer you decide where to strengthen.</p>
+    <p class="muted">Pick your country and where it starts. Every match plays on its own; each summer you decide which side to rebuild.</p>
 
     <div class="field">Country
       ${chosen ? `<div class="chosen">${swatch(chosen, 'crest big')}<strong>${esc(chosen.name)}</strong></div>` : ''}
-      <input id="search" type="search" placeholder="Search countries" aria-label="Search countries" value="${esc(setup.search)}" autocomplete="off">
+      <input id="search" type="search" placeholder="Type your country" aria-label="Type your country" value="${esc(setup.search)}" autocomplete="off">
       <div id="nations" class="nation-list" role="listbox" aria-label="Countries">${nationList(v.nations)}</div>
     </div>
 
@@ -167,16 +163,6 @@ function renderSetup(v: SetupView): void {
     )}</div>
 
     <div class="field">Match length ${seg('duration', v.durations.map((d): Option => [d, DURATION_LABELS[d]]), setup.duration)}</div>
-
-    <div class="field">Style ${seg(
-      'style',
-      [
-        ['attacking', 'Attacking'],
-        ['balanced', 'Balanced'],
-        ['defensive', 'Defensive'],
-      ],
-      setup.style,
-    )}</div>
 
     <button type="button" id="start" class="primary" ${chosen ? '' : 'disabled'}>${chosen ? 'Start career' : 'Pick a country'}</button>
   </div>`;
@@ -659,7 +645,7 @@ app.addEventListener('click', (e) => {
   } else if (button.id === 'pause') {
     send({ type: 'togglePause' });
   } else if (button.id === 'start' && setup.team) {
-    send({ type: 'startCareer', team: setup.team, league: setup.league, difficulty: setup.difficulty, duration: setup.duration, style: setup.style });
+    send({ type: 'startCareer', team: setup.team, league: setup.league, difficulty: setup.difficulty, duration: setup.duration });
   } else if (button.dataset.team && view?.screen === 'setup') {
     setup.team = button.dataset.team;
     setup.league = view.setup.nations.find((n) => n.code === setup.team)!.tier;
@@ -670,7 +656,6 @@ app.addEventListener('click', (e) => {
     if (group === 'league') setup.league = Number(value);
     if (group === 'difficulty') setup.difficulty = value as Difficulty;
     if (group === 'duration') setup.duration = value as Duration;
-    if (group === 'style') setup.style = value as Style;
     if (view?.screen === 'setup') renderSetup(view.setup);
   }
 });

@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
 import { fullHistory } from '../core/career';
 import { goalRanks } from '../core/league';
-import { startRating, styleSplit } from '../core/league';
-import { TUNING } from '../sports/football/match';
+import { startRating } from '../core/league';
 import { Rng } from '../core/rng';
 import { isNation } from '../sports/football/names';
 import { DURATIONS, type Duration, type ToHost } from '../shared/view';
@@ -71,10 +70,9 @@ export function activate(context: vscode.ExtensionContext): void {
         setDuration(message.duration);
         const seed = (Date.now() ^ (Math.random() * 2 ** 31)) >>> 0;
         const tier = Math.min(5, Math.max(1, Math.round(message.league)));
-        // Somewhere in the league, weighted towards mid-table; the style leans within the free range.
+        // Somewhere in the league, weighted towards mid-table, attack and defence level: the summers shape it from there.
         const rating = startRating(tier, new Rng(seed ^ 0x9e3779b9));
-        const split = message.style === 'balanced' ? undefined : styleSplit(rating, message.style, TUNING.weaknessTolerance);
-        game!.start({ rating, difficulty: message.difficulty, split, team: message.team, seed });
+        game!.start({ rating, difficulty: message.difficulty, team: message.team, seed });
         return;
       }
       case 'togglePause':
