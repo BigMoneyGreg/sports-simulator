@@ -17,7 +17,7 @@ import { emptyRecords, recordMatch, recordSeasonGoals, type Records } from './re
 import { Rng } from './rng';
 import type { GoalRecord, MatchOutcome, Player, SportModule, TeamSheet } from './sport';
 
-export const CAREER_VERSION = 1;
+export const CAREER_VERSION = 2;
 export const CLUB_COUNT = LEAGUE_COUNT * LEAGUE_SIZE;
 export const PLAYER_CLUB_ID = 0;
 

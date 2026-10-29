@@ -22,7 +22,7 @@ import { footballSport } from '../sports/football';
 import { createMatch, isFinished, outcome, step, type FootballMatch } from '../sports/football/match';
 import type { Duration } from '../shared/view';
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 /** Real milliseconds per match-minute. */
 export const MINUTE_MS: Record<Duration, number> = {
