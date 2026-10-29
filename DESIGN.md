@@ -488,7 +488,7 @@ Each milestone finishes in a working state.
 
 **M8 progress (29 Oct 2026):** trial under way and going well. Done so far: two-stat model and summer focus, league picker, no rating numbers, badge colour picker, responsive box (header-only at its narrowest), Start next season button, games played in the header, and a visual pass (live table arrows, goal flash, sticky header, fixtures scroll, form tooltips). Marketplace groundwork: icon, README with screenshots and how to play, `vsce package` works (61 KB). MIT licence chosen and added.
 
-**Before publishing (M9):** create a Marketplace publisher and set `publisher` in package.json; make the GitHub repo public (README screenshots load from it); push `main`; bump the version; `npx @vscode/vsce publish`.
+**Before publishing (M9):** done: GitHub repo renamed to `sports-simulator`; Marketplace publisher **bigdevgreg** created and set in package.json. Still to do: force-push the cleaned history (`git push --force-with-lease origin main`) and delete the `backup-before-email-rewrite` branch; make the GitHub repo public (README screenshots load from it); bump the version; `npx @vscode/vsce package` and upload the `.vsix` by hand at marketplace.visualstudio.com/manage (no Azure DevOps token needed). Updates: bump the version, package, upload with **Update**.
 
 ---
 
@@ -565,6 +565,7 @@ In rough priority order:
 | Sticky header; fixtures open at the current match; played fixtures faded; form dots show the result on hover | Smoother to use as the season gets long |
 | Summer explanation behind "How does summer work?"; Club tab hides records that don't exist yet | Keeps the choice and its button in view; no columns of dashes |
 | MIT licence | Permissive and the norm for VS Code extensions; anyone can learn from or fork it |
+| Publisher `bigdevgreg`; publish by uploading the `.vsix` by hand | "BigMoneyGreg" was rejected as suspicious by the Marketplace; a token needs an Azure DevOps organisation, which asked for an Azure subscription |
 
 ## 17. Name ✅
 
