@@ -44,6 +44,7 @@ export interface CareerOptions {
   /** Defaults to an even split. Must average to `rating`. */
   split?: Record<Stat, number>;
   clubName?: string;
+  clubColours?: [string, string];
   seed: number;
 }
 
@@ -172,6 +173,7 @@ export function newCareer(options: CareerOptions, sport: SportDefinition): Caree
     const used = new Set(identities.slice(1).map((c) => c.short));
     identities[PLAYER_CLUB_ID] = { ...identities[PLAYER_CLUB_ID], name: options.clubName, short: sport.shortCode(options.clubName, used) };
   }
+  if (options.clubColours) identities[PLAYER_CLUB_ID] = { ...identities[PLAYER_CLUB_ID], colours: [...options.clubColours] };
   const clubs: Club[] = identities.map((identity, id) => {
     const isPlayer = id === PLAYER_CLUB_ID;
     const style: Style = isPlayer ? 'balanced' : rng.pick(AI_STYLES);

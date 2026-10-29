@@ -223,6 +223,52 @@ input:focus-visible {
   accent-color: var(--vscode-button-background);
 }
 
+/* Badge colour picker */
+
+.badge-pick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.badge-pick .crest.big {
+  flex: none;
+  width: 30px;
+  height: 33px;
+  margin: 0;
+  border-radius: 5px 5px 15px 15px;
+}
+
+.kit-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.kit-row {
+  display: flex;
+  gap: 6px;
+}
+
+.kit {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.kit.on {
+  outline: 2px solid var(--vscode-focusBorder, var(--accent));
+  outline-offset: 2px;
+}
+
+.kit:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+}
+
 .row {
   display: flex;
   gap: 4px;

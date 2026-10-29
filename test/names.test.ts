@@ -1,3 +1,4 @@
+import { BADGE_MAIN, BADGE_SECOND, badgeAllowed } from '../src/shared/view';
 import { describe, expect, it } from 'vitest';
 import { newCareer } from '../src/core/career';
 import { Rng } from '../src/core/rng';
@@ -77,6 +78,17 @@ describe('player club naming', () => {
     expect(c.clubs[0].name).toBe('Wexstead Rovers');
     expect(c.clubs[0].short).toMatch(/^W/);
     expect(new Set(c.clubs.map((x) => x.short)).size).toBe(100);
+  });
+
+  it('uses the badge colours picked at setup', () => {
+    const c = newCareer({ rating: 50, difficulty: 'medium', seed: 1, clubColours: ['#7a263a', '#6cabdd'] }, footballSport);
+    expect(c.clubs[0].colours).toEqual(['#7a263a', '#6cabdd']);
+  });
+
+  it('every main colour has a second colour that works, and clashes are refused', () => {
+    for (const [main] of BADGE_MAIN) expect(BADGE_SECOND.some(([second]) => badgeAllowed(main, second))).toBe(true);
+    expect(badgeAllowed('#c8102e', '#c8102e')).toBe(false);
+    expect(badgeAllowed('#123456', '#ffffff')).toBe(false);
   });
 
   it('strips the suffix for the narrow table', () => {

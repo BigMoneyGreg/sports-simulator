@@ -4,7 +4,7 @@ import { startRating, styleSplit } from '../core/league';
 import { TUNING } from '../sports/football/match';
 import { Rng } from '../core/rng';
 import { suggestClubName } from '../sports/football/names';
-import { DURATIONS, type Duration, type ToHost } from '../shared/view';
+import { badgeAllowed, DURATIONS, type Duration, type ToHost } from '../shared/view';
 import { Game } from './game';
 import { SidebarProvider } from './sidebar';
 import { StatusBar } from './statusBar';
@@ -79,7 +79,9 @@ export function activate(context: vscode.ExtensionContext): void {
         // Somewhere in the league, weighted towards mid-table; the style leans within the free range.
         const rating = startRating(tier, new Rng(seed ^ 0x9e3779b9));
         const split = message.style === 'balanced' ? undefined : styleSplit(rating, message.style, TUNING.weaknessTolerance);
-        game!.start({ rating, difficulty: message.difficulty, split, clubName: name, seed });
+        const [main, second] = message.colours ?? [];
+        const clubColours: [string, string] | undefined = badgeAllowed(main, second) ? [main, second] : undefined;
+        game!.start({ rating, difficulty: message.difficulty, split, clubName: name, clubColours, seed });
         return;
       }
       case 'togglePause':

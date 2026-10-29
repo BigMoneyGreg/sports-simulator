@@ -1,4 +1,7 @@
 import {
+  BADGE_MAIN,
+  BADGE_SECOND,
+  badgeAllowed,
   DURATION_LABELS,
   type Difficulty,
   type Duration,
@@ -47,6 +50,7 @@ const setup = {
   duration: '2m' as Duration,
   style: 'balanced' as Style,
   name: '',
+  colours: ['', ''] as [string, string],
   /** Defaults are taken from the host once; option clicks must not reset them. */
   initialised: false,
 };
@@ -105,10 +109,29 @@ function seg(name: string, options: Option[], value: string): string {
     .join('')}</div>`;
 }
 
+function randomBadge(): [string, string] {
+  const pairs = BADGE_MAIN.flatMap(([m]) => BADGE_SECOND.filter(([s]) => badgeAllowed(m, s)).map(([s]): [string, string] => [m, s]));
+  return pairs[Math.floor(Math.random() * pairs.length)];
+}
+
+/** Two rows of colours with a live preview; second colours that clash with the main one are greyed out. */
+function badgePicker(): string {
+  const [main, second] = setup.colours;
+  const row = (kit: 'main' | 'second', options: [string, string][], value: string) =>
+    `<div class="kit-row" role="radiogroup" aria-label="${kit === 'main' ? 'Main colour' : 'Second colour'}">${options
+      .map(([hex, label]) => {
+        const off = kit === 'second' && !badgeAllowed(main, hex);
+        return `<button type="button" role="radio" class="kit ${hex === value ? 'on' : ''}" data-kit="${kit}" data-value="${hex}" data-c1="${hex}" data-c2="${hex}" aria-checked="${hex === value}" title="${label}" aria-label="${label}"${off ? ' disabled' : ''}></button>`;
+      })
+      .join('')}</div>`;
+  return `<div class="badge-pick">${swatch({ colours: setup.colours }, 'crest big')}<div class="kit-rows">${row('main', BADGE_MAIN, main)}${row('second', BADGE_SECOND, second)}</div></div>`;
+}
+
 function renderSetup(v: SetupView): void {
   if (!setup.initialised) {
     setup.name = v.suggestedName;
     setup.duration = v.duration;
+    setup.colours = randomBadge();
     setup.initialised = true;
   }
   app.dataset.mode = 'setup';
@@ -120,6 +143,8 @@ function renderSetup(v: SetupView): void {
     <label class="field">Club name
       <span class="row"><input id="name" type="text" maxlength="40" value="${esc(setup.name)}"><button type="button" id="reroll" class="icon" title="Suggest another name" aria-label="Suggest another name">↻</button></span>
     </label>
+
+    <div class="field">Badge ${badgePicker()}</div>
 
     <div class="field">League ${seg('league', [1, 2, 3, 4, 5].map((t): Option => [String(t), `L${t}`]), String(setup.league))}</div>
 
@@ -147,6 +172,7 @@ function renderSetup(v: SetupView): void {
 
     <button type="button" id="start" class="primary">Start career</button>
   </div>`;
+  paintSwatches();
 }
 
 // ---------------------------------------------------------------------------
@@ -487,7 +513,19 @@ app.addEventListener('click', (e) => {
       duration: setup.duration,
       style: setup.style,
       name: (document.getElementById('name') as HTMLInputElement).value,
+      colours: setup.colours,
     });
+  } else if (button.dataset.kit) {
+    const hex = button.dataset.value!;
+    if (button.dataset.kit === 'main') {
+      // Keep the second colour unless it now clashes; then take the first one that works.
+      const second = badgeAllowed(hex, setup.colours[1]) ? setup.colours[1] : BADGE_SECOND.find(([s]) => badgeAllowed(hex, s))![0];
+      setup.colours = [hex, second];
+    } else {
+      setup.colours = [setup.colours[0], hex];
+    }
+    setup.name = (document.getElementById('name') as HTMLInputElement).value;
+    if (view?.screen === 'setup') renderSetup(view.setup);
   } else if (button.closest('.seg')?.getAttribute('data-name')) {
     const group = button.closest('.seg')!.getAttribute('data-name')!;
     const value = button.dataset.value!;

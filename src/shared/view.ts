@@ -10,6 +10,42 @@ export type Focus = 'attack' | 'balanced' | 'defence';
 export type Style = 'attacking' | 'balanced' | 'defensive';
 export type Zone = 'champion' | 'promotion' | 'playoff' | 'relegation' | null;
 
+/**
+ * Badge colours the player picks from at setup. The main colour also tints the
+ * header, so it leaves out black and white (lost on dark or light themes).
+ */
+export const BADGE_MAIN: [hex: string, label: string][] = [
+  ['#c8102e', 'Red'],
+  ['#003399', 'Blue'],
+  ['#6cabdd', 'Sky blue'],
+  ['#00843d', 'Green'],
+  ['#fdb913', 'Amber'],
+  ['#7a263a', 'Claret'],
+];
+export const BADGE_SECOND: [hex: string, label: string][] = [
+  ['#ffffff', 'White'],
+  ['#111111', 'Black'],
+  ['#1c2c5b', 'Navy'],
+  ['#6cabdd', 'Sky blue'],
+  ['#fdb913', 'Amber'],
+  ['#c8102e', 'Red'],
+];
+/** Pairs that are the same colour or too close to tell apart. */
+const BADGE_CLASHES: Record<string, string[]> = {
+  '#c8102e': ['#c8102e'],
+  '#003399': ['#1c2c5b'],
+  '#6cabdd': ['#6cabdd'],
+  '#00843d': ['#c8102e'],
+  '#fdb913': ['#fdb913', '#ffffff'],
+  '#7a263a': ['#c8102e', '#111111'],
+};
+
+export function badgeAllowed(main: string, second: string): boolean {
+  return (
+    BADGE_MAIN.some(([c]) => c === main) && BADGE_SECOND.some(([c]) => c === second) && !(BADGE_CLASHES[main] ?? []).includes(second)
+  );
+}
+
 export interface TeamBadge {
   name: string;
   short: string;
@@ -215,7 +251,7 @@ export type View = { screen: 'setup'; setup: SetupView } | GameView;
 
 export type ToHost =
   | { type: 'ready' }
-  | { type: 'startCareer'; league: number; difficulty: Difficulty; duration: Duration; style: Style; name: string }
+  | { type: 'startCareer'; league: number; difficulty: Difficulty; duration: Duration; style: Style; name: string; colours: [string, string] }
   | { type: 'suggestName' }
   | { type: 'togglePause' }
   | { type: 'setDuration'; duration: Duration }
