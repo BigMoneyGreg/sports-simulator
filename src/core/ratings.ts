@@ -8,9 +8,9 @@ export type Difficulty = 'easy' | 'medium' | 'hard';
 export const RATING_TUNING = {
   decline: 10,
   /** Standard deviation, per stat, of how unevenly the decline lands. */
-  declineSpread: 7,
+  declineSpread: 10,
   /** Extra decline per point a stat sits above the club's rating (strong areas regress). */
-  declineRegression: 0.25,
+  declineRegression: 0.1,
   averageGain: 10,
   performanceMultiplier: 1.0,
   topBonus: [6, 4, 2],
@@ -26,8 +26,10 @@ export const RATING_TUNING = {
   /** AI clubs above this rating lose this share of the excess each season (stars get poached). */
   aiCeiling: 93,
   aiCeilingPull: 0.7,
-  /** Rating points of player-allocation per point of rating. */
-  pointsPerRating: 3,
+  /** Rating an AI club gains on promotion (investment), so promoted sides can compete. */
+  promotedBoost: 4,
+  /** Points the player allocates per point of rating gained (1 point = +1 to a stat). */
+  pointsPerRating: 2,
 };
 
 /** Rank by rating within a league: the highest-rated club is expected 1st. */
@@ -76,7 +78,7 @@ export function applyDecline(club: Club, rng: Rng): Record<Stat, number> {
   const centre = raw.reduce((t, x) => t + x, 0) / raw.length;
   const amounts = raw.map((x) => Math.max(0, decline + x - centre));
   const scale = (decline * STATS.length) / amounts.reduce((t, x) => t + x, 0);
-  const before = { attack: club.attack, defence: club.defence, chemistry: club.chemistry };
+  const before = { attack: club.attack, defence: club.defence };
   let shortfall = 0;
   STATS.forEach((s, i) => {
     const want = amounts[i] * scale;
@@ -85,7 +87,7 @@ export function applyDecline(club: Club, rng: Rng): Record<Stat, number> {
     club[s] = next;
   });
   if (shortfall > 0) shiftRating(club, -shortfall / STATS.length);
-  return { attack: before.attack - club.attack, defence: before.defence - club.defence, chemistry: before.chemistry - club.chemistry };
+  return { attack: before.attack - club.attack, defence: before.defence - club.defence };
 }
 
 /**

@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import type { TeamSheet } from '../src/core/sport';
-import { createMatch, effectiveStats, formSpread, isFinished, outcome, playMatch, step, type MatchEvent } from '../src/sports/football/match';
+import { createMatch, effectiveStats, isFinished, TUNING, outcome, playMatch, step, type MatchEvent } from '../src/sports/football/match';
 import { generateSquad, lineup } from '../src/sports/football/squad';
 
 function sheet(clubId: number, rating: number, rng = new Rng(clubId)): TeamSheet {
   const squad = generateSquad(rng, clubId * 100, () => 'Player');
-  return { clubId, attack: rating, defence: rating, chemistry: rating, lineup: lineup(squad) };
+  return { clubId, attack: rating, defence: rating, lineup: lineup(squad) };
 }
 
 function many(n: number, home: TeamSheet, away: TeamSheet, seed = 1) {
@@ -125,11 +125,6 @@ describe('football match', () => {
     }
   });
 
-  it('narrows the form range as chemistry rises', () => {
-    expect(formSpread(99)).toBeLessThan(formSpread(50));
-    expect(formSpread(50)).toBeLessThan(formSpread(0));
-  });
-
   it('always produces a winner in knockout ties, using extra time and penalties', () => {
     const rng = new Rng(21);
     let extraTime = 0;
@@ -161,21 +156,16 @@ describe('football match', () => {
 });
 
 describe('effective strength', () => {
-  it('values a point equally in any stat for a balanced team', () => {
-    const base = effectiveStats({ attack: 50, defence: 50, chemistry: 50 });
-    expect(base).toEqual({ attack: 50, defence: 50 });
-    const gap = (s: { attack: number; defence: number }) => s.attack + s.defence;
-    const plusAttack = gap(effectiveStats({ attack: 51.5, defence: 50, chemistry: 50 }));
-    const plusChem = gap(effectiveStats({ attack: 50, defence: 50, chemistry: 51.5 }));
-    expect(plusAttack).toBeCloseTo(plusChem);
+  it('lets a team lean either way for free, within the tolerance', () => {
+    expect(effectiveStats({ attack: 50, defence: 50 })).toEqual({ attack: 50, defence: 50 });
+    const t = TUNING.weaknessTolerance;
+    expect(effectiveStats({ attack: 50 + t, defence: 50 - t })).toEqual({ attack: 50 + t, defence: 50 - t });
   });
 
-  it('punishes a stat lagging behind the rest, so fixing weaknesses pays', () => {
-    const balanced = effectiveStats({ attack: 50, defence: 50, chemistry: 50 });
-    const lopsided = effectiveStats({ attack: 60, defence: 40, chemistry: 50 });
-    expect(lopsided.attack + lopsided.defence).toBeLessThan(balanced.attack + balanced.defence - 10);
-    // Small imbalances within the tolerance cost nothing.
-    const slight = effectiveStats({ attack: 51, defence: 49, chemistry: 50 });
-    expect(slight.attack + slight.defence).toBeCloseTo(100);
+  it('punishes leaning too far, so a drained stat needs fixing', () => {
+    const t = TUNING.weaknessTolerance;
+    const lopsided = effectiveStats({ attack: 50 + t + 5, defence: 50 - t - 5 });
+    expect(lopsided.attack).toBeCloseTo(50 + t + 5 - 5 * TUNING.weaknessPenalty);
+    expect(lopsided.defence).toBeCloseTo(50 - t - 5 - 5 * TUNING.weaknessPenalty);
   });
 });

@@ -1,5 +1,12 @@
 import { ratingLabel } from '../core/league';
-import type { Difficulty, Duration, FixtureView, FullTimeView, GameView, LiveMatchView, PlayoffView, SeasonEndView, StatKey, TableView, TeamBadge, ToHost, ToWebview, View } from '../shared/view';
+import type { Difficulty, Duration, FixtureView, FullTimeView, GameView, LiveMatchView, PlayoffView, SeasonEndView, SetupView, StatKey, TableView, TeamBadge, ToHost, ToWebview, View } from '../shared/view';
+
+const DURATION_OPTIONS: [Duration, string][] = [
+  ['30s', '30s'],
+  ['1m', '1 min'],
+  ['2m', '2 min'],
+  ['5m', '5 min'],
+];
 
 declare function acquireVsCodeApi(): { postMessage(m: ToHost): void; getState(): unknown; setState(s: unknown): void };
 
@@ -26,9 +33,8 @@ const setup = {
   difficulty: 'medium' as Difficulty,
   duration: '2m' as Duration,
   name: '',
-  custom: false,
-  attack: 50,
-  defence: 50,
+  lean: 0,
+  tolerance: 5,
   rendered: false,
 };
 
@@ -70,24 +76,27 @@ function paintSwatches(): void {
 // ---------------------------------------------------------------------------
 // Setup
 
-function chemistryFromSplit(): number {
-  return setup.rating * 3 - setup.attack - setup.defence;
+const MAX_LEAN = 15;
+
+function leanLimit(): number {
+  return Math.min(MAX_LEAN, setup.rating, 99 - setup.rating);
 }
 
-function renderSetup(suggestedName: string, duration: Duration): void {
+function renderSetup(v: SetupView): void {
   if (!setup.rendered) {
-    setup.name = suggestedName;
-    setup.duration = duration;
+    setup.name = v.suggestedName;
+    setup.duration = v.duration;
   }
+  setup.tolerance = v.tolerance;
   setup.rendered = true;
   const seg = <T extends string>(name: string, options: [T, string][], value: T) =>
     `<div class="seg" role="radiogroup" data-name="${name}">${options
-      .map(([v, label]) => `<button type="button" role="radio" aria-checked="${v === value}" class="${v === value ? 'on' : ''}" data-value="${v}">${esc(label)}</button>`)
+      .map(([val, label]) => `<button type="button" role="radio" aria-checked="${val === value}" class="${val === value ? 'on' : ''}" data-value="${val}">${esc(label)}</button>`)
       .join('')}</div>`;
   app.innerHTML = `
-  <div class="setup">
+  <div class="setup card">
     <h2>New career</h2>
-    <p class="muted">Pick how good your club is. Sports Simulator plays every match on its own; once a season you decide where to strengthen.</p>
+    <p class="muted">Pick how good your club is. Every match plays on its own; once a season you decide where to strengthen: attack or defence.</p>
 
     <label class="field">Club name
       <span class="row"><input id="name" type="text" maxlength="40" value="${esc(setup.name)}"><button type="button" id="reroll" class="icon" title="Suggest another name" aria-label="Suggest another name">↻</button></span>
@@ -102,68 +111,53 @@ function renderSetup(suggestedName: string, duration: Duration): void {
       <span class="hint">${esc({ easy: 'A big hidden boost every season: climb fast.', medium: 'A few seasons in each league.', hard: 'A long grind to the top.' }[setup.difficulty])}</span>
     </div>
 
-    <div class="field">Match length ${seg('duration', [['30s', '30s'], ['1m', '1 min'], ['2m', '2 min'], ['5m', '5 min']], setup.duration)}
-      <span class="hint">Real time for one 90-minute match. Change it any time in settings.</span>
+    <div class="field">Match length ${seg('duration', DURATION_OPTIONS, setup.duration)}
+      <span class="hint">Real time for one 90-minute match. You can change it from the box later.</span>
     </div>
 
-    <details id="split" ${setup.custom ? 'open' : ''}>
-      <summary>Customise attack / defence / chemistry</summary>
-      ${splitHtml()}
-    </details>
+    <label class="field">Style <strong id="leanValue"></strong>
+      <input id="lean" type="range" min="-${MAX_LEAN}" max="${MAX_LEAN}" value="${setup.lean}">
+      <span class="row between small muted"><span>Defensive</span><span>Attacking</span></span>
+      <span id="leanHint" class="hint"></span>
+    </label>
 
     <button type="button" id="start" class="primary">Start career</button>
   </div>`;
-  updateSplit();
+  updateLean();
 }
 
-function splitHtml(): string {
-  return `<div id="splitBody">
-      <label class="field">Attack <strong id="attackValue">${setup.attack}</strong><input id="attack" type="range" min="0" max="99" value="${setup.attack}"></label>
-      <label class="field">Defence <strong id="defenceValue">${setup.defence}</strong><input id="defence" type="range" min="0" max="99" value="${setup.defence}"></label>
-      <div class="field">Chemistry <strong id="chemistryValue"></strong></div>
-      <span id="splitHint" class="hint"></span>
-    </div>`;
-}
-
-/** Refreshes the split read-outs in place, so a slider being dragged is never replaced. */
-function updateSplit(): void {
-  const chem = chemistryFromSplit();
-  const valid = chem >= 0 && chem <= 99;
-  const weak = valid && [setup.attack, setup.defence, chem].some((v) => setup.rating - v > 2);
-  const byId = (id: string) => document.getElementById(id);
-  (byId('attack') as HTMLInputElement).value = String(setup.attack);
-  (byId('defence') as HTMLInputElement).value = String(setup.defence);
-  byId('attackValue')!.textContent = String(setup.attack);
-  byId('defenceValue')!.textContent = String(setup.defence);
-  const chemEl = byId('chemistryValue')!;
-  chemEl.textContent = valid ? String(chem) : '—';
-  chemEl.classList.toggle('bad', !valid);
-  const hint = byId('splitHint')!;
-  hint.classList.toggle('bad', !valid);
-  hint.textContent = !valid
-    ? 'That split can’t average your rating. Move attack or defence.'
-    : weak
-      ? 'Opponents exploit a weak area: a stat well below your rating costs you on the pitch.'
-      : 'The three stats always average your rating.';
-  (byId('start') as HTMLButtonElement).disabled = setup.custom && !valid;
+/** Refreshes the style read-out in place, so the slider being dragged is never replaced. */
+function updateLean(): void {
+  setup.lean = Math.max(-leanLimit(), Math.min(leanLimit(), setup.lean));
+  const attack = setup.rating + setup.lean;
+  const defence = setup.rating - setup.lean;
+  (document.getElementById('lean') as HTMLInputElement).value = String(setup.lean);
+  document.getElementById('leanValue')!.textContent = `Attack ${attack} · Defence ${defence}`;
+  const hint = document.getElementById('leanHint')!;
+  const weak = Math.abs(setup.lean) > setup.tolerance;
+  hint.classList.toggle('bad', weak);
+  hint.textContent =
+    setup.lean === 0
+      ? 'Balanced. Lean either way to score more and concede more, or the reverse.'
+      : weak
+        ? 'Leaning this far leaves a weakness opponents exploit: it costs you on the pitch.'
+        : setup.lean > 0
+          ? 'Attacking: more goals at both ends.'
+          : 'Defensive: tighter games, fewer goals at both ends.';
 }
 
 function updateSetupRating(): void {
   document.getElementById('ratingValue')!.textContent = String(setup.rating);
   document.getElementById('ratingLabel')!.textContent = ratingLabel(setup.rating);
-  if (!setup.custom) {
-    setup.attack = setup.rating;
-    setup.defence = setup.rating;
-  }
-  updateSplit();
+  updateLean();
 }
 
 // ---------------------------------------------------------------------------
 // Game
 
-const STATS: StatKey[] = ['attack', 'defence', 'chemistry'];
-const STAT_LABEL: Record<StatKey, string> = { attack: 'Attack', defence: 'Defence', chemistry: 'Chemistry' };
-const alloc = { season: 0, attack: 0, defence: 0, chemistry: 0 };
+const STATS: StatKey[] = ['attack', 'defence'];
+const STAT_LABEL: Record<StatKey, string> = { attack: 'Attack', defence: 'Defence' };
+const alloc = { season: 0, attack: 0, defence: 0 };
 
 function renderOverlay(ft: FullTimeView | null): void {
   if (!ft) {
@@ -284,7 +278,7 @@ function playoffHtml(p: PlayoffView): string {
 }
 
 function seasonEndHtml(e: SeasonEndView): string {
-  if (alloc.season !== e.season) Object.assign(alloc, { season: e.season, attack: 0, defence: 0, chemistry: 0 });
+  if (alloc.season !== e.season) Object.assign(alloc, { season: e.season, attack: 0, defence: 0 });
   const spent = STATS.reduce((t, k) => t + alloc[k], 0);
   const left = e.points.total - spent;
   const after = (k: StatKey) => e.stats[k] + alloc[k];
@@ -327,11 +321,11 @@ function seasonEndHtml(e: SeasonEndView): string {
     <p class="verdict">${esc(r.verdict)}</p>
 
     <h3 class="sub">Decline</h3>
-    <p class="small">Every club loses about 10 a season. Yours: ${STATS.map((k) => `${STAT_LABEL[k]} −${Math.round(e.decline.byStat[k])}`).join(' · ')}.
+    <p class="small">Every club loses about 10 rating a season (20 stat points), split unevenly. Yours: ${STATS.map((k) => `${STAT_LABEL[k]} −${Math.round(e.decline.byStat[k])}`).join(' · ')}.
       Rating ${Math.round(e.decline.ratingBefore)} → ${Math.round(e.decline.ratingAfter)}.</p>
 
     <h3 class="sub">Strengthen: ${e.points.total} points</h3>
-    <p class="muted small">Rating gain ${esc(breakdown)}${e.points.boosted ? ' · plus your difficulty boost' : ''}. Each point of gain = 3 points to spend; 1 point = +1 to a stat.</p>
+    <p class="muted small">Rating gain ${esc(breakdown)}${e.points.boosted ? ' · plus your difficulty boost' : ''}. Each point of gain = 2 points to spend; 1 point = +1 to a stat.</p>
     <div class="alloc">${STATS.map(statRow).join('')}</div>
     <div class="row alloc-actions">
       <span class="${left === 0 ? '' : 'strong'}">${left} left</span>
@@ -368,7 +362,7 @@ function clubHtml(v: GameView): string {
   return `<div class="clubcard">
     <div class="club">${swatch(c)}<div><div class="name">${esc(c.name)}</div><div class="muted small">${esc(c.short)} · League ${c.tier} · Season ${c.season}</div></div></div>
     <div class="rating"><span class="big">${c.rating}</span><span class="muted small">rating · expected ${ordinal(c.expected)} · ${esc(c.difficulty)}</span></div>
-    ${bar('Attack', 'attack')}${bar('Defence', 'defence')}${bar('Chemistry', 'chemistry')}
+    ${bar('Attack', 'attack')}${bar('Defence', 'defence')}
     ${c.rival ? `<p class="small">Rival: ${swatch(c.rival)}${esc(c.rival.name)}</p>` : ''}
 
     <h3 class="sub">Trophy cabinet</h3>
@@ -415,7 +409,7 @@ function render(): void {
   if (!view) return;
   if (view.screen === 'setup') {
     renderOverlay(null);
-    if (!setup.rendered) renderSetup(view.setup.suggestedName, view.setup.duration);
+    if (!setup.rendered) renderSetup(view.setup);
     return;
   }
   setup.rendered = false;
@@ -463,21 +457,19 @@ app.addEventListener('click', (e) => {
   } else if (button.id === 'resetCareer') {
     send({ type: 'resetCareer' });
   } else if (button.id === 'confirmAlloc') {
-    send({ type: 'allocate', allocation: { attack: alloc.attack, defence: alloc.defence, chemistry: alloc.chemistry } });
+    send({ type: 'allocate', allocation: { attack: alloc.attack, defence: alloc.defence } });
   } else if (button.id === 'pause') {
     send({ type: 'togglePause' });
   } else if (button.id === 'reroll') {
     send({ type: 'suggestName' });
   } else if (button.id === 'start') {
-    const chem = chemistryFromSplit();
-    if (setup.custom && (chem < 0 || chem > 99)) return;
     send({
       type: 'startCareer',
       rating: setup.rating,
       difficulty: setup.difficulty,
       duration: setup.duration,
       name: (document.getElementById('name') as HTMLInputElement).value,
-      split: setup.custom ? { attack: setup.attack, defence: setup.defence, chemistry: chem } : undefined,
+      split: setup.lean ? { attack: setup.rating + setup.lean, defence: setup.rating - setup.lean } : undefined,
     });
   } else if (button.closest('.seg')?.getAttribute('data-name')) {
     const group = button.closest('.seg')!.getAttribute('data-name')!;
@@ -486,7 +478,7 @@ app.addEventListener('click', (e) => {
     if (group === 'duration') setup.duration = value as Duration;
     setup.name = (document.getElementById('name') as HTMLInputElement).value;
     setup.rendered = false;
-    if (view?.screen === 'setup') renderSetup(view.setup.suggestedName, view.setup.duration);
+    if (view?.screen === 'setup') renderSetup(view.setup);
   }
 });
 
@@ -495,25 +487,13 @@ app.addEventListener('input', (e) => {
   if (input.id === 'rating') {
     setup.rating = Number(input.value);
     updateSetupRating();
-  } else if (input.id === 'attack' || input.id === 'defence') {
-    setup[input.id] = Number(input.value);
-    setup.custom = true;
-    updateSplit();
+  } else if (input.id === 'lean') {
+    setup.lean = Number(input.value);
+    updateLean();
   } else if (input.id === 'name') {
     setup.name = input.value;
   }
 });
-
-app.addEventListener('toggle', (e) => {
-  const details = e.target as HTMLDetailsElement;
-  if (details.id !== 'split') return;
-  setup.custom = details.open;
-  if (!details.open) {
-    setup.attack = setup.rating;
-    setup.defence = setup.rating;
-  }
-  updateSplit();
-}, true);
 
 window.addEventListener('message', (event: MessageEvent<ToWebview>) => {
   const message = event.data;

@@ -13,7 +13,6 @@ export interface TeamSheet {
   clubId: number;
   attack: number;
   defence: number;
-  chemistry: number;
   /** Starting line-up: player ids and positions. */
   lineup: { id: number; position: string }[];
 }

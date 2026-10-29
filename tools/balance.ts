@@ -35,16 +35,16 @@ const smart: Strategy = (career) => {
     target[lowest] += 1;
     left--;
   }
-  const weights = { attack: target.attack - me.attack, defence: target.defence - me.defence, chemistry: target.chemistry - me.chemistry };
+  const weights = { attack: target.attack - me.attack, defence: target.defence - me.defence };
   return fillAllocation(me, points, weights);
 };
 
-const even: Strategy = (career) => fillAllocation(career.clubs[career.playerClubId], career.pending!.points, { attack: 1, defence: 1, chemistry: 1 });
+const even: Strategy = (career) => fillAllocation(career.clubs[career.playerClubId], career.pending!.points, { attack: 1, defence: 1 });
 
 /** Dumps everything into one stat, picked at random each season. */
 const careless: Strategy = (career, rng) => {
   const pick = rng.pick(STATS);
-  return fillAllocation(career.clubs[career.playerClubId], career.pending!.points, { attack: 0, defence: 0, chemistry: 0, [pick]: 1 });
+  return fillAllocation(career.clubs[career.playerClubId], career.pending!.points, { attack: 0, defence: 0, [pick]: 1 });
 };
 
 const STRATEGIES = { smart, even, careless };
@@ -129,6 +129,7 @@ function worldRun(): void {
   console.log(`\n== World: ${SEEDS} careers x ${LONG_SEASONS} seasons (even-split player at 50, medium) ==`);
   const stats = newStats();
   let maxLeagueDrift = 0;
+  let driftLeague = 0;
   let maxAbove95 = 0;
   let maxAt99Streak = 0;
   let maxTotalDrift = 0;
@@ -166,7 +167,11 @@ function worldRun(): void {
         const { min, max } = band(l.tier);
         leagueAverages[t].push(avg);
         // Drift is a sustained shift, so measure it on a 5-season rolling average.
-        if (season >= 5) maxLeagueDrift = Math.max(maxLeagueDrift, Math.abs(mean(leagueAverages[t].slice(-5)) - (min + max) / 2));
+        const drift = Math.abs(mean(leagueAverages[t].slice(-5)) - (min + max) / 2);
+        if (season >= 5 && drift > maxLeagueDrift) {
+          maxLeagueDrift = drift;
+          driftLeague = l.tier;
+        }
       });
       const above95 = career.clubs.filter((c) => !c.isPlayer && rating(c) > 95).length;
       maxAbove95 = Math.max(maxAbove95, above95);
@@ -194,11 +199,12 @@ function worldRun(): void {
   console.log('\n-- World ratings (§7) --');
   check('Overall average stays at 49.5', maxAverageDrift < 0.005, `max drift ${maxAverageDrift.toExponential(1)}`);
   check('Total rating identical before/after every season', maxTotalDrift < 0.005, `max drift ${maxTotalDrift.toExponential(1)}`);
-  check('No league average drifts more than ±3 from band (5-season avg)', maxLeagueDrift <= 3, `max ${fmt(maxLeagueDrift)}`);
+  check('No league average drifts more than ±3 from band (5-season avg)', maxLeagueDrift <= 3, `max ${fmt(maxLeagueDrift)} (League ${driftLeague})`);
   console.log(`      league averages (mean over run): ${leagueAverages.map((xs) => fmt(mean(xs), 1)).join(' / ')}`);
   check('Fewer than 2 AI clubs above 95 at any time', maxAbove95 < 2, `max ${maxAbove95}`);
   check('No AI club at 99 for long (≤ 2 seasons)', maxAt99Streak <= 2, `longest ${maxAt99Streak}`);
-  check('Promoted clubs finish bottom half ~70%', Math.abs(promotedBottomHalf / promotedTotal - 0.7) < 0.1, pct(promotedBottomHalf / promotedTotal));
+  // Premier League promoted clubs, last decade: about 78% finished in the bottom half.
+  check('Promoted clubs finish bottom half ~78% (real world)', Math.abs(promotedBottomHalf / promotedTotal - 0.78) < 0.06, pct(promotedBottomHalf / promotedTotal));
 }
 
 // ---------------------------------------------------------------------------

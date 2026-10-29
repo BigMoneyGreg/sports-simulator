@@ -27,17 +27,16 @@ describe('records', () => {
 
   it('builds up over a real career and survives the new season', () => {
     const c = newCareer({ rating: 50, difficulty: 'medium', seed: 2 }, footballSport);
+    const scored = () => c.season.playerMatches.reduce((t, x) => t + x.goals.filter((g) => g.for && !g.ownGoal).length, 0);
     playSeason(c, footballSport);
     expect(fullHistory(c)).toHaveLength(1);
-    allocatePoints(c, fillAllocation(c.clubs[0], c.pending!.points, { attack: 1, defence: 1, chemistry: 1 }));
+    const first = scored();
+    allocatePoints(c, fillAllocation(c.clubs[0], c.pending!.points, { attack: 1, defence: 1 }));
     playSeason(c, footballSport);
     expect(c.records.manager.matches).toBeGreaterThanOrEqual(76);
     expect(c.records.mostGoalsSeason!.season).toBe(1);
-    // Every scorer goal is a club goal; only opponents' own goals are missing from the scorers.
-    const clubGoals = c.history[0].goalsFor + c.season.playerMatches.reduce((t, x) => t + x.goalsFor, 0);
     const recorded = Object.values(c.records.scorers).reduce((t, s) => t + s.goals, 0);
-    expect(recorded).toBeGreaterThan(clubGoals * 0.9);
-    expect(recorded).toBeLessThanOrEqual(clubGoals);
+    expect(recorded).toBe(first + scored());
   });
 });
 
@@ -49,7 +48,7 @@ describe('rival', () => {
     expect(c.rival).not.toBe(0);
     const before = c.rival;
     playSeason(c, footballSport);
-    allocatePoints(c, fillAllocation(c.clubs[0], c.pending!.points, { attack: 1, defence: 1, chemistry: 1 }));
+    allocatePoints(c, fillAllocation(c.clubs[0], c.pending!.points, { attack: 1, defence: 1 }));
     const now = c.season.leagues.find((l) => l.clubIds.includes(0))!;
     expect(now.clubIds).toContain(c.rival);
     if (now.clubIds.includes(before!)) expect(c.rival).toBe(before);

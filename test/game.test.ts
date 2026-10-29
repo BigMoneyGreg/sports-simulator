@@ -87,7 +87,7 @@ describe('game clock', () => {
     expect(game.phase).toBe('seasonOver');
     expect(statusText(game)).toMatch(/Season over/);
 
-    game.allocate(fillAllocation(career.clubs[0], career.pending!.points, { attack: 1, defence: 1, chemistry: 1 }));
+    game.allocate(fillAllocation(career.clubs[0], career.pending!.points, { attack: 1, defence: 1 }));
     expect(game.career!.season.number).toBe(2);
     expect(game.phase).toBe('live');
   });
@@ -134,13 +134,13 @@ describe('season end view', () => {
     expect(e.report.record).toMatch(/^\d+W \d+D \d+L$/);
     expect(e.report.verdict.length).toBeGreaterThan(20);
     const d = e.decline.byStat;
-    expect(d.attack + d.defence + d.chemistry).toBeCloseTo(30);
-    expect(e.room.attack + e.room.defence + e.room.chemistry).toBeGreaterThanOrEqual(e.points.total);
+    expect(d.attack + d.defence).toBeCloseTo(20);
+    expect(e.room.attack + e.room.defence).toBeGreaterThanOrEqual(e.points.total);
     expect(e.playoffs?.semis).toHaveLength(2);
 
-    expect(() => game.allocate({ attack: e.points.total + 1, defence: 0, chemistry: 0 })).toThrow();
-    const third = Math.floor(e.points.total / 3);
-    game.allocate({ attack: third, defence: third, chemistry: e.points.total - 2 * third });
+    expect(() => game.allocate({ attack: e.points.total + 1, defence: 0 })).toThrow();
+    const half = Math.floor(e.points.total / 2);
+    game.allocate({ attack: half, defence: e.points.total - half });
     expect(game.career!.history).toHaveLength(1);
     expect(buildView(game, () => '').screen).toBe('game');
   });

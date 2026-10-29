@@ -1,8 +1,8 @@
 import type { Player } from './sport';
 
 export type Style = 'attacking' | 'defensive' | 'balanced';
-export type Stat = 'attack' | 'defence' | 'chemistry';
-export const STATS: readonly Stat[] = ['attack', 'defence', 'chemistry'];
+export type Stat = 'attack' | 'defence';
+export const STATS: readonly Stat[] = ['attack', 'defence'];
 
 export const MAX_STAT = 99;
 
@@ -16,29 +16,31 @@ export interface Club {
   /** Stats are stored with decimals and shown as whole numbers. */
   attack: number;
   defence: number;
-  chemistry: number;
   squad: Player[];
   isPlayer: boolean;
 }
 
 /**
- * Each AI style is a fixed shape around the club's rating. Every shape carries
- * the same built-in weakness (attacking sides leave gaps at the back,
- * defensive sides struggle to score, balanced sides lack chemistry), so AI
- * clubs of equal rating are equally strong but play differently.
+ * Each AI style is a fixed shape around the club's rating: attacking sides
+ * score more and leave gaps at the back, defensive sides the reverse. Both
+ * lean the same distance, so AI clubs of equal rating are equally strong but
+ * play differently. Balanced is the player's starting shape.
  */
-export const STYLE_TUNING = { skew: 7 };
+export const STYLE_TUNING = { skew: 10 };
+
+/** Styles an AI club can have. */
+export const AI_STYLES: readonly Style[] = ['attacking', 'defensive'];
 
 const STYLE_SHAPE: Record<Style, Record<Stat, number>> = {
-  attacking: { attack: 1, defence: -1, chemistry: 0 },
-  defensive: { attack: -1, defence: 1, chemistry: 0 },
-  balanced: { attack: 0.5, defence: 0.5, chemistry: -1 },
+  attacking: { attack: 1, defence: -1 },
+  defensive: { attack: -1, defence: 1 },
+  balanced: { attack: 0, defence: 0 },
 };
 
-const EVEN: Record<Stat, number> = { attack: 1, defence: 1, chemistry: 1 };
+const EVEN: Record<Stat, number> = { attack: 1, defence: 1 };
 
 export function rating(club: Pick<Club, Stat>): number {
-  return (club.attack + club.defence + club.chemistry) / 3;
+  return (club.attack + club.defence) / 2;
 }
 
 /** Stats for a rating in a style's shape, squeezed near 0 and 99 so the average is exact. */
@@ -47,8 +49,8 @@ export function statsFor(value: number, style: Style): Record<Stat, number> {
   const v = clamp(value, 0, MAX_STAT);
   const up = Math.max(...STATS.map((s) => shape[s]));
   const down = -Math.min(...STATS.map((s) => shape[s]));
-  const skew = Math.min(STYLE_TUNING.skew, (MAX_STAT - v) / up, v / down);
-  return { attack: v + skew * shape.attack, defence: v + skew * shape.defence, chemistry: v + skew * shape.chemistry };
+  const skew = up === 0 ? 0 : Math.min(STYLE_TUNING.skew, (MAX_STAT - v) / up, v / down);
+  return { attack: v + skew * shape.attack, defence: v + skew * shape.defence };
 }
 
 /**
@@ -58,7 +60,7 @@ export function statsFor(value: number, style: Style): Record<Stat, number> {
  */
 export function shiftRating(club: Club, delta: number, weights: Record<Stat, number> = EVEN): number {
   const before = rating(club);
-  let remaining = delta * 3;
+  let remaining = delta * STATS.length;
   let open = STATS.filter((s) => canMove(club[s], remaining));
   for (let pass = 0; pass < 3 && Math.abs(remaining) > 1e-12 && open.length > 0; pass++) {
     const total = open.reduce((t, s) => t + weights[s], 0);

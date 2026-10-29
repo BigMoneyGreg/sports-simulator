@@ -3,15 +3,12 @@ import type { MatchOptions, MatchOutcome, SportModule, TeamSheet } from '../../c
 
 /** Starting values from DESIGN.md §5; tuned by tools/balance.ts. */
 export const TUNING = {
-  baseXg: 1.17,
+  baseXg: 1.13,
   slope: 0.25,
   homeAdvantage: 1.14,
   awayFactor: 0.9,
-  /** Form-on-the-day spread at chemistry 0 and 99 (multiplier drawn from 1 ± spread). */
-  formSpreadLow: 0.3,
-  formSpreadHigh: 0.08,
-  /** Boost after 75' per 99 points of chemistry advantage. */
-  lateChemistry: 0.2,
+  /** Form on the day: each side's multiplier is drawn from 1 ± this. */
+  formSpread: 0.2,
   yellowsPerTeam: 1.7,
   straightRedsPerTeam: 0.05,
   bookedCaution: 0.25,
@@ -20,11 +17,10 @@ export const TUNING = {
   ownGoalShare: 0.03,
   chancesPerGoal: 2.5,
   penaltyConversion: 0.76,
-  /** Share of effective attack and defence that comes from chemistry. */
-  chemistryLink: 1 / 3,
-  /** Effective attack and defence lost per point a stat lags the team's rating (beyond the tolerance). */
+  /** Effective attack and defence lost per point the weaker stat lags the rating, beyond the tolerance. */
   weaknessPenalty: 2,
-  weaknessTolerance: 2,
+  /** How far attack and defence can each sit from the rating before it costs anything. */
+  weaknessTolerance: 5,
 };
 
 export type Period = 'first' | 'second' | 'et1' | 'et2' | 'done';
@@ -69,25 +65,15 @@ const PERIOD_END: Record<Exclude<Period, 'done'>, number> = { first: 45, second:
 const SCORER_WEIGHT: Record<string, number> = { GK: 0.02, DEF: 1, MID: 2.5, FWD: 6 };
 const CARD_WEIGHT: Record<string, number> = { GK: 0.4, DEF: 3, MID: 3, FWD: 1.5 };
 
-export function formSpread(chemistry: number): number {
-  const c = clamp(chemistry, 0, 99) / 99;
-  return TUNING.formSpreadLow + (TUNING.formSpreadHigh - TUNING.formSpreadLow) * c;
-}
-
 /**
- * Attack and defence as they play on the pitch. Chemistry links the team, so
- * it feeds both; a stat lagging behind the rest is a weakness opponents
- * exploit, which drags both down.
+ * Attack and defence as they play on the pitch. Leaning one way is a choice
+ * (score more, concede more), but lean too far and opponents exploit the
+ * weak side, which drags both down.
  */
-export function effectiveStats(team: Pick<TeamSheet, 'attack' | 'defence' | 'chemistry'>): { attack: number; defence: number } {
-  const { chemistryLink: link, weaknessPenalty, weaknessTolerance } = TUNING;
-  const mean = (team.attack + team.defence + team.chemistry) / 3;
-  const weakness = [team.attack, team.defence, team.chemistry].reduce((t, v) => t + Math.max(0, mean - v - weaknessTolerance), 0);
-  const penalty = weaknessPenalty * weakness;
-  return {
-    attack: (1 - link) * team.attack + link * team.chemistry - penalty,
-    defence: (1 - link) * team.defence + link * team.chemistry - penalty,
-  };
+export function effectiveStats(team: Pick<TeamSheet, 'attack' | 'defence'>): { attack: number; defence: number } {
+  const lean = Math.abs(team.attack - team.defence) / 2;
+  const penalty = TUNING.weaknessPenalty * Math.max(0, lean - TUNING.weaknessTolerance);
+  return { attack: team.attack - penalty, defence: team.defence - penalty };
 }
 
 /** Expected goals per match for a side before form, cards and timing. */
@@ -98,8 +84,8 @@ export function expectedGoals(attack: number, opponentDefence: number, venue: 'h
 
 export function createMatch(home: TeamSheet, away: TeamSheet, options: MatchOptions, rng: Rng): FootballMatch {
   const neutral = options.neutral ?? false;
-  const homeForm = 1 + rng.range(-1, 1) * formSpread(home.chemistry);
-  const awayForm = 1 + rng.range(-1, 1) * formSpread(away.chemistry);
+  const homeForm = 1 + rng.range(-1, 1) * TUNING.formSpread;
+  const awayForm = 1 + rng.range(-1, 1) * TUNING.formSpread;
   const h = effectiveStats(home);
   const a = effectiveStats(away);
   const homeXg = (expectedGoals(h.attack, a.defence, neutral ? 'neutral' : 'home') * homeForm) / Math.sqrt(awayForm);
@@ -202,7 +188,6 @@ function playMinute(m: FootballMatch, rng: Rng): void {
     const side = m[key];
     const other = m[key === 'home' ? 'away' : 'home'];
     let rate = side.rate * minuteWeight(m.minute);
-    if (m.minute > 75) rate *= 1 + (TUNING.lateChemistry * (side.sheet.chemistry - other.sheet.chemistry)) / 99;
     rate *= TUNING.redOwnFactor ** side.reds * TUNING.redOpponentFactor ** other.reds;
 
     if (rng.chance(rate)) {
@@ -246,18 +231,14 @@ function shootout(m: FootballMatch, rng: Rng, at: { minute: number; added: numbe
     return [...takers].sort((a, b) => (SCORER_WEIGHT[b.position] ?? 1) - (SCORER_WEIGHT[a.position] ?? 1));
   };
   const takers = { home: order(m.home), away: order(m.away) };
-  const conversion = (key: SideKey) => {
-    const own = m[key].sheet.chemistry;
-    const opp = m[key === 'home' ? 'away' : 'home'].sheet.chemistry;
-    return TUNING.penaltyConversion + (0.06 * (own - opp)) / 99;
-  };
+
   const kicks: { side: SideKey; playerId: number; scored: boolean }[] = [];
   const score: [number, number] = [0, 0];
   for (let round = 0; ; round++) {
     for (const key of ['home', 'away'] as const) {
       const list = takers[key];
       const playerId = list[round % list.length].id;
-      const scored = rng.chance(conversion(key));
+      const scored = rng.chance(TUNING.penaltyConversion);
       kicks.push({ side: key, playerId, scored });
       if (scored) score[key === 'home' ? 0 : 1]++;
       if (round < 5 && shootoutDecided(score, round, key)) {
@@ -318,7 +299,3 @@ export function playMatch(home: TeamSheet, away: TeamSheet, options: MatchOption
 }
 
 export const football: SportModule<FootballMatch> = { createMatch, step, isFinished, outcome };
-
-function clamp(x: number, lo: number, hi: number): number {
-  return Math.min(hi, Math.max(lo, x));
-}

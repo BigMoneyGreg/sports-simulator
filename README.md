@@ -1,6 +1,6 @@
 # Sports Simulator
 
-A football management sim that lives in a small box in your VS Code sidebar. Pick how good your club is, and it plays every match, table and season on its own while you code. Once a season, you decide where to strengthen: attack, defence or chemistry.
+A football management sim that lives in a small box in your VS Code sidebar. Pick how good your club is, and it plays every match, table and season on its own while you code. Once a season, you decide where to strengthen: attack or defence.
 
 > 🚧 In development. See [DESIGN.md](DESIGN.md) for the full design and build plan.
 

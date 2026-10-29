@@ -4,7 +4,7 @@
 export type Duration = '30s' | '1m' | '2m' | '5m';
 export const DURATIONS: Duration[] = ['30s', '1m', '2m', '5m'];
 export type Difficulty = 'easy' | 'medium' | 'hard';
-export type StatKey = 'attack' | 'defence' | 'chemistry';
+export type StatKey = 'attack' | 'defence';
 export type Zone = 'champion' | 'promotion' | 'playoff' | 'relegation' | null;
 
 export interface TeamBadge {
@@ -131,6 +131,8 @@ export interface HeaderView {
 export interface SetupView {
   suggestedName: string;
   duration: Duration;
+  /** How far attack and defence can lean apart for free. */
+  tolerance: number;
 }
 
 export interface PlayoffTieView {

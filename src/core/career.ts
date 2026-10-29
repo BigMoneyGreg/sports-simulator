@@ -1,4 +1,4 @@
-import { clamp, MAX_STAT, rating, shiftRating, STATS, statsFor, type Club, type Stat, type Style } from './club';
+import { AI_STYLES, clamp, MAX_STAT, rating, shiftRating, STATS, statsFor, type Club, type Stat, type Style } from './club';
 import {
   doubleRoundRobin,
   emptyTable,
@@ -113,7 +113,7 @@ export interface SeasonEnd {
   /** Rating lost to the decline (shown on the end-of-season screen). */
   decline: number;
   declineByStat: Record<Stat, number>;
-  /** Points to allocate across attack, defence and chemistry. */
+  /** Points to allocate across attack and defence. */
   points: number;
   outcome: SeasonOutcome;
   newTier: number;
@@ -168,14 +168,13 @@ export function newCareer(options: CareerOptions, sport: SportDefinition): Caree
   const identities = sport.clubIdentities(rng, CLUB_COUNT);
 
   const aiRatings = rng.shuffle(Array.from({ length: CLUB_COUNT }, (_, i) => i).filter((r) => r !== chosen));
-  const styles: Style[] = ['attacking', 'defensive', 'balanced'];
   if (options.clubName) {
     const used = new Set(identities.slice(1).map((c) => c.short));
     identities[PLAYER_CLUB_ID] = { ...identities[PLAYER_CLUB_ID], name: options.clubName, short: sport.shortCode(options.clubName, used) };
   }
   const clubs: Club[] = identities.map((identity, id) => {
     const isPlayer = id === PLAYER_CLUB_ID;
-    const style: Style = isPlayer ? 'balanced' : rng.pick(styles);
+    const style: Style = isPlayer ? 'balanced' : rng.pick(AI_STYLES);
     const stats = isPlayer ? playerStats(chosen, options.split) : statsFor(aiRatings[id - 1], style);
     return {
       id,
@@ -219,9 +218,9 @@ export function pickRival(career: Career): number | null {
 }
 
 function playerStats(value: number, split?: Record<Stat, number>): Record<Stat, number> {
-  if (!split) return { attack: value, defence: value, chemistry: value };
+  if (!split) return { attack: value, defence: value };
   const sum = STATS.reduce((t, s) => t + split[s], 0);
-  if (STATS.some((s) => split[s] < 0 || split[s] > MAX_STAT) || sum !== value * 3) {
+  if (STATS.some((s) => split[s] < 0 || split[s] > MAX_STAT) || sum !== value * STATS.length) {
     throw new Error(`stat split must be 0–99 each and average ${value}`);
   }
   return { ...split };
@@ -287,7 +286,7 @@ export function playerInRound(career: Career, fixtures: Fixture[]): Fixture | un
 
 export function teamSheet(career: Career, clubId: number, sport: SportDefinition): TeamSheet {
   const c = career.clubs[clubId];
-  return { clubId, attack: c.attack, defence: c.defence, chemistry: c.chemistry, lineup: sport.lineup(c.squad) };
+  return { clubId, attack: c.attack, defence: c.defence, lineup: sport.lineup(c.squad) };
 }
 
 export interface RoundResult {
@@ -436,7 +435,9 @@ export function endSeason(career: Career): SeasonEnd {
     if (club.isPlayer) continue;
     const tier = tierOf[club.id];
     const gain = seasonGain(tier, s.expected[club.id], position[club.id], rating(club), rng.normal(0, RATING_TUNING.aiNoise));
-    Object.assign(club, statsFor(clamp(rating(club) - RATING_TUNING.decline + gain, 0, MAX_STAT), club.style));
+    const promotedNow = newTierOf[club.id] < tier;
+    const boost = promotedNow ? RATING_TUNING.promotedBoost : 0;
+    Object.assign(club, statsFor(clamp(rating(club) - RATING_TUNING.decline + gain + boost, 0, MAX_STAT), club.style));
     bandPull(club, newTierOf[club.id]);
   }
 
@@ -500,7 +501,7 @@ export function allocationCapacity(club: Club): number {
 export function fillAllocation(club: Club, points: number, weights: Record<Stat, number>): Record<Stat, number> {
   const room = (s: Stat) => Math.max(0, Math.floor(MAX_STAT - club[s] + 1e-9));
   const total = STATS.reduce((t, s) => t + Math.max(0, weights[s]), 0) || 1;
-  const out = { attack: 0, defence: 0, chemistry: 0 };
+  const out = { attack: 0, defence: 0 };
   let left = points;
   for (const s of STATS) {
     out[s] = Math.min(room(s), Math.floor((points * Math.max(0, weights[s])) / total));

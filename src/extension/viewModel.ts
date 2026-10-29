@@ -17,7 +17,7 @@ export interface ViewOptions {
 
 export function buildView(game: Game, suggestedName: () => string, options: ViewOptions = { fullTimeOverlay: true }): View {
   const career = game.career;
-  if (!career) return { screen: 'setup', setup: { suggestedName: suggestedName(), duration: game.duration } };
+  if (!career) return { screen: 'setup', setup: { suggestedName: suggestedName(), duration: game.duration, tolerance: TUNING.weaknessTolerance } };
   const me = career.clubs[career.playerClubId];
   const season = career.season;
   const tier = season.leagues.find((l) => l.clubIds.includes(me.id))!.tier;
@@ -43,7 +43,7 @@ export function buildView(game: Game, suggestedName: () => string, options: View
     club: {
       ...badge(career, me.id),
       rating: Math.round(rating(me)),
-      stats: { attack: Math.round(me.attack), defence: Math.round(me.defence), chemistry: Math.round(me.chemistry) },
+      stats: { attack: Math.round(me.attack), defence: Math.round(me.defence) },
       tier,
       difficulty: career.difficulty,
       season: season.number,
@@ -155,7 +155,7 @@ function playoffView(career: Career, p: Playoff): PlayoffView {
   };
 }
 
-const STAT_NAMES: Record<StatKey, string> = { attack: 'Attack', defence: 'Defence', chemistry: 'Chemistry' };
+const STAT_NAMES: Record<StatKey, string> = { attack: 'Attack', defence: 'Defence' };
 
 function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
   const end = career.pending!;
@@ -189,7 +189,7 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
 
   const decline = end.declineByStat;
   const hardest = [...STATS].sort((a, b) => decline[b] - decline[a])[0];
-  const stats = { attack: me.attack, defence: me.defence, chemistry: me.chemistry };
+  const stats = { attack: me.attack, defence: me.defence };
   const room = Object.fromEntries(STATS.map((k) => [k, Math.max(0, Math.floor(MAX_STAT - me[k] + 1e-9))])) as Record<StatKey, number>;
 
   const forGap = row.goalsFor - avgFor;

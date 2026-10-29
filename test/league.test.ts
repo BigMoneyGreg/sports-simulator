@@ -17,7 +17,7 @@ import { Rng } from '../src/core/rng';
 import { footballSport } from '../src/sports/football';
 
 const evenSplit = (career: Career) =>
-  fillAllocation(career.clubs[career.playerClubId], career.pending!.points, { attack: 1, defence: 1, chemistry: 1 });
+  fillAllocation(career.clubs[career.playerClubId], career.pending!.points, { attack: 1, defence: 1 });
 
 describe('fixtures', () => {
   const ids = Array.from({ length: 20 }, (_, i) => i);
@@ -96,26 +96,27 @@ describe('ratings', () => {
   });
 
   it('keeps stats within 0–99 and passes the excess to other stats', () => {
-    const club = { attack: 98, defence: 50, chemistry: 50 } as Club;
+    const club = { attack: 98, defence: 50 } as Club;
     const applied = shiftRating(club, 3);
     expect(club.attack).toBe(99);
     expect(applied).toBeCloseTo(3);
-    expect(rating(club)).toBeCloseTo(69);
+    expect(rating(club)).toBeCloseTo(77);
+    expect(club.defence).toBeCloseTo(55);
   });
 
   it('gives styled clubs stats that still average the rating', () => {
     for (const r of [0, 3, 50, 97, 99]) {
       for (const style of ['attacking', 'defensive', 'balanced'] as const) {
         const s = statsFor(r, style);
-        expect((s.attack + s.defence + s.chemistry) / 3).toBe(r);
-        expect(Math.min(s.attack, s.defence, s.chemistry)).toBeGreaterThanOrEqual(0);
-        expect(Math.max(s.attack, s.defence, s.chemistry)).toBeLessThanOrEqual(99);
+        expect((s.attack + s.defence) / 2).toBe(r);
+        expect(Math.min(s.attack, s.defence)).toBeGreaterThanOrEqual(0);
+        expect(Math.max(s.attack, s.defence)).toBeLessThanOrEqual(99);
       }
     }
   });
 
   it('normalises the AI back to the target total without touching the player', () => {
-    const clubs = Array.from({ length: 10 }, (_, id) => ({ id, attack: 50, defence: 50, chemistry: 50, isPlayer: id === 0 }) as Club);
+    const clubs = Array.from({ length: 10 }, (_, id) => ({ id, attack: 50, defence: 50, isPlayer: id === 0 }) as Club);
     clubs[0].attack = 80;
     normalise(clubs, 500);
     expect(totalRating(clubs)).toBeCloseTo(500, 9);
@@ -151,9 +152,9 @@ describe('career', () => {
   });
 
   it('accepts an uneven split that averages the rating, rejects one that does not', () => {
-    const c = newCareer({ rating: 50, difficulty: 'hard', seed: 1, split: { attack: 60, defence: 40, chemistry: 50 } }, footballSport);
+    const c = newCareer({ rating: 50, difficulty: 'hard', seed: 1, split: { attack: 60, defence: 40 } }, footballSport);
     expect(c.clubs[0].attack).toBe(60);
-    expect(() => newCareer({ rating: 50, difficulty: 'hard', seed: 1, split: { attack: 60, defence: 60, chemistry: 50 } }, footballSport)).toThrow();
+    expect(() => newCareer({ rating: 50, difficulty: 'hard', seed: 1, split: { attack: 60, defence: 50 } }, footballSport)).toThrow();
   });
 
   it('plays 38 league rounds then three play-off rounds, then waits', () => {
@@ -198,11 +199,11 @@ describe('career', () => {
       playSeason(c, footballSport);
       expect(c.pending!.decline).toBeCloseTo(10);
       const d = c.pending!.declineByStat;
-      expect(d.attack + d.defence + d.chemistry).toBeCloseTo(30);
+      expect(d.attack + d.defence).toBeCloseTo(20);
       allocatePoints(c, evenSplit(c));
       expect(totalRating(c.clubs)).toBeCloseTo(4950, 6);
       for (const club of c.clubs) {
-        for (const s of ['attack', 'defence', 'chemistry'] as const) {
+        for (const s of ['attack', 'defence'] as const) {
           expect(club[s]).toBeGreaterThanOrEqual(0);
           expect(club[s]).toBeLessThanOrEqual(99);
         }
@@ -217,18 +218,18 @@ describe('career', () => {
     const before = rating(c.clubs[0]);
     const end = playSeason(c, footballSport);
     const expectedGain = 10 + end.performance + end.bonus + end.boost;
-    expect(end.points).toBe(Math.max(0, Math.round(expectedGain * 3)));
+    expect(end.points).toBe(Math.max(0, Math.round(expectedGain * 2)));
     allocatePoints(c, evenSplit(c));
     // A negative gain comes off as extra decline instead of negative points.
-    expect(rating(c.clubs[0])).toBeCloseTo(before - 10 + Math.round(expectedGain * 3) / 3, 6);
+    expect(rating(c.clubs[0])).toBeCloseTo(before - 10 + Math.round(expectedGain * 2) / 2, 6);
   });
 
   it('rejects allocations that do not spend exactly the points', () => {
     const c = start();
     playSeason(c, footballSport);
     const p = c.pending!.points;
-    expect(() => allocatePoints(c, { attack: p + 1, defence: 0, chemistry: 0 })).toThrow();
-    expect(() => allocatePoints(c, { attack: 0.5, defence: p - 0.5, chemistry: 0 })).toThrow();
+    expect(() => allocatePoints(c, { attack: p + 1, defence: 0 })).toThrow();
+    expect(() => allocatePoints(c, { attack: 0.5, defence: p - 0.5 })).toThrow();
   });
 
   it('is deterministic and survives a save/load round trip', () => {
@@ -267,19 +268,19 @@ describe('career', () => {
 
 describe('allocation and decline', () => {
   it('fills an allocation without passing 99 and spends every point it can', () => {
-    const club = { attack: 97.4, defence: 50, chemistry: 60 } as Club;
-    const a = fillAllocation(club, 12, { attack: 1, defence: 0, chemistry: 0 });
+    const club = { attack: 97.4, defence: 50 } as Club;
+    const a = fillAllocation(club, 12, { attack: 1, defence: 0 });
     expect(a.attack).toBe(1);
-    expect(a.attack + a.defence + a.chemistry).toBe(12);
+    expect(a.attack + a.defence).toBe(12);
   });
 
-  it('lands the decline unevenly but averages 10 per stat', () => {
+  it('lands the decline unevenly but always totals 20 stat points (10 rating)', () => {
     const rng = new Rng(4);
     let spread = 0;
     for (let i = 0; i < 200; i++) {
-      const club = { attack: 60, defence: 50, chemistry: 40 } as Club;
+      const club = { attack: 60, defence: 50 } as Club;
       const d = applyDecline(club, rng);
-      expect(d.attack + d.defence + d.chemistry).toBeCloseTo(30);
+      expect(d.attack + d.defence).toBeCloseTo(20);
       spread += Math.abs(d.attack - d.defence);
     }
     expect(spread / 200).toBeGreaterThan(2);

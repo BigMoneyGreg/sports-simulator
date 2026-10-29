@@ -60,12 +60,12 @@ views.seasonOver = { view: buildView(game, () => ''), tab: 'match' };
 // A few seasons in, for the club tab's history and records.
 for (let season = 0; season < 3; season++) {
   const c = game.career!;
-  game.allocate(fillAllocation(c.clubs[c.playerClubId], c.pending!.points, { attack: 1, defence: 1, chemistry: 1 }));
+  game.allocate(fillAllocation(c.clubs[c.playerClubId], c.pending!.points, { attack: 1, defence: 1 }));
   while (phase() !== 'seasonOver') run();
 }
 {
   const c = game.career!;
-  game.allocate(fillAllocation(c.clubs[c.playerClubId], c.pending!.points, { attack: 1, defence: 1, chemistry: 1 }));
+  game.allocate(fillAllocation(c.clubs[c.playerClubId], c.pending!.points, { attack: 1, defence: 1 }));
   for (let md = 0; md < 3; md++) {
     while (phase() === 'live') run();
     run();
