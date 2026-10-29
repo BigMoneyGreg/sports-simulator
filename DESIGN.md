@@ -555,6 +555,11 @@ In rough priority order:
 | Badge colours picked at setup: 6 main × 6 second; the second row only shows colours that go with the main (from a pool of 9), so nothing is ever greyed out | Players own their club's look; a fixed palette keeps every badge readable, and the main colour (used for the header tint) excludes black and white so it shows on any theme |
 | Responsive box (CSS only): ≤250px wide drops table W/D/L, towns and running scores, speed button shows just ⏱; ≤200px wide shows only the header (club, badge, league, position, form, ⏱ and pause), except while a summer choice waits; short (≤420px / ≤260px) tightens spacing and puts the scoreboard on one line | Many players keep it in a small corner; at its narrowest it's a status card, widen it to manage |
 | Summer focus is picked, then confirmed with a separate "Start next season" button | Picking straight into the next season felt abrupt; players can change their mind and read the report first |
+| Live table shows ▲▼ for places moved since kick-off instead of a dot on every playing club | Every club plays at once, so dots said nothing; movement is what makes a live table interesting |
+| Derby markers removed (rival still on the Club tab) | Hardly noticed in play; one less thing on screen |
+| Goal flash: scoreboard and header flash green when you score, red when you concede | Catches the eye when the box sits in a corner |
+| Sticky header; fixtures open at the current match; played fixtures faded; form dots show the result on hover | Smoother to use as the season gets long |
+| Summer explanation behind "How does summer work?"; Club tab hides records that don't exist yet | Keeps the choice and its button in view; no columns of dashes |
 
 ## 17. Name ✅
 

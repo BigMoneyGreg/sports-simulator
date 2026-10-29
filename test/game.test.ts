@@ -101,7 +101,8 @@ describe('game clock', () => {
     if (v.screen !== 'game') throw new Error('expected game view');
     expect(v.header.club.name).toBe('Test FC');
     expect(v.tables).toHaveLength(5);
-    expect(v.tables[v.playerTier - 1].rows.some((r) => r.isPlayer && r.live)).toBe(true);
+    // An hour in, the live tables show clubs moving since kick-off.
+    expect(v.tables.some((t) => t.rows.some((r) => r.move))).toBe(true);
     expect(v.fixtures).toHaveLength(38);
     expect(v.match!.clock).toMatch(/^\d+'$/);
     expect(statusText(game)).toMatch(/^⚽ [A-Z0-9]{3} \d+–\d+ [A-Z0-9]{3} \d+'$/);

@@ -83,7 +83,6 @@ export interface LiveMatchView {
   finished: boolean;
   aggregate?: string;
   timeline: TimelineView[];
-  derby: boolean;
 }
 
 export interface FullTimeView {
@@ -137,8 +136,8 @@ export interface TableRowView {
   points: number;
   zone: Zone;
   isPlayer: boolean;
-  /** Playing right now (live table). */
-  live?: boolean;
+  /** Places gained (+) or lost (−) since kick-off, while matches are live. */
+  move?: number;
 }
 
 export interface TableView {
@@ -150,7 +149,6 @@ export interface FixtureView {
   label: string;
   /** Opponent's name without the club suffix. */
   town: string;
-  derby?: boolean;
   opponent: TeamBadge;
   home: boolean;
   result?: string;
@@ -181,7 +179,8 @@ export interface HeaderView {
   /** League games played and in the season, e.g. 7 of 38. */
   played: number;
   games: number;
-  form: ('W' | 'D' | 'L')[];
+  /** Last five league results, oldest first, with a hover line like "W 2–0 v Hengate (H)". */
+  form: { result: 'W' | 'D' | 'L'; title: string }[];
   paused: boolean;
   season: number;
   round: string;

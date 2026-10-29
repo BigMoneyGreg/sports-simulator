@@ -91,6 +91,8 @@ const dark = {
   'toolbar-hoverBackground': '#5a5d5e50',
   errorForeground: '#f85149',
   'textBlockQuote-background': '#2b2b2b',
+  'sideBar-background': '#181818',
+  'editorWidget-background': '#202020',
 };
 const light = {
   ...dark,
@@ -104,6 +106,9 @@ const light = {
   'textLink-foreground': '#005fb8',
   'list-inactiveSelectionBackground': '#e4e6f1',
   'textBlockQuote-background': '#f2f2f2',
+  'sideBar-background': '#f8f8f8',
+  'editorWidget-background': '#f8f8f8',
+  'editorWidget-foreground': '#3b3b3b',
 };
 const theme = process.argv.includes('--light') ? light : dark;
 const vars = Object.entries(theme)

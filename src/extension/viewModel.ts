@@ -24,7 +24,6 @@ export function buildView(game: Game, suggestedName: () => string, options: View
   const tier = season.leagues.find((l) => l.clubIds.includes(me.id))!.tier;
   const tables = buildTables(game);
   const myRow = tables[tier - 1].rows.find((r) => r.isPlayer)!;
-  const myTable = season.leagues[tier - 1].table.find((r) => r.clubId === me.id)!;
 
   const view: GameView = {
     screen: 'game',
@@ -34,7 +33,13 @@ export function buildView(game: Game, suggestedName: () => string, options: View
       position: myRow.pos,
       played: myRow.played,
       games: leagueRounds(season),
-      form: myTable.form.slice(-5),
+      form: season.playerMatches
+        .filter((x) => x.kind === 'league')
+        .slice(-5)
+        .map((x) => {
+          const result = x.goalsFor > x.goalsAgainst ? 'W' : x.goalsFor < x.goalsAgainst ? 'L' : 'D';
+          return { result, title: `${result} ${x.goalsFor}–${x.goalsAgainst} v ${townName(career.clubs[x.opponentId].name)} (${x.home ? 'H' : 'A'})` };
+        }),
       paused: game.paused,
       season: season.number,
       round: roundLabel(career),
@@ -255,11 +260,6 @@ function roundLabel(career: Career): string {
   return ['Play-off semi-final, 1st leg', 'Play-off semi-final, 2nd leg', 'Play-off final'][s.round - league] ?? 'Play-offs';
 }
 
-function isDerby(career: Career, f: Pick<Fixture, 'home' | 'away'>): boolean {
-  const rival = career.rival;
-  return rival !== null && rival !== undefined && (f.home === rival || f.away === rival) && (f.home === career.playerClubId || f.away === career.playerClubId);
-}
-
 function competition(fixture: Fixture): string {
   switch (fixture.kind) {
     case 'league':
@@ -293,7 +293,6 @@ function buildMatch(game: Game): LiveMatchView | null {
     away: { ...badge(career, fixture.away), goals: match.away.goals, isPlayer: fixture.away === career.playerClubId },
     clock: matchClock(match),
     finished: match.period === 'done',
-    derby: isDerby(career, fixture),
     timeline: timeline(match, { playerName }),
   };
   if (match.knockout && fixture.kind === 'playoffSemi2') {
@@ -309,7 +308,8 @@ function buildTables(game: Game): TableView[] {
   const live = game.live;
   return career.season.leagues.map((league) => {
     let table: TableRow[] = league.table;
-    const playing = new Set<number>();
+    const before = new Map(sortTable(league.table).map((r, i) => [r.clubId, i + 1]));
+    let playing = false;
     if (live) {
       table = league.table.map((r) => ({ ...r, form: [...r.form] }));
       live.fixtures.forEach((f, i) => {
@@ -317,7 +317,7 @@ function buildTables(game: Game): TableView[] {
         const m = live.matches[i];
         if (m.minute === 0) return;
         recordResult(table, f.home, f.away, outcome(m));
-        playing.add(f.home).add(f.away);
+        playing = true;
       });
     }
     return {
@@ -335,7 +335,7 @@ function buildTables(game: Game): TableView[] {
         points: r.points,
         zone: zone(league.tier, i + 1),
         isPlayer: r.clubId === career.playerClubId,
-        live: playing.has(r.clubId) || undefined,
+        move: (playing && before.get(r.clubId)! - (i + 1)) || undefined,
       })),
     };
   });
@@ -366,7 +366,7 @@ function buildFixtures(career: Career, game: Game): FixtureView[] {
 function fixtureView(career: Career, label: string, f: Pick<Fixture, 'home' | 'away'>, played: Career['season']['playerMatches'][number] | undefined, current: boolean): FixtureView {
   const home = f.home === career.playerClubId;
   const opponent = badge(career, home ? f.away : f.home);
-  const view: FixtureView = { label, opponent, town: townName(opponent.name), home, current, derby: isDerby(career, f) || undefined };
+  const view: FixtureView = { label, opponent, town: townName(opponent.name), home, current };
   if (played) {
     view.result = `${played.goalsFor}–${played.goalsAgainst}${played.penalties ? ` (${played.penalties[0]}–${played.penalties[1]} p)` : ''}`;
     const won = played.won ?? played.goalsFor > played.goalsAgainst;
@@ -380,7 +380,7 @@ function fixtureView(career: Career, label: string, f: Pick<Fixture, 'home' | 'a
 export function statusText(game: Game): string | null {
   const career = game.career;
   if (!career) return null;
-  if (career.pending) return '$(bell) Season over — allocate points';
+  if (career.pending) return '$(bell) Season over — choose your summer focus';
   const shown = game.shownMatch;
   if (!shown) return null;
   const { match, fixture } = shown;
