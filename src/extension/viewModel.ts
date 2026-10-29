@@ -413,7 +413,7 @@ function fixtureView(career: Career, label: string, f: Pick<Fixture, 'home' | 'a
   const opponent = badge(career, opponentId);
   const view: FixtureView = { label, opponent, town: shortName(career.clubs[opponentId]), home, current };
   if (played) {
-    view.result = `${played.goalsFor}–${played.goalsAgainst}${played.penalties ? ' p' : played.extraTime ? ' aet' : ''}`;
+    view.result = `${played.goalsFor}–${played.goalsAgainst}${played.penalties ? ` p (${played.penalties[0]}–${played.penalties[1]})` : played.extraTime ? ' aet' : ''}`;
     if (played.penalties) view.resultTitle = `${played.goalsFor}–${played.goalsAgainst}, ${played.won ? 'won' : 'lost'} ${played.penalties[0]}–${played.penalties[1]} on penalties`;
     const won = played.won ?? played.goalsFor > played.goalsAgainst;
     const lost = played.won === false || (played.won === undefined && played.goalsFor < played.goalsAgainst);

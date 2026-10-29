@@ -731,7 +731,7 @@ table.league {
 
 .fixtures li {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 12px 52px;
+  grid-template-columns: 40px minmax(0, 1fr) 12px minmax(52px, auto);
   align-items: center;
   gap: 6px;
   padding: 4px 8px;
@@ -768,6 +768,7 @@ table.league {
 
 .pill {
   display: inline-block;
+  white-space: nowrap;
   min-width: 34px;
   padding: 0 6px;
   border-radius: 9px;
