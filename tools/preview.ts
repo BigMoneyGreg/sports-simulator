@@ -36,26 +36,26 @@ const game = new Game({ save: () => {}, changed: () => {} }, manual);
 // Read through a function so TypeScript doesn't narrow the phase across calls that change it.
 const phase = () => game.phase;
 const views: Record<string, { view: View; tab?: string }> = {};
-views.setup = { view: buildView(game, () => 'Wexstead Rovers') };
+views.setup = { view: buildView(game) };
 
-game.start({ rating: 55, difficulty: 'medium', seed: 11, clubName: 'Wexstead Rovers' });
+game.start({ rating: 55, difficulty: 'medium', seed: 11, team: 'SCO' });
 // Play a few matchdays, then stop mid-match.
 for (let md = 0; md < 6; md++) {
   while (phase() === 'live') run();
   run();
 }
 run(64);
-const live = buildView(game, () => '');
+const live = buildView(game);
 views.match = { view: live, tab: 'match' };
 views.table = { view: live, tab: 'table' };
 views.fixtures = { view: live, tab: 'fixtures' };
 views.club = { view: live, tab: 'club' };
 
 while (phase() === 'live') run();
-views.fullTime = { view: buildView(game, () => ''), tab: 'match' };
+views.fullTime = { view: buildView(game), tab: 'match' };
 
 while (phase() !== 'seasonOver') run();
-views.seasonOver = { view: buildView(game, () => ''), tab: 'match' };
+views.seasonOver = { view: buildView(game), tab: 'match' };
 
 // A few seasons in, for the club tab's history and records.
 for (let season = 0; season < 3; season++) {
@@ -71,7 +71,7 @@ for (let season = 0; season < 3; season++) {
     run();
   }
 }
-views.clubLater = { view: buildView(game, () => ''), tab: 'club' };
+views.clubLater = { view: buildView(game), tab: 'club' };
 writeFileSync(join(out, 'views.js'), `window.__views = ${JSON.stringify(views)};`);
 
 const dark = {

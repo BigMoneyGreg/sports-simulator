@@ -1,6 +1,7 @@
 import { AI_STYLES, clamp, MAX_STAT, rating, shiftRating, STATS, statsFor, type Club, type Stat, type Style } from './club';
 import {
   doubleRoundRobin,
+  potShuffle,
   emptyTable,
   LEAGUE_COUNT,
   LEAGUE_SIZE,
@@ -17,25 +18,28 @@ import { emptyRecords, recordMatch, recordSeasonGoals, type Records } from './re
 import { Rng } from './rng';
 import type { GoalRecord, MatchOutcome, Player, SportModule, TeamSheet } from './sport';
 
-export const CAREER_VERSION = 2;
+export const CAREER_VERSION = 3;
 export const CLUB_COUNT = LEAGUE_COUNT * LEAGUE_SIZE;
 export const PLAYER_CLUB_ID = 0;
 
 export interface ClubIdentity {
   name: string;
   short: string;
-  colours: [string, string];
+  /** For tight spaces when the name is long. */
+  shortName?: string;
+  colours: string[];
 }
 
 /** Everything sport-specific the shared core needs. */
 export interface SportDefinition<M = unknown> {
   module: SportModule<M>;
-  generateSquad(rng: Rng, firstId: number): Player[];
+  generateSquad(rng: Rng, firstId: number, club: ClubIdentity): Player[];
   lineup(squad: Player[]): TeamSheet['lineup'];
-  /** `count` distinct fictional clubs, the player's first. */
-  clubIdentities(rng: Rng, count: number): ClubIdentity[];
-  /** A three-letter code for a name, unique among `used`. */
-  shortCode(name: string, used: Set<string>): string;
+  /**
+   * The world for a career: the player's team (`code`, or a random one) and
+   * the other `count - 1` teams, strongest first.
+   */
+  world(rng: Rng, count: number, code?: string): { player: ClubIdentity; others: ClubIdentity[] };
 }
 
 export interface CareerOptions {
@@ -43,8 +47,8 @@ export interface CareerOptions {
   difficulty: Difficulty;
   /** Defaults to an even split. Must average to `rating`. */
   split?: Record<Stat, number>;
-  clubName?: string;
-  clubColours?: [string, string];
+  /** The player's team; random if left out. */
+  team?: string;
   seed: number;
 }
 
@@ -166,14 +170,11 @@ export function newCareer(options: CareerOptions, sport: SportDefinition): Caree
   const chosen = Math.round(options.rating);
   if (chosen < 0 || chosen > MAX_STAT) throw new Error(`rating must be 0–99, got ${options.rating}`);
   const rng = new Rng(options.seed);
-  const identities = sport.clubIdentities(rng, CLUB_COUNT);
+  const world = sport.world(rng, CLUB_COUNT, options.team);
+  const identities = [world.player, ...world.others];
 
-  const aiRatings = rng.shuffle(Array.from({ length: CLUB_COUNT }, (_, i) => i).filter((r) => r !== chosen));
-  if (options.clubName) {
-    const used = new Set(identities.slice(1).map((c) => c.short));
-    identities[PLAYER_CLUB_ID] = { ...identities[PLAYER_CLUB_ID], name: options.clubName, short: sport.shortCode(options.clubName, used) };
-  }
-  if (options.clubColours) identities[PLAYER_CLUB_ID] = { ...identities[PLAYER_CLUB_ID], colours: [...options.clubColours] };
+  const remaining = Array.from({ length: CLUB_COUNT }, (_, i) => CLUB_COUNT - 1 - i).filter((r) => r !== chosen);
+  const aiRatings = potShuffle(remaining, rng);
   const clubs: Club[] = identities.map((identity, id) => {
     const isPlayer = id === PLAYER_CLUB_ID;
     const style: Style = isPlayer ? 'balanced' : rng.pick(AI_STYLES);
@@ -183,7 +184,7 @@ export function newCareer(options: CareerOptions, sport: SportDefinition): Caree
       ...identity,
       style,
       ...stats,
-      squad: sport.generateSquad(rng, id * 100),
+      squad: sport.generateSquad(rng, id * 100, identity),
       isPlayer,
     };
   });

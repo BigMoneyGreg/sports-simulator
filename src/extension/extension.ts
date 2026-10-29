@@ -3,8 +3,8 @@ import { fullHistory } from '../core/career';
 import { startRating, styleSplit } from '../core/league';
 import { TUNING } from '../sports/football/match';
 import { Rng } from '../core/rng';
-import { suggestClubName } from '../sports/football/names';
-import { badgeAllowed, DURATIONS, type Duration, type ToHost } from '../shared/view';
+import { isNation } from '../sports/football/names';
+import { DURATIONS, type Duration, type ToHost } from '../shared/view';
 import { Game } from './game';
 import { SidebarProvider } from './sidebar';
 import { StatusBar } from './statusBar';
@@ -17,8 +17,6 @@ let storage: Storage | undefined;
 export function activate(context: vscode.ExtensionContext): void {
   storage = new Storage(context.globalState);
   const statusBar = new StatusBar();
-  const nameRng = new Rng(Date.now() >>> 0);
-  let suggestedName = suggestClubName(nameRng);
 
   const config = () => vscode.workspace.getConfiguration('sportsSimulator');
   const duration = (): Duration => {
@@ -30,7 +28,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const durations: Duration[] = DURATIONS;
 
   const refresh = () => {
-    sidebar.post({ type: 'view', view: buildView(game!, () => suggestedName, { fullTimeOverlay: config().get('fullTimeOverlay', true), durations }) });
+    sidebar.post({ type: 'view', view: buildView(game!, { fullTimeOverlay: config().get('fullTimeOverlay', true), durations }) });
     const text = statusText(game!);
     const seasonOver = !!game!.career?.pending;
     statusBar.update(config().get('statusBarScore', true) || seasonOver ? text : null);
@@ -67,21 +65,15 @@ export function activate(context: vscode.ExtensionContext): void {
       case 'ready':
         refresh();
         return;
-      case 'suggestName':
-        suggestedName = suggestClubName(nameRng);
-        sidebar.post({ type: 'suggestedName', name: suggestedName });
-        return;
       case 'startCareer': {
-        const name = message.name.trim().slice(0, 40) || suggestedName;
+        if (!isNation(message.team)) return;
         setDuration(message.duration);
         const seed = (Date.now() ^ (Math.random() * 2 ** 31)) >>> 0;
         const tier = Math.min(5, Math.max(1, Math.round(message.league)));
         // Somewhere in the league, weighted towards mid-table; the style leans within the free range.
         const rating = startRating(tier, new Rng(seed ^ 0x9e3779b9));
         const split = message.style === 'balanced' ? undefined : styleSplit(rating, message.style, TUNING.weaknessTolerance);
-        const [main, second] = message.colours ?? [];
-        const clubColours: [string, string] | undefined = badgeAllowed(main, second) ? [main, second] : undefined;
-        game!.start({ rating, difficulty: message.difficulty, split, clubName: name, clubColours, seed });
+        game!.start({ rating, difficulty: message.difficulty, split, team: message.team, seed });
         return;
       }
       case 'togglePause':
@@ -127,7 +119,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('sportsSimulator.open', () => vscode.commands.executeCommand(`${SidebarProvider.viewId}.focus`)),
     vscode.commands.registerCommand('sportsSimulator.togglePause', () => game!.togglePause()),
     vscode.commands.registerCommand('sportsSimulator.resetCareer', async () => {
-      const answer = await vscode.window.showWarningMessage('Reset your Sports Simulator career? Your club, history and trophies will be lost.', { modal: true }, 'Reset career');
+      const answer = await vscode.window.showWarningMessage('Reset your Sports Simulator career? Your history and trophies will be lost.', { modal: true }, 'Reset career');
       if (answer === 'Reset career') game!.reset();
     }),
     vscode.workspace.onDidChangeConfiguration((e) => {

@@ -1,6 +1,4 @@
 import {
-  BADGE_MAIN,
-  secondOptions,
   DURATION_LABELS,
   type Difficulty,
   type Duration,
@@ -9,6 +7,7 @@ import {
   type FullTimeView,
   type GameView,
   type LiveMatchView,
+  type NationOption,
   type PlayoffView,
   type SeasonEndView,
   type SetupView,
@@ -46,12 +45,12 @@ let view: View | null = null;
 const summer = { season: 0, focus: null as Focus | null, sent: false };
 
 const setup = {
+  team: '',
+  search: '',
   league: 3,
   difficulty: 'medium' as Difficulty,
   duration: '2m' as Duration,
   style: 'balanced' as Style,
-  name: '',
-  colours: ['', ''] as [string, string],
   /** Defaults are taken from the host once; option clicks must not reset them. */
   initialised: false,
 };
@@ -78,18 +77,21 @@ function ordinal(n: number): string {
 }
 
 function swatch(b: Pick<TeamBadge, 'colours'>, cls = 'swatch'): string {
-  return `<span class="${cls}" data-c1="${esc(b.colours[0])}" data-c2="${esc(b.colours[1])}"></span>`;
+  return `<span class="${cls}" data-colours="${esc(b.colours.join(' '))}"></span>`;
+}
+
+/** Diagonal bands of the flag's colours, two or three of them. */
+function flagGradient(colours: string[]): string {
+  const step = 100 / colours.length;
+  return `linear-gradient(135deg, ${colours.map((c, i) => `${c} ${i * step}% ${(i + 1) * step}%`).join(', ')})`;
 }
 
 /** Inline styles are blocked by the CSP, so colours are applied through the CSSOM. */
-function paintSwatches(): void {
-  app.querySelectorAll<HTMLElement>('[data-c1]').forEach((el) => {
-    el.style.background = `linear-gradient(135deg, ${el.dataset.c1} 50%, ${el.dataset.c2} 50%)`;
+function paintSwatches(root: ParentNode = app): void {
+  root.querySelectorAll<HTMLElement>('[data-colours]').forEach((el) => {
+    el.style.background = flagGradient(el.dataset.colours!.split(' '));
   });
-  app.querySelectorAll<HTMLElement>('[data-width]').forEach((el) => {
-    el.style.width = `${el.dataset.width}%`;
-  });
-  app.querySelectorAll<HTMLElement>('[data-accent]').forEach((el) => {
+  root.querySelectorAll<HTMLElement>('[data-accent]').forEach((el) => {
     el.style.setProperty('--club', el.dataset.accent!);
   });
 }
@@ -110,44 +112,46 @@ function seg(name: string, options: Option[], value: string): string {
     .join('')}</div>`;
 }
 
-function randomBadge(): [string, string] {
-  const pairs = BADGE_MAIN.flatMap(([m]) => secondOptions(m).map(([s]): [string, string] => [m, s]));
-  return pairs[Math.floor(Math.random() * pairs.length)];
+const NATION_LIMIT = 40;
+
+function nationMatches(nations: NationOption[]): NationOption[] {
+  const q = setup.search.trim().toLowerCase();
+  return q ? nations.filter((n) => n.name.toLowerCase().includes(q) || n.code.toLowerCase() === q) : nations;
 }
 
-/** Two rows of colours with a live preview; the second row only offers colours that go with the main one. */
-function badgePicker(): string {
-  const [main, second] = setup.colours;
-  const row = (kit: 'main' | 'second', options: [string, string][], value: string) =>
-    `<div class="kit-row" role="radiogroup" aria-label="${kit === 'main' ? 'Main colour' : 'Second colour'}">${options
-      .map(
-        ([hex, label]) =>
-          `<button type="button" role="radio" class="kit ${hex === value ? 'on' : ''}" data-kit="${kit}" data-value="${hex}" data-c1="${hex}" data-c2="${hex}" aria-checked="${hex === value}" title="${label}" aria-label="${label}"></button>`,
-      )
-      .join('')}</div>`;
-  return `<div class="badge-pick">${swatch({ colours: setup.colours }, 'crest big')}<div class="kit-rows">${row('main', BADGE_MAIN, main)}${row('second', secondOptions(main), second)}</div></div>`;
+/** The search results; redrawn on its own while typing so the search box keeps focus. */
+function nationList(nations: NationOption[]): string {
+  const matches = nationMatches(nations);
+  if (!matches.length) return '<p class="muted small">No country matches.</p>';
+  return `${matches
+    .slice(0, NATION_LIMIT)
+    .map(
+      (n) =>
+        `<button type="button" role="option" class="nation ${n.code === setup.team ? 'on' : ''}" aria-selected="${n.code === setup.team}" data-team="${n.code}">${swatch(n)}<span class="grow">${esc(n.name)}</span><span class="muted small">L${n.tier}</span></button>`,
+    )
+    .join('')}${matches.length > NATION_LIMIT ? `<p class="muted small">${matches.length - NATION_LIMIT} more: keep typing.</p>` : ''}`;
 }
 
 function renderSetup(v: SetupView): void {
   if (!setup.initialised) {
-    setup.name = v.suggestedName;
     setup.duration = v.duration;
-    setup.colours = randomBadge();
     setup.initialised = true;
   }
+  const chosen = v.nations.find((n) => n.code === setup.team);
+  const leagueOptions = [1, 2, 3, 4, 5].map((t): Option => [String(t), `L${t}`, chosen?.tier === t ? 'Usual' : undefined]);
   app.dataset.mode = 'setup';
   app.innerHTML = `
   <div class="setup card">
     <h2>New career</h2>
-    <p class="muted">Pick a league to start in. Every match plays on its own; each summer you decide where to strengthen.</p>
+    <p class="muted">Pick your country and where it starts. Every match plays on its own; each summer you decide where to strengthen.</p>
 
-    <label class="field">Club name
-      <span class="row"><input id="name" type="text" maxlength="40" value="${esc(setup.name)}"><button type="button" id="reroll" class="icon" title="Suggest another name" aria-label="Suggest another name">↻</button></span>
-    </label>
+    <div class="field">Country
+      ${chosen ? `<div class="chosen">${swatch(chosen, 'crest big')}<strong>${esc(chosen.name)}</strong></div>` : ''}
+      <input id="search" type="search" placeholder="Search countries" aria-label="Search countries" value="${esc(setup.search)}" autocomplete="off">
+      <div id="nations" class="nation-list" role="listbox" aria-label="Countries">${nationList(v.nations)}</div>
+    </div>
 
-    <div class="field">Badge ${badgePicker()}</div>
-
-    <div class="field">League ${seg('league', [1, 2, 3, 4, 5].map((t): Option => [String(t), `L${t}`]), String(setup.league))}</div>
+    <div class="field">League ${seg('league', leagueOptions, String(setup.league))}</div>
 
     <div class="field">Difficulty ${seg(
       'difficulty',
@@ -171,7 +175,7 @@ function renderSetup(v: SetupView): void {
       setup.style,
     )}</div>
 
-    <button type="button" id="start" class="primary">Start career</button>
+    <button type="button" id="start" class="primary" ${chosen ? '' : 'disabled'}>${chosen ? 'Start career' : 'Pick a country'}</button>
   </div>`;
   paintSwatches();
 }
@@ -193,9 +197,7 @@ function renderOverlay(ft: FullTimeView | null): void {
       <div class="ft-score">${swatch(ft.home)}<span>${esc(ft.home.name)}</span> <strong>${ft.home.goals}–${ft.away.goals}</strong> <span>${esc(ft.away.name)}</span>${swatch(ft.away)}</div>
       ${ft.scorers ? `<div class="small muted">${esc(ft.scorers)}</div>` : ''}
     </div>`;
-  overlay.querySelectorAll<HTMLElement>('[data-c1]').forEach((el) => {
-    el.style.background = `linear-gradient(135deg, ${el.dataset.c1} 50%, ${el.dataset.c2} 50%)`;
-  });
+  paintSwatches(overlay);
   (overlay.firstElementChild as HTMLElement).style.animationDuration = `${ft.ms}ms`;
 }
 
@@ -233,7 +235,7 @@ function renderGame(v: GameView): void {
     ['match', 'Match'],
     ['table', 'Table'],
     ['fixtures', 'Fixtures'],
-    ['club', 'Club'],
+    ['club', 'Team'],
   ];
   const nav = `<nav class="tabs" role="tablist">${tabs
     .map(([id, label]) => `<button type="button" role="tab" aria-selected="${ui.tab === id}" class="${ui.tab === id ? 'on' : ''}" data-tab="${id}">${label}</button>`)
@@ -434,7 +436,7 @@ function seasonEndHtml(e: SeasonEndView): string {
     <h3 class="sub first">Summer</h3>
     <p class="small">${esc(verdict)}</p>
     <details class="howto small"><summary>How does summer work?</summary>
-      <p class="muted">Players age and leave over the summer, and every club loses some strength. You won't be told whether it hit your attack or your defence: the goals are the clue. Lots at both ends suggests you lean attacking; tight, low-scoring games suggest you lean defensive.</p>
+      <p class="muted">Players age and leave over the summer, and every team loses some strength. You won't be told whether it hit your attack or your defence: the goals are the clue. Lots at both ends suggests you lean attacking; tight, low-scoring games suggest you lean defensive.</p>
     </details>
     <p class="small strong">Where should the summer's work go?</p>
     <div class="focus-row" role="radiogroup">${e.options.map(option).join('')}</div>
@@ -572,30 +574,12 @@ app.addEventListener('click', (e) => {
     send({ type: 'setDuration', duration: button.dataset.next as Duration });
   } else if (button.id === 'pause') {
     send({ type: 'togglePause' });
-  } else if (button.id === 'reroll') {
-    send({ type: 'suggestName' });
-  } else if (button.id === 'start') {
-    send({
-      type: 'startCareer',
-      league: setup.league,
-      difficulty: setup.difficulty,
-      duration: setup.duration,
-      style: setup.style,
-      name: (document.getElementById('name') as HTMLInputElement).value,
-      colours: setup.colours,
-    });
-  } else if (button.dataset.kit) {
-    const hex = button.dataset.value!;
-    if (button.dataset.kit === 'main') {
-      // Keep the second colour if it's still offered; otherwise take the first one that is.
-      const options = secondOptions(hex);
-      const second = options.some(([s]) => s === setup.colours[1]) ? setup.colours[1] : options[0][0];
-      setup.colours = [hex, second];
-    } else {
-      setup.colours = [setup.colours[0], hex];
-    }
-    setup.name = (document.getElementById('name') as HTMLInputElement).value;
-    if (view?.screen === 'setup') renderSetup(view.setup);
+  } else if (button.id === 'start' && setup.team) {
+    send({ type: 'startCareer', team: setup.team, league: setup.league, difficulty: setup.difficulty, duration: setup.duration, style: setup.style });
+  } else if (button.dataset.team && view?.screen === 'setup') {
+    setup.team = button.dataset.team;
+    setup.league = view.setup.nations.find((n) => n.code === setup.team)!.tier;
+    renderSetup(view.setup);
   } else if (button.closest('.seg')?.getAttribute('data-name')) {
     const group = button.closest('.seg')!.getAttribute('data-name')!;
     const value = button.dataset.value!;
@@ -603,14 +587,17 @@ app.addEventListener('click', (e) => {
     if (group === 'difficulty') setup.difficulty = value as Difficulty;
     if (group === 'duration') setup.duration = value as Duration;
     if (group === 'style') setup.style = value as Style;
-    setup.name = (document.getElementById('name') as HTMLInputElement).value;
     if (view?.screen === 'setup') renderSetup(view.setup);
   }
 });
 
 app.addEventListener('input', (e) => {
   const input = e.target as HTMLInputElement;
-  if (input.id === 'name') setup.name = input.value;
+  if (input.id !== 'search' || view?.screen !== 'setup') return;
+  setup.search = input.value;
+  const list = document.getElementById('nations')!;
+  list.innerHTML = nationList(view.setup.nations);
+  paintSwatches(list);
 });
 
 window.addEventListener('message', (event: MessageEvent<ToWebview>) => {
@@ -618,10 +605,6 @@ window.addEventListener('message', (event: MessageEvent<ToWebview>) => {
   if (message.type === 'view') {
     view = message.view;
     render();
-  } else if (message.type === 'suggestedName') {
-    const input = document.getElementById('name') as HTMLInputElement | null;
-    if (input) input.value = message.name;
-    setup.name = message.name;
   }
 });
 

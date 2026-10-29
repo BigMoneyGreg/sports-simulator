@@ -30,6 +30,24 @@ export interface TableRow {
   form: ('W' | 'D' | 'L')[];
 }
 
+/**
+ * Starting pots by world order: each pot's ratings are shuffled among its
+ * teams, so the order inside a pot changes every career. Pots straddling a
+ * league line (17–24, 37–44, …) can start on either side of it.
+ */
+export const STARTING_POTS = [8, 16, 24, 36, 44, 56, 64, 76, 84, 92, 100];
+
+/** Shuffles `ratings` (strongest first) within each starting pot. */
+export function potShuffle(ratings: number[], rng: Rng): number[] {
+  const out: number[] = [];
+  let from = 0;
+  for (const end of STARTING_POTS) {
+    out.push(...rng.shuffle(ratings.slice(from, end)));
+    from = end;
+  }
+  return out;
+}
+
 /** Rating band for each league: League 1 is 80–99, League 5 is 0–19. */
 export function band(tier: number): { min: number; max: number } {
   const min = (LEAGUE_COUNT - tier) * LEAGUE_SIZE;

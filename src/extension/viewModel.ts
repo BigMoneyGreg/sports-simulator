@@ -1,11 +1,12 @@
 import { FOCUSES, focusAllocation, leagueRounds, type Career, type Playoff, type SeasonRecord } from '../core/career';
 import { emptyRecords, topScorers } from '../core/records';
-import { recordResult, sortTable, zone, type Fixture, type TableRow } from '../core/league';
+import { LEAGUE_COUNT, LEAGUE_SIZE, recordResult, sortTable, zone, type Fixture, type TableRow } from '../core/league';
 import { matchClock, timeline } from '../sports/football/commentary';
 import { outcome, type SideKey } from '../sports/football/match';
-import { surname, townName } from '../sports/football/names';
+import { NATIONS } from '../sports/football/data/nations';
+import { naturalTier, shortName, surname } from '../sports/football/names';
 import { DURATIONS, type Duration } from '../shared/view';
-import type { CabinetView, ClubView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, TableView, TeamBadge, View } from '../shared/view';
+import type { NationOption, CabinetView, ClubView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, TableView, TeamBadge, View } from '../shared/view';
 import { fullTimePause } from './game';
 import type { Game } from './game';
 
@@ -14,10 +15,10 @@ export interface ViewOptions {
   durations?: Duration[];
 }
 
-export function buildView(game: Game, suggestedName: () => string, options: ViewOptions = { fullTimeOverlay: true }): View {
+export function buildView(game: Game, options: ViewOptions = { fullTimeOverlay: true }): View {
   const career = game.career;
   if (!career) {
-    return { screen: 'setup', setup: { suggestedName: suggestedName(), duration: game.duration, durations: options.durations ?? DURATIONS } };
+    return { screen: 'setup', setup: { nations: nationOptions(), duration: game.duration, durations: options.durations ?? DURATIONS } };
   }
   const me = career.clubs[career.playerClubId];
   const season = career.season;
@@ -38,7 +39,7 @@ export function buildView(game: Game, suggestedName: () => string, options: View
         .slice(-5)
         .map((x) => {
           const result = x.goalsFor > x.goalsAgainst ? 'W' : x.goalsFor < x.goalsAgainst ? 'L' : 'D';
-          return { result, title: `${result} ${x.goalsFor}–${x.goalsAgainst} v ${townName(career.clubs[x.opponentId].name)} (${x.home ? 'H' : 'A'})` };
+          return { result, title: `${result} ${x.goalsFor}–${x.goalsAgainst} v ${shortName(career.clubs[x.opponentId])} (${x.home ? 'H' : 'A'})` };
         }),
       paused: game.paused,
       season: season.number,
@@ -247,6 +248,14 @@ function ordinal(n: number): string {
   return n + (sfx[(v - 20) % 10] ?? sfx[v] ?? sfx[0]);
 }
 
+let nationList: NationOption[] | undefined;
+function nationOptions(): NationOption[] {
+  nationList ??= NATIONS.map((n) => ({ code: n.code, name: n.name, colours: n.colours, tier: naturalTier(n.code, LEAGUE_SIZE, LEAGUE_COUNT) })).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+  return nationList;
+}
+
 function badge(career: Career, clubId: number): TeamBadge {
   const c = career.clubs[clubId];
   return { name: c.name, short: c.short, colours: c.colours };
@@ -287,8 +296,8 @@ function buildMatch(game: Game): LiveMatchView | null {
   const view: LiveMatchView = {
     competition: competition(fixture),
     round: fixture.kind === 'league' ? roundLabel(career) : undefined,
-    homeTown: townName(career.clubs[fixture.home].name),
-    awayTown: townName(career.clubs[fixture.away].name),
+    homeTown: shortName(career.clubs[fixture.home]),
+    awayTown: shortName(career.clubs[fixture.away]),
     home: { ...badge(career, fixture.home), goals: match.home.goals, isPlayer: fixture.home === career.playerClubId },
     away: { ...badge(career, fixture.away), goals: match.away.goals, isPlayer: fixture.away === career.playerClubId },
     clock: matchClock(match),
@@ -326,7 +335,7 @@ function buildTables(game: Game): TableView[] {
         pos: i + 1,
         short: career.clubs[r.clubId].short,
         name: career.clubs[r.clubId].name,
-        town: townName(career.clubs[r.clubId].name),
+        town: shortName(career.clubs[r.clubId]),
         played: r.played,
         won: r.won,
         drawn: r.drawn,
@@ -365,8 +374,9 @@ function buildFixtures(career: Career, game: Game): FixtureView[] {
 
 function fixtureView(career: Career, label: string, f: Pick<Fixture, 'home' | 'away'>, played: Career['season']['playerMatches'][number] | undefined, current: boolean): FixtureView {
   const home = f.home === career.playerClubId;
-  const opponent = badge(career, home ? f.away : f.home);
-  const view: FixtureView = { label, opponent, town: townName(opponent.name), home, current };
+  const opponentId = home ? f.away : f.home;
+  const opponent = badge(career, opponentId);
+  const view: FixtureView = { label, opponent, town: shortName(career.clubs[opponentId]), home, current };
   if (played) {
     view.result = `${played.goalsFor}–${played.goalsAgainst}${played.penalties ? ` (${played.penalties[0]}–${played.penalties[1]} p)` : ''}`;
     const won = played.won ?? played.goalsFor > played.goalsAgainst;

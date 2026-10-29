@@ -11,7 +11,8 @@ export interface Club {
   name: string;
   /** Three-letter code, e.g. ASH. */
   short: string;
-  colours: [string, string];
+  shortName?: string;
+  colours: string[];
   style: Style;
   /** Stats are stored with decimals and shown as whole numbers. */
   attack: number;

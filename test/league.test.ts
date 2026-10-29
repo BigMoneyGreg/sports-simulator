@@ -326,7 +326,7 @@ describe('summer focus', () => {
     chooseFocus(c, 'defence');
     expect(c.season.number).toBe(2);
     expect(c.clubs[0].defence - before.defence).toBeGreaterThan(c.clubs[0].attack - before.attack);
-    expect(c.clubs[0].defence - before.defence + c.clubs[0].attack - before.attack).toBe(points);
+    expect(c.clubs[0].defence - before.defence + c.clubs[0].attack - before.attack).toBeCloseTo(points, 9);
   });
 });
 

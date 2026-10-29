@@ -94,12 +94,12 @@ describe('game clock', () => {
 
   it('builds a view at every stage', () => {
     const { game } = setup();
-    expect(buildView(game, () => 'Test FC').screen).toBe('setup');
-    game.start({ rating: 70, difficulty: 'hard', seed: 6, clubName: 'Test FC' });
+    expect(buildView(game).screen).toBe('setup');
+    game.start({ rating: 70, difficulty: 'hard', seed: 6, team: 'WAL' });
     vi.advanceTimersByTime(minute * 60);
-    const v = buildView(game, () => '');
+    const v = buildView(game);
     if (v.screen !== 'game') throw new Error('expected game view');
-    expect(v.header.club.name).toBe('Test FC');
+    expect(v.header.club.name).toBe('Wales');
     expect(v.tables).toHaveLength(5);
     // An hour in, the live tables show clubs moving since kick-off.
     expect(v.tables.some((t) => t.rows.some((r) => r.move))).toBe(true);
@@ -128,7 +128,7 @@ describe('season end view', () => {
     game.duration = '30s';
     game.start({ rating: 30, difficulty: 'easy', seed: 9 });
     vi.advanceTimersByTime(60 * 60 * 1000);
-    const v = buildView(game, () => '');
+    const v = buildView(game);
     if (v.screen !== 'game' || !v.seasonEnd) throw new Error('expected season end');
     const e = v.seasonEnd;
     expect(e.table.rows).toHaveLength(20);
@@ -147,7 +147,7 @@ describe('season end view', () => {
     const half = Math.floor(e.points.total / 2);
     game.allocate({ attack: half, defence: e.points.total - half });
     expect(game.career!.history).toHaveLength(1);
-    expect(buildView(game, () => '').screen).toBe('game');
+    expect(buildView(game).screen).toBe('game');
   });
 });
 

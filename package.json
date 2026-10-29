@@ -95,8 +95,7 @@
     "balance": "tsx tools/balance.ts",
     "package": "npx @vscode/vsce package --no-dependencies",
     "test:integration": "npm run build && node test/integration/run.mjs",
-    "preview": "npm run build && tsx tools/preview.ts",
-    "check-names": "tsx tools/check-names.ts"
+    "preview": "npm run build && tsx tools/preview.ts"
   },
   "devDependencies": {
     "@types/node": "22.20.5",

@@ -9,55 +9,11 @@ export type Focus = 'attack' | 'balanced' | 'defence';
 export type Style = 'attacking' | 'balanced' | 'defensive';
 export type Zone = 'champion' | 'promotion' | 'playoff' | 'relegation' | null;
 
-/**
- * Badge colours the player picks from at setup. The main colour also tints the
- * header, so it leaves out black and white (lost on dark or light themes).
- */
-export const BADGE_MAIN: [hex: string, label: string][] = [
-  ['#c8102e', 'Red'],
-  ['#003399', 'Blue'],
-  ['#6cabdd', 'Sky blue'],
-  ['#00843d', 'Green'],
-  ['#fdb913', 'Amber'],
-  ['#7a263a', 'Claret'],
-];
-export const BADGE_SECOND: [hex: string, label: string][] = [
-  ['#ffffff', 'White'],
-  ['#111111', 'Black'],
-  ['#1c2c5b', 'Navy'],
-  ['#6cabdd', 'Sky blue'],
-  ['#fdb913', 'Amber'],
-  ['#c8102e', 'Red'],
-  ['#a7a9ac', 'Silver'],
-  ['#f47b20', 'Orange'],
-  ['#00843d', 'Green'],
-];
-/** Pairs that are the same colour or too close to tell apart. */
-const BADGE_CLASHES: Record<string, string[]> = {
-  '#c8102e': ['#c8102e', '#f47b20', '#00843d'],
-  '#003399': ['#1c2c5b'],
-  '#6cabdd': ['#6cabdd'],
-  '#00843d': ['#c8102e', '#00843d'],
-  '#fdb913': ['#fdb913', '#ffffff', '#f47b20'],
-  '#7a263a': ['#c8102e', '#111111'],
-};
-const SECOND_SHOWN = 6;
-
-export function badgeAllowed(main: string, second: string): boolean {
-  return (
-    BADGE_MAIN.some(([c]) => c === main) && BADGE_SECOND.some(([c]) => c === second) && !(BADGE_CLASHES[main] ?? []).includes(second)
-  );
-}
-
-/** The second colours offered with a main colour: always six, clashes left out rather than greyed. */
-export function secondOptions(main: string): [hex: string, label: string][] {
-  return BADGE_SECOND.filter(([c]) => badgeAllowed(main, c)).slice(0, SECOND_SHOWN);
-}
-
 export interface TeamBadge {
   name: string;
   short: string;
-  colours: [string, string];
+  /** Two or three flag colours. */
+  colours: string[];
 }
 
 /** One line of the match report. */
@@ -158,7 +114,7 @@ export interface FixtureView {
 export interface ClubView {
   name: string;
   short: string;
-  colours: [string, string];
+  colours: string[];
   /** This season's goals against the league average, the only clue to where the drain hit. */
   goals: { scored: number; conceded: number; average: number; played: number };
   tier: number;
@@ -188,8 +144,17 @@ export interface HeaderView {
   durations: Duration[];
 }
 
+export interface NationOption {
+  code: string;
+  name: string;
+  colours: string[];
+  /** The league it starts in by default. */
+  tier: number;
+}
+
 export interface SetupView {
-  suggestedName: string;
+  /** Every playable nation, A–Z. */
+  nations: NationOption[];
   duration: Duration;
   durations: Duration[];
 }
@@ -261,8 +226,7 @@ export type View = { screen: 'setup'; setup: SetupView } | GameView;
 
 export type ToHost =
   | { type: 'ready' }
-  | { type: 'startCareer'; league: number; difficulty: Difficulty; duration: Duration; style: Style; name: string; colours: [string, string] }
-  | { type: 'suggestName' }
+  | { type: 'startCareer'; team: string; league: number; difficulty: Difficulty; duration: Duration; style: Style }
   | { type: 'togglePause' }
   | { type: 'setDuration'; duration: Duration }
   | { type: 'chooseFocus'; focus: Focus }
@@ -270,4 +234,4 @@ export type ToHost =
   | { type: 'newCareer' }
   | { type: 'resetCareer' };
 
-export type ToWebview = { type: 'view'; view: View } | { type: 'suggestedName'; name: string };
+export type ToWebview = { type: 'view'; view: View };

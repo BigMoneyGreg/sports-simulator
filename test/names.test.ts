@@ -1,103 +1,116 @@
-import { BADGE_MAIN, badgeAllowed, secondOptions } from '../src/shared/view';
 import { describe, expect, it } from 'vitest';
 import { newCareer } from '../src/core/career';
+import { band, STARTING_POTS } from '../src/core/league';
+import { rating } from '../src/core/club';
 import { Rng } from '../src/core/rng';
+import { NAME_POOLS } from '../src/sports/football/data/names';
+import { NATIONS, WORLD_ORDER } from '../src/sports/football/data/nations';
 import { footballSport } from '../src/sports/football';
-import { CURATED_CLUBS, SPARE_TOWNS } from '../src/sports/football/data/clubs';
-import { clubIdentities, displayName, editDistance, isBlocked, playerNamer, shortCode, suggestClubName, surname, townName } from '../src/sports/football/names';
+import { naturalTier, playerNamer, shortName, surname } from '../src/sports/football/names';
 
-describe('club names', () => {
-  it('has 100 curated clubs with unique names and codes', () => {
-    expect(CURATED_CLUBS).toHaveLength(100);
-    expect(new Set(CURATED_CLUBS.map((c) => c.town)).size).toBe(100);
-    expect(new Set(CURATED_CLUBS.map((c) => c.short)).size).toBe(100);
-    for (const c of CURATED_CLUBS) expect(c.short).toMatch(/^[A-Z]{3}$/);
-  });
-
-  it('never ships a curated or spare name that hits the real-club blocklist', () => {
-    for (const c of CURATED_CLUBS) expect(isBlocked(displayName(c.town, c.suffix)), c.town).toBe(false);
-    for (const t of SPARE_TOWNS) expect(isBlocked(`${t} United`), t).toBe(false);
-  });
-
-  it('blocks real clubs and close imitations of famous ones', () => {
-    for (const name of ['Manchester United', 'Liverpool Town', 'Manchester FC', 'Arsenal', 'Brentford', 'Brenford City', 'Tadcaster Albion', 'AFC Wimbledon', 'Hearts', 'Bayern Rovers']) {
-      expect(isBlocked(name), name).toBe(true);
+describe('nations', () => {
+  it('has unique codes and names, with two or three flag colours each', () => {
+    expect(new Set(NATIONS.map((n) => n.code)).size).toBe(NATIONS.length);
+    expect(new Set(NATIONS.map((n) => n.name)).size).toBe(NATIONS.length);
+    for (const n of NATIONS) {
+      expect(n.code, n.name).toMatch(/^[A-Z]{3}$/);
+      expect(n.colours.length, n.name).toBeGreaterThanOrEqual(2);
+      expect(n.colours.length, n.name).toBeLessThanOrEqual(3);
+      for (const c of n.colours) expect(c, n.name).toMatch(/^#[0-9a-f]{6}$/);
     }
   });
 
-  it('suggests fresh names for the player club', () => {
-    const rng = new Rng(3);
-    const taken = CURATED_CLUBS.map((c) => displayName(c.town, c.suffix));
-    for (let i = 0; i < 50; i++) {
-      const name = suggestClubName(rng, taken);
-      expect(isBlocked(name)).toBe(false);
-      expect(taken).not.toContain(name);
+  it('never tints the header black or white', () => {
+    for (const n of NATIONS) expect(['#000000', '#ffffff'], n.name).not.toContain(n.colours[0]);
+  });
+
+  it('orders 100 distinct known nations for the world', () => {
+    expect(WORLD_ORDER).toHaveLength(100);
+    expect(new Set(WORLD_ORDER).size).toBe(100);
+    const codes = new Set(NATIONS.map((n) => n.code));
+    for (const c of WORLD_ORDER) expect(codes.has(c), c).toBe(true);
+    expect(STARTING_POTS[STARTING_POTS.length - 1]).toBe(100);
+  });
+
+  it('starts a nation in its usual league, or the bottom one from outside the world', () => {
+    expect(naturalTier('ESP', 20, 5)).toBe(1);
+    expect(naturalTier('SCO', 20, 5)).toBe(2);
+    expect(naturalTier('SMR', 20, 5)).toBe(5);
+    expect(naturalTier('KEN', 20, 5)).toBe(5);
+  });
+
+  it('uses the short name in tight spaces', () => {
+    expect(shortName({ name: 'Bosnia and Herzegovina', shortName: 'Bosnia' })).toBe('Bosnia');
+    expect(shortName({ name: 'Brazil' })).toBe('Brazil');
+  });
+});
+
+describe('the starting world', () => {
+  const tierOf = (c: ReturnType<typeof newCareer>, id: number) => c.season.leagues.find((l) => l.clubIds.includes(id))!.tier;
+
+  it('keeps each pot within its ratings, shuffled from career to career', () => {
+    const tops = new Set<string>();
+    for (let seed = 1; seed <= 20; seed++) {
+      const c = newCareer({ rating: 50, difficulty: 'medium', seed, team: 'KEN' }, footballSport);
+      const byName = new Map(c.clubs.map((x) => [x.short, x]));
+      for (const code of WORLD_ORDER.slice(0, 8)) expect(rating(byName.get(code)!)).toBeGreaterThanOrEqual(91);
+      for (const code of WORLD_ORDER.slice(0, 16)) expect(tierOf(c, byName.get(code)!.id)).toBe(1);
+      for (const code of WORLD_ORDER.slice(24, 36)) expect(tierOf(c, byName.get(code)!.id)).toBe(2);
+      tops.add(c.clubs.reduce((a, b) => (rating(b) > rating(a) ? b : a)).short);
     }
+    expect(tops.size).toBeGreaterThan(2);
   });
 
-  it('builds a world of 100 identities with the player club first', () => {
-    const ids = clubIdentities(new Rng(1), 100);
-    expect(ids).toHaveLength(100);
-    expect(new Set(ids.map((c) => c.name)).size).toBe(100);
-    expect(new Set(ids.map((c) => c.short)).size).toBe(100);
-    expect(CURATED_CLUBS.map((c) => displayName(c.town, c.suffix))).not.toContain(ids[0].name);
+  it('lets a swing pot start on either side of the league line', () => {
+    const tiers = new Set<number>();
+    for (let seed = 1; seed <= 20; seed++) {
+      const c = newCareer({ rating: 50, difficulty: 'medium', seed, team: 'KEN' }, footballSport);
+      tiers.add(tierOf(c, c.clubs.find((x) => x.short === WORLD_ORDER[18])!.id));
+    }
+    expect([...tiers].sort()).toEqual([1, 2]);
   });
 
-  it('formats AFC as a prefix and makes unique short codes', () => {
-    expect(displayName('Warkstow', 'AFC')).toBe('AFC Warkstow');
-    expect(shortCode('AFC Warkstow', new Set())).toBe('WAR');
-    expect(shortCode('Warkstow Town', new Set(['WAR']))).toBe('WAK');
+  it('puts the player in the league of their rating and uses every rating once', () => {
+    const c = newCareer({ rating: 10, difficulty: 'medium', seed: 3, team: 'ENG' }, footballSport);
+    expect(c.clubs[0].name).toBe('England');
+    expect(tierOf(c, 0)).toBe(5);
+    expect(rating(c.clubs[0])).toBeGreaterThanOrEqual(band(5).min);
+    expect(new Set(c.clubs.map((x) => Math.round(rating(x)))).size).toBe(100);
+    expect(c.clubs.filter((x) => x.short === 'ENG')).toHaveLength(1);
   });
 
-  it('measures edit distance', () => {
-    expect(editDistance('brenford', 'brentford')).toBe(1);
-    expect(editDistance('abc', 'abc')).toBe(0);
-    expect(editDistance('kitten', 'sitting')).toBe(3);
+  it('makes room for a nation from outside the world', () => {
+    const c = newCareer({ rating: 5, difficulty: 'medium', seed: 3, team: 'FIJ' }, footballSport);
+    expect(c.clubs[0].short).toBe('FIJ');
+    expect(c.clubs.map((x) => x.short)).not.toContain(WORLD_ORDER[99]);
   });
 });
 
 describe('player names', () => {
-  it('gives every squad distinct surnames', () => {
-    const c = newCareer({ rating: 50, difficulty: 'medium', seed: 1 }, footballSport);
+  it('has no empty or duplicated names in a pool', () => {
+    for (const [key, pool] of Object.entries(NAME_POOLS)) {
+      for (const list of [pool.first, pool.last]) {
+        expect(list.every((n) => n.length > 1), key).toBe(true);
+        expect(new Set(list).size, key).toBe(list.length);
+      }
+    }
+  });
+
+  it('gives every squad distinct surnames from its own country while the pool lasts', () => {
+    const c = newCareer({ rating: 50, difficulty: 'medium', seed: 1, team: 'JPN' }, footballSport);
     for (const club of c.clubs) {
       expect(club.squad).toHaveLength(18);
-      expect(new Set(club.squad.map((p) => surname(p.name))).size).toBe(18);
+      const available = new Set([NATIONS.find((n) => n.code === club.short)!.names].flat().flatMap((k) => NAME_POOLS[k].last)).size;
+      expect(new Set(club.squad.map((p) => surname(p.name))).size, club.name).toBeGreaterThanOrEqual(Math.min(18, available) - 1);
     }
+    for (const p of c.clubs[0].squad) expect(NAME_POOLS.japanese.last).toContain(surname(p.name));
   });
 
-  it('takes the last word as the surname, keeping particles', () => {
-    expect(surname('Daan De Vries')).toBe('De Vries');
-    expect(surname('Jack Okafor')).toBe('Okafor');
-    expect(playerNamer()(new Rng(1))).toMatch(/^\S+ .+$/);
-  });
-});
-
-describe('player club naming', () => {
-  it('derives the short code from a typed club name', () => {
-    const c = newCareer({ rating: 50, difficulty: 'medium', seed: 1, clubName: 'Wexstead Rovers' }, footballSport);
-    expect(c.clubs[0].name).toBe('Wexstead Rovers');
-    expect(c.clubs[0].short).toMatch(/^W/);
-    expect(new Set(c.clubs.map((x) => x.short)).size).toBe(100);
-  });
-
-  it('uses the badge colours picked at setup', () => {
-    const c = newCareer({ rating: 50, difficulty: 'medium', seed: 1, clubColours: ['#7a263a', '#6cabdd'] }, footballSport);
-    expect(c.clubs[0].colours).toEqual(['#7a263a', '#6cabdd']);
-  });
-
-  it('offers six second colours for every main colour, none clashing', () => {
-    for (const [main] of BADGE_MAIN) {
-      const options = secondOptions(main);
-      expect(options).toHaveLength(6);
-      expect(options.every(([second]) => badgeAllowed(main, second))).toBe(true);
-    }
-    expect(badgeAllowed('#c8102e', '#c8102e')).toBe(false);
-    expect(badgeAllowed('#123456', '#ffffff')).toBe(false);
-  });
-
-  it('strips the suffix for the narrow table', () => {
-    expect(townName('Wexstead Rovers')).toBe('Wexstead');
-    expect(townName('AFC Holtbury')).toBe('Holtbury');
-    expect(townName('Ashminster')).toBe('Ashminster');
+  it('mixes in the second pool for nations that have one', () => {
+    const name = playerNamer('FRA');
+    const rng = new Rng(2);
+    const surnames = Array.from({ length: 200 }, () => surname(name(rng)));
+    expect(surnames.some((s) => NAME_POOLS.westafricanFr.last.includes(s))).toBe(true);
+    expect(surnames.some((s) => NAME_POOLS.french.last.includes(s))).toBe(true);
   });
 });

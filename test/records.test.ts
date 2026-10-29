@@ -70,7 +70,7 @@ describe('full-time overlay', () => {
     const game = new Game({ save: () => {}, changed: () => {} });
     game.start({ rating: 50, difficulty: 'medium', seed: 4 });
     const fullTime = () => {
-      const v = buildView(game, () => '');
+      const v = buildView(game);
       return v.screen === 'game' ? v.fullTime : null;
     };
     expect(fullTime()).toBeNull();
@@ -78,7 +78,7 @@ describe('full-time overlay', () => {
     const ft = fullTime()!;
     expect(ft.ms).toBe(5000);
     expect(ft.home.goals + ft.away.goals).toBeGreaterThanOrEqual(0);
-    const off = buildView(game, () => '', { fullTimeOverlay: false });
+    const off = buildView(game, { fullTimeOverlay: false });
     expect(off.screen === 'game' && off.fullTime).toBeNull();
     vi.advanceTimersByTime(5100);
     expect(fullTime()).toBeNull();
