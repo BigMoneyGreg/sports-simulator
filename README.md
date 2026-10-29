@@ -50,3 +50,7 @@ npm run preview        # renders the webview with sample states in dist/preview/
 ```
 
 Press **F5** in VS Code ("Run Sports Simulator") to try it in an Extension Development Host; the Sports Simulator box appears in the Explorer.
+
+## Licence
+
+[MIT](LICENSE)
