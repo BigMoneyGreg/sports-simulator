@@ -45,7 +45,7 @@ New career
 Season (runs automatically, 38 matchdays)
   └─ matchday → all 50 matches across 5 leagues play at the same time
   └─ your match shown live: score + commentary feed
-  └─ full-time pop-up (auto-closes after 5s) → next matchday
+  └─ full-time overlay in the sidebar box (fades after 5s) → next matchday
         │
         ▼
 Play-offs (if you finished 3rd–6th)
@@ -325,14 +325,15 @@ All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned wi
 
 `⚽ ASH 2–1 RED 67'`, which you can click to open the sidebar box.
 
-### Full-time pop-up
+### Full-time overlay
 
-For your club's matches only. It **closes itself after 5 seconds** with no click needed, then the next matchday starts.
+For your club's matches only. A result card **slides over the sidebar box itself** (not a VS Code notification), stays for **5 seconds** (3 seconds at 30s matches), then fades and the next matchday starts. No click needed.
 
 > **FT: Ashby Rovers 2–1 Holtwick Town**
 > Okafor 23', Lind 67' · Marsh 81'
 
-Built with a VS Code progress-style notification that closes automatically. If that turns out to be awkward, the fallback is a slide-in banner inside the sidebar box.
+- Nothing appears over your code or in VS Code's notification list, so it never interrupts work.
+- If the sidebar box is hidden or collapsed, the result shows in the **status bar** instead (`⚽ FT ASH 2–1 HOL`) until the next match kicks off.
 
 ### Pause / play
 
@@ -392,7 +393,7 @@ Rename any club locally (edit button, or import/export a names file). Anyone who
 ## 11. Settings 🟢 NOW
 
 - Match duration (30s / 1 / 2 / 5 minutes)
-- Full-time pop-up on/off
+- Full-time overlay on/off
 - Status bar score on/off
 - Reset career (with confirmation)
 
@@ -407,7 +408,7 @@ Rename any club locally (edit button, or import/export a names file). Anyone who
 | Tests | Vitest |
 | Engine | **Pure, deterministic module** with no VS Code imports: `state + seed → next state`. Unit-testable and runnable headless |
 | Multi-sport ready | Engine split into a **shared league core** (leagues, fixtures, tables, ratings, promotion, career) and a **sport module** (match simulation, commentary, scoring rules). Version 1 ships football only |
-| Where it runs | **Extension host** runs the game clock and engine (so the status bar and pop-ups work even when the sidebar is collapsed). The webview only *displays* state it receives |
+| Where it runs | **Extension host** runs the game clock and engine (so the game and status bar keep running even when the sidebar is collapsed). The webview only *displays* state it receives |
 | UI | `WebviewViewProvider` registered in the Explorer; plain HTML/CSS with a small amount of TypeScript; uses VS Code theme colours for light and dark themes |
 | Saving | `context.globalState` (the career follows you across all projects); saved at every goal, full-time and season end, and when VS Code closes |
 | Performance | One tick per match-minute for all 50 matches (at most a few per second), no animation loop, idle when paused |
@@ -431,7 +432,6 @@ src/
     extension.ts   activation, commands, game clock
     sidebar.ts     webview view provider
     statusBar.ts
-    notifications.ts
     storage.ts
   webview/         UI shown in the sidebar
 tools/
@@ -454,7 +454,7 @@ Each milestone finishes in a working state.
 | **M4** | Club names | 100 curated fictional clubs, checked against real club lists; generator + blocklist |
 | **M5** | Live sidebar | Setup screen (rating slider + live label), live match + commentary, tables, fixtures, pause/play, status bar, saving |
 | **M6** | Season loop UI | Play-offs, end-of-season screen, season report, decline, point allocation |
-| **M7** | Polish | Full-time pop-up, form dots, rival/derby, trophy cabinet, history, records, copy summary, settings |
+| **M7** | Polish | Full-time overlay, form dots, rival/derby, trophy cabinet, history, records, copy summary, settings |
 | **M8** | Personal trial | Use it daily for two weeks; fix what's boring, annoying or unrealistic |
 
 ---
@@ -504,7 +504,8 @@ In rough priority order:
 | Unbeaten-run tracker in status bar: **rejected** | Unnecessary; records page covers it |
 | Pause when VS Code closes | You never miss matches; no catch-up simulation |
 | Fictional club names only, checked against real club lists | Avoid trademark issues; renaming handled locally later |
-| Engine runs in extension host | Status bar and pop-ups work without the sidebar open |
+| Engine runs in extension host | Game and status bar keep running without the sidebar open |
+| Full-time result as an overlay inside the sidebar box, not a VS Code notification | Never covers code or clutters notifications; status bar covers the hidden case |
 | Sport-agnostic core + sport modules | Rugby/cricket can be added later without a rewrite |
 | One extension for all sports (later) | One codebase; keywords handle discovery |
 
