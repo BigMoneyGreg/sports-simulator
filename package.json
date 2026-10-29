@@ -2,9 +2,14 @@
   "name": "sports-simulator",
   "displayName": "Sports Simulator",
   "description": "A football management sim that plays itself in your sidebar while you code.",
+  "icon": "media/icon.png",
   "version": "0.1.0",
   "publisher": "sports-simulator",
   "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BigMoneyGreg/sideline.git"
+  },
   "private": true,
   "engines": {
     "vscode": "^1.90.0"

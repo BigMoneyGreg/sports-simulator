@@ -3,9 +3,12 @@ test/**
 tools/**
 .vscode/**
 node_modules/**
-*.map
+**/*.map
 esbuild.mjs
 tsconfig.json
 vitest.config.ts
 DESIGN.md
 dist/preview/**
+media/screenshots/**
+.gitignore
+.gitattributes
