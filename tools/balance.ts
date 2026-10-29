@@ -301,12 +301,14 @@ function topRun(): void {
 
 function peakRun(): void {
   const seasons = quick ? 25 : 40;
+  // Peaks swing a lot with luck, so this section runs more careers than the rest.
+  const careers = quick ? 3 : 8;
   console.log(`\n== Beyond 99: from 95 over ${seasons} seasons (medium) ==`);
   const peaks: Record<StrategyName, number[]> = { reader: [], coinFlip: [], careless: [] };
   let unbeaten = 0;
   let readerSeasonsAbove120 = 0;
   for (const name of Object.keys(STRATEGIES) as StrategyName[]) {
-    for (let seed = 1; seed <= SEEDS; seed++) {
+    for (let seed = 1; seed <= careers; seed++) {
       const career = newCareer({ rating: 95, difficulty: 'medium', seed: 900 + seed }, footballSport);
       const rng = new Rng(seed);
       let peak = 0;
@@ -326,10 +328,10 @@ function peakRun(): void {
     console.log(`      ${name.padEnd(9)} peak ${peaks[name].map((p) => fmt(p, 0)).join(', ')}`);
   }
   console.log(`      reader: ${unbeaten} unbeaten season(s), ${readerSeasonsAbove120} season(s) above 120`);
-  check('A good reader climbs well past 99', mean(peaks.reader) >= 125, fmt(mean(peaks.reader), 0));
-  check('Nobody passes the 150 cap', Math.max(...Object.values(peaks).flat()) <= 150 + 1e-9, fmt(Math.max(...Object.values(peaks).flat()), 1));
-  check('A guesser stays near the top of the AI', mean(peaks.coinFlip) <= 115, fmt(mean(peaks.coinFlip), 0));
-  check('Unbeaten seasons happen, but not routinely', unbeaten >= 1 && unbeaten <= (seasons * SEEDS) / 3, `${unbeaten} of ${seasons * SEEDS}`);
+  check('A good reader climbs well past 99', mean(peaks.reader) >= 130, fmt(mean(peaks.reader), 0));
+  check('Nobody runs away: no peak above 200 in a career', Math.max(...Object.values(peaks).flat()) <= 200, fmt(Math.max(...Object.values(peaks).flat()), 0));
+  check('A guesser stays well below a reader', mean(peaks.coinFlip) <= 125 && mean(peaks.coinFlip) < mean(peaks.reader) - 20, fmt(mean(peaks.coinFlip), 0));
+  check('Unbeaten seasons happen, but not routinely', unbeaten >= 1 && unbeaten <= (seasons * careers) / 3, `${unbeaten} of ${seasons * careers}`);
 }
 
 const only = process.argv.find((a) => a.startsWith('--only='))?.slice(7);

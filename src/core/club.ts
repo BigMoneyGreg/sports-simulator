@@ -6,10 +6,11 @@ export const STATS: readonly Stat[] = ['attack', 'defence'];
 
 /**
  * Stat bounds. Starting ratings run 0–99; after that the AI is held near its
- * bands by the season rules, and the player can climb as far as 150.
+ * bands by the season rules. The player has no real ceiling: by 250 every
+ * season is already perfect, so the bound is only a technical one.
  */
 export const MIN_STAT = -50;
-export const MAX_STAT = 150;
+export const MAX_STAT = 250;
 
 export interface Club {
   id: number;
@@ -32,7 +33,7 @@ export interface Club {
  * lean the same distance, so AI clubs of equal rating are equally strong but
  * play differently. Balanced is the player's starting shape.
  */
-export const STYLE_TUNING = { skew: 10 };
+export const STYLE_TUNING = { skew: 7 };
 
 /** Styles an AI club can have. */
 export const AI_STYLES: readonly Style[] = ['attacking', 'defensive'];

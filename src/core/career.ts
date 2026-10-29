@@ -13,7 +13,7 @@ import {
   type RoundKind,
   type TableRow,
 } from './league';
-import { applyDecline, bandPull, declineFor, expectedPositions, normalise, positionBonus, RATING_TUNING, seasonGain, totalRating, type Difficulty } from './ratings';
+import { applyDecline, bandPull, expectedPositions, normalise, positionBonus, RATING_TUNING, seasonGain, totalRating, type Difficulty } from './ratings';
 import { CHAMPIONSHIP_ENTRANTS, CHAMPIONSHIP_EVERY, CUP_ENTRANTS, cupFixtures, cupRun, cupStages, drawChampionship, drawCup, recordCupResult, type Cup, type CupId } from './cups';
 import { emptyRecords, recordMatch, recordSeasonGoals, type Records } from './records';
 import { Rng } from './rng';
@@ -521,10 +521,11 @@ export function endSeason(career: Career): SeasonEnd {
   const me = career.clubs[career.playerClubId];
   const tier = tierOf[me.id];
   const pos = position[me.id];
-  const boost = RATING_TUNING.difficultyBoost[career.difficulty];
+  const reigning = career.history[career.history.length - 1]?.outcome === 'champion';
+  const boost = (reigning ? RATING_TUNING.championBoost : RATING_TUNING.difficultyBoost)[career.difficulty];
   const gain = seasonGain(tier, s.expected[me.id], pos, rating(me), boost, true);
   const before = rating(me);
-  const declineByStat = applyDecline(me, declineFor(before, true), rng);
+  const declineByStat = applyDecline(me, RATING_TUNING.decline, rng);
   const decline = before - rating(me);
   let points = Math.round(gain * RATING_TUNING.pointsPerRating);
   if (points < 0) {

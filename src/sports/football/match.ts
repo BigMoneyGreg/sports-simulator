@@ -25,15 +25,15 @@ export const TUNING = {
   chancesPerGoal: 2.5,
   penaltyConversion: 0.76,
   /** Effective attack and defence lost per point the weaker stat lags the rating, beyond the tolerance. */
-  weaknessPenalty: 2,
+  weaknessPenalty: 1.2,
   /** How far attack and defence can each sit from the rating before it costs anything. */
-  weaknessTolerance: 5,
+  weaknessTolerance: 2,
   /**
-   * Above this rating, balance matters more: by `weaknessScaleTo` the penalty
-   * has doubled and the tolerance halved, so a 150 side can't carry a weak half.
+   * Above this rating the penalty grows by `weaknessTopGrowth` per point, so a
+   * side near 150 needs near-perfect balance to stay there.
    */
   weaknessScaleFrom: 99,
-  weaknessScaleTo: 150,
+  weaknessTopGrowth: 0.12,
 };
 
 export type Period = 'first' | 'second' | 'et1' | 'et2' | 'done';
@@ -86,8 +86,8 @@ const CARD_WEIGHT: Record<string, number> = { GK: 0.4, DEF: 3, MID: 3, FWD: 1.5 
 export function effectiveStats(team: Pick<TeamSheet, 'attack' | 'defence'>): { attack: number; defence: number } {
   const lean = Math.abs(team.attack - team.defence) / 2;
   const level = (team.attack + team.defence) / 2;
-  const scale = 1 + Math.min(1, Math.max(0, (level - TUNING.weaknessScaleFrom) / (TUNING.weaknessScaleTo - TUNING.weaknessScaleFrom)));
-  const penalty = TUNING.weaknessPenalty * scale * Math.max(0, lean - TUNING.weaknessTolerance / scale);
+  const perPoint = TUNING.weaknessPenalty + TUNING.weaknessTopGrowth * Math.max(0, level - TUNING.weaknessScaleFrom);
+  const penalty = perPoint * Math.max(0, lean - TUNING.weaknessTolerance);
   return { attack: team.attack - penalty, defence: team.defence - penalty };
 }
 

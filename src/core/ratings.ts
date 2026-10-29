@@ -8,12 +8,6 @@ export type Difficulty = 'easy' | 'medium' | 'hard';
 export const RATING_TUNING = {
   /** Rating every club loses each summer, split at random between attack and defence. */
   decline: 10,
-  /**
-   * The player's extra decline per rating point above `declineGrowthFrom`: big
-   * squads lose more stars, so each step towards 150 is harder than the last.
-   */
-  declineGrowth: 0.08,
-  declineGrowthFrom: 85,
   /** The share of the decline that hits attack is drawn from this range; defence takes the rest. */
   declineSplit: [0.25, 0.75] as [number, number],
   averageGain: 10,
@@ -21,6 +15,8 @@ export const RATING_TUNING = {
   topBonus: [6, 4, 2],
   bottomBonus: [-2, -4, -6],
   difficultyBoost: { easy: 10, medium: 5, hard: 0 } as Record<Difficulty, number>,
+  /** The smaller boost while the player is reigning League 1 champion; back to the full one once they lose the title. */
+  championBoost: { easy: 4, medium: 2, hard: 0 } as Record<Difficulty, number>,
   /** Standard deviation of the AI-only random variation, in rating points. */
   aiNoise: 1.5,
   /** AI only: net rises are scaled down linearly from this rating to plateauFloor at 99. */
@@ -62,17 +58,12 @@ export function plateau(value: number): number {
   return 1 - ((1 - plateauFloor) * (Math.min(value, PLATEAU_TOP) - plateauStart)) / (PLATEAU_TOP - plateauStart);
 }
 
-/** The summer's decline for a club: the flat amount, plus more for a player club high up. */
-export function declineFor(currentRating: number, isPlayer: boolean): number {
-  const { decline, declineGrowth, declineGrowthFrom } = RATING_TUNING;
-  return decline + (isPlayer ? declineGrowth * Math.max(0, currentRating - declineGrowthFrom) : 0);
-}
-
 /**
  * Rating regained at the end of a season (on top of the flat decline):
  * average gain + performance against expectation + top/bottom bonus + extra
  * (AI noise or the player's difficulty boost). An AI club's net rise is
- * flattened near 99; the player instead loses more as they climb (`declineFor`).
+ * flattened near 99; the player's isn't, but their boost shrinks while they
+ * hold the title.
  */
 export function seasonGain(tier: number, expected: number, actual: number, currentRating: number, extra = 0, isPlayer = false): number {
   const performance = expected - actual;

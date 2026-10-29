@@ -90,7 +90,7 @@ Examples: **85** → *"Lower half — League 1"* · **14** → *"Upper half — 
 
 ## 4. Team model 🟢 NOW
 
-Each club has two stats, each **0–99**:
+Each club has two stats. Every starting rating is 0–99; after that they can drift below 0 or, for the player, climb past 99 (§7):
 
 | Stat | Effect in matches |
 |---|---|
@@ -99,9 +99,16 @@ Each club has two stats, each **0–99**:
 
 **Team rating = average of attack and defence.** This is what places a club within the rating bands (§6). Chemistry was removed in M8: two stats make the season's decision simple (score more, or concede less?) and readable from the season report.
 
-**Leaning is a choice, up to a point.** Attack 60 / defence 40 scores more and concedes more than 50 / 50; that's a style, not a mistake. But each stat can sit up to **5** from the rating for free (a gap of 10). Beyond that the weak side is exploited: every extra point costs 2 effective attack *and* defence. So when the decline drains one side (§7), fixing it is worth much more than spreading points evenly.
+**Leaning costs, gradually.** A gap of up to 4 between attack and defence is free. Beyond that the weak side is exploited and it costs more the wider it gets: every extra point of lean costs **1.2** effective attack *and* defence, so a strong attack never makes up for a weak defence. **Above 99 it gets steeper**, by 0.12 per rating point, so a side at 150 needs near-perfect balance:
 
-AI clubs have a "style", a fixed **shape** around their rating: attacking clubs are +10 attack / −10 defence, defensive clubs the reverse. Both shapes sit 5 beyond the free lean, so AI clubs of the same rating are equally strong but play differently, and they never fix their weak side: that's the edge a player who reads the season report has over them.
+| Gap | Rating 50 (League 3) | Rating 120 (League 1) | Rating 150 (League 1) |
+|---|---|---|---|
+| 0 | ~6th | 99 pts, champions | 107 pts, champions |
+| 10 | ~7th | 90 pts, champions | 102 pts, champions |
+| 20 | ~12th | 65 pts, ~4th | 68 pts, ~4th |
+| 30 | ~17th | 34 pts, ~18th | 15 pts, bottom |
+
+AI clubs have a "style", a fixed **shape** around their rating: attacking clubs are +7 attack / −7 defence, defensive clubs the reverse. So AI clubs of the same rating are equally strong but play differently, and they never fix their weak side. Their gap of 14 is about what a player who reads the season carries, so reading holds you level with expectation, and guessing sinks you.
 
 Players are generated (names, positions, shirt numbers). They're flavour only: they score goals, get cards and appear in commentary and records. There is no squad management.
 
@@ -211,7 +218,7 @@ Cups never change ratings: only league finishes feed the summer (§7). They brin
 
 ### Every club, every season
 
-1. **Decline:** every club, including yours, loses **10** rating (ageing, players leaving), which is **20 stat points**, at the end of the season. For your club it's **split at random** between attack and defence, each side taking a quarter to three quarters of it (a key striker leaves, the defence ages). **You're never told the split**, and your attack and defence numbers are hidden once the career starts. High up you lose more: **+0.08 for every rating point above 85**, so 14 at 135 and 15 at 150, because big squads lose more stars.
+1. **Decline:** every club, including yours, loses **10** rating (ageing, players leaving), which is **20 stat points**, at the end of the season, however strong it is. For your club it's **split at random** between attack and defence, each side taking a quarter to three quarters of it (a key striker leaves, the defence ages). **You're never told the split**, and your attack and defence numbers are hidden once the career starts.
 2. **Gains:** clubs regain rating based on **how they finished compared with what was expected**. The average gain is **+10**.
 3. **Ratings carry forward** into the next season for every club, so clubs rise and fall over the years like real life.
 
@@ -259,26 +266,29 @@ Examples (at the start of a career, when each rating is used exactly once):
 Your one decision each summer is **which side to rebuild: attack or defence**. There's no balanced option, because a safe middle made the choice meaningless (measured: always-balanced did as well as perfect knowledge, so nobody had a reason to look). **65%** of the summer's points go to the side you rebuild, **35%** to the other.
 
 - **The clue:** the summer screen shows where you ranked in your league for **goals scored** and **goals conceded**. The side that ranked worse is usually the one that dropped off. It's plain football information; no ratings are shown.
-- **Why it matters:** a side that falls too far behind gets exploited (§4), and a strong attack doesn't make up for a weak defence. Above 99 it matters more: by 150 the penalty for a gap has doubled and the free lean halved.
+- **Why it matters:** a side that falls behind gets exploited (§4), gradually at first and steeply above 99.
+- **How readable it is** (60 careers): the ranks point at the weaker side **95%** of the time when the gap is big (12+), 72% when it's medium, and only 50% when it's small, but a small gap costs almost nothing. They're right 99% of the time after a bad season and 65% after a good one: winning papers over the cracks. Ranks 5+ places apart are a clear read (91%). Promotion doesn't spoil it (92% in a promoted team's first season).
 - **Measured** (12 seasons from five starting ratings, medium), places above expectation per season:
 
 | Player | Places a season |
 |---|---|
-| Reads the ranks | **+0.2** |
-| Guesses (coin flip) | **−4.2** |
-| Always rebuilds attack | −9.1 |
+| Reads the ranks | **±0** |
+| Guesses (coin flip) | **−5.6** |
+| Always rebuilds attack | −8.9 |
 
-So reading the season is worth over 4 places a season against guessing, and ignoring it sinks you.
+So reading the season keeps you level with expectation, while guessing costs over 5 places a season and ignoring it sinks you.
 
 ### Difficulty: a hidden boost 🟢 NOW
 
 Each season your club gets an extra boost. It's **new rating, not taken from the AI** (see *Two economies* below):
 
-| Difficulty | Your boost per season |
-|---|---|
-| Easy | +10 |
-| Medium | +5 |
-| Hard | 0 |
+| Difficulty | Your boost per season | While reigning League 1 champion |
+|---|---|---|
+| Easy | +10 | +4 |
+| Medium | +5 | +2 |
+| Hard | 0 | 0 |
+
+The smaller boost applies for the season after you win League 1; lose the title and it's back to the full one. Winning when you're expected to scores 0, so at the top the champion's boost is the only way up.
 
 ### Top / bottom bonus
 
@@ -301,11 +311,18 @@ League 1's top 3 get nothing (there's nowhere higher to go), and League 5's bott
 
 | Difficulty | Reads the ranks | Guesses |
 |---|---|---|
-| Easy (+10) | 7–13 seasons | mostly never (one of four: 13) |
-| Medium (+5) | 9–13 seasons | 26–43 seasons, or never |
-| Hard (no boost) | 14–40 seasons, or never | never |
+| Easy (+10) | 7–9 seasons | far slower, or never |
+| Medium (+5) | 11–23 seasons | far slower, or never |
+| Hard (no boost) | 39–55 seasons, or never | never |
 
-**Beyond 99**, from 95 over 40 seasons (medium): a reader peaks around **144–146**, a guesser around **110–122**, a careless player around **107–115**. Nobody passes the **cap of 150**. Unbeaten seasons came up 27 times in 160 reader seasons, almost all above 130; at a balanced 150 they're about a coin flip, and winning all 38 stays rare (about 1 in 30).
+**Beyond 99** there's no ceiling (a technical bound of 250, where every season is already perfect). Measured over 40 seasons from 95, 12 careers each:
+
+| Difficulty | Reader's peak | Guesser's peak |
+|---|---|---|
+| Medium | **~148** (127–166) | ~119 (104–148) |
+| Easy | **~205** (181–234) | ~176 (142–206) |
+
+What a rating means over a League 1 season (balanced): at **150** about half of seasons are unbeaten and 1 in 50 wins all 38; at **200**, 84% are unbeaten and about half win all 38; past 225 nearly every season is perfect.
 
 ### Two economies
 
@@ -313,7 +330,7 @@ League 1's top 3 get nothing (there's nowhere higher to go), and League 5's bott
 
 - Performance scores already sum to zero within each league, and top/bottom bonuses across the game.
 - **Everything else** (plateau, AI noise, band pull, the ceiling) is balanced by a final **normalisation step** across the AI clubs only.
-- **Stat bounds:** −50 to 150. Starting ratings run 0–99; a club bottom of League 5 can dip below 0 and climb back. The AI stays near its bands through the adjustments below; the player can reach 150.
+- **Stat bounds:** −50 to 250. Starting ratings run 0–99; a club bottom of League 5 can dip below 0 and climb back. The AI stays near its bands through the adjustments below; the player has no practical ceiling.
 
 ### Extra AI-only adjustments
 
@@ -323,7 +340,7 @@ League 1's top 3 get nothing (there's nowhere higher to go), and League 5's bott
 - **Promotion investment:** an AI club gains **+4** rating when promoted, so promoted sides can compete. Tuned so about 80% of promoted clubs finish in the bottom half of their new league (Premier League, last decade: about 78%).
 - **Small random variation** each season, so AI clubs don't move mechanically.
 
-Your gain becomes points (2 points = +1 rating, 1 point = +1 to a stat), spent 65/35 on the side you rebuild. Nothing goes above 150. 65/35 because a stronger rebuild overcorrected: at 80/20 even a good reader swung past balance and lost places.
+Your gain becomes points (2 points = +1 rating, 1 point = +1 to a stat), spent 65/35 on the side you rebuild. 65/35 because a stronger rebuild overcorrected: at 80/20 even a good reader swung past balance and lost places.
 
 All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned with the balance tool.
 
@@ -337,7 +354,7 @@ All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned wi
 - **Reading the ranks beats guessing by 2+ places a season**; a guesser drifts below expectation; a careless player sinks furthest
 - A reader reaches 99 in roughly the measured seasons for each difficulty; a guesser takes at least twice as long or never; a careless player on hard never climbs from 0 to 99
 - A player club starting at 99 wins League 1 most seasons, but not every season
-- A good reader climbs well past 99 (peak 125+); a guesser stays near the top of the AI (≤ 115); nobody passes 150; unbeaten seasons happen but not routinely
+- A good reader climbs well past 99 (peak 130+); a guesser stays well below a reader (≤ 125, 20+ lower); nobody runs away (no peak above 200 in 40 seasons on medium); unbeaten seasons happen but not routinely
 
 ---
 
@@ -573,7 +590,7 @@ In rough priority order:
 | MIT licence | Permissive and the norm for VS Code extensions; anyone can learn from or fork it |
 | Publisher `bigdevgreg`; publish by uploading the `.vsix` by hand | "BigMoneyGreg" was rejected as suspicious by the Marketplace; a token needs an Azure DevOps organisation, which asked for an Azure subscription |
 | Summer: rebuild attack or defence, no balanced option; ranks for goals scored and conceded as the clue | Measured: with a balanced option, guessing and perfect knowledge ended level, so the choice didn't matter. Now reading the ranks beats guessing by over 4 places a season |
-| Player outside a fixed AI economy; stats −50 to 150; the player's decline grows above 85 | A great player can chase 150 and unbeaten seasons without draining the world; the growing decline makes each step harder |
+| Player outside a fixed AI economy; no practical ceiling; flat decline of 10; smaller boost while reigning champion; imbalance costs gradually, steeply above 99 | A great player can chase 200 and unbeaten seasons without draining the world; only near-perfect balance keeps you climbing at the top, so guessers stall |
 | Very large strength gaps count only partly (beyond 32 points, 30% counts) | The open cup draw pairs teams 60 apart; full gaps gave 6+ goal margins in 6% of cup games and scores like 3–10. Now about 3%, with league scoring unchanged |
 | Real nations replace fictional clubs | Relatable worldwide, and players can follow how teams they know are doing; clubs' names are trademarks, countries' aren't |
 | World order by football standing, shuffled within pots of 8 (swing pots across each league line) | A single ranking table over-rates hot streaks; pots keep big nations near the top while every career starts differently |

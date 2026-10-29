@@ -12,9 +12,9 @@ import {
   playSeason,
   type Career,
 } from '../src/core/career';
-import { MAX_STAT, MIN_STAT, rating, shiftRating, statsFor, type Club } from '../src/core/club';
+import { MAX_STAT, MIN_STAT, rating, shiftRating, statsFor, STYLE_TUNING, type Club } from '../src/core/club';
 import { band, doubleRoundRobin, emptyTable, goalRanks, recordResult, sortTable, startRating, styleSplit, zone } from '../src/core/league';
-import { applyDecline, declineFor, normalise, plateau, positionBonus, seasonGain, totalRating } from '../src/core/ratings';
+import { applyDecline, normalise, plateau, positionBonus, RATING_TUNING, seasonGain, totalRating } from '../src/core/ratings';
 import { Rng } from '../src/core/rng';
 import { footballSport } from '../src/sports/football';
 
@@ -97,11 +97,20 @@ describe('ratings', () => {
     expect(seasonGain(1, 1, 10, 95) - 10).toBe(-9);
   });
 
-  it('leaves the player unflattened, but takes more off them each summer as they climb', () => {
+  it('leaves the player’s rises unflattened', () => {
     expect(seasonGain(1, 10, 1, 95, 0, true) - 10).toBe(9);
-    expect(declineFor(60, true)).toBe(10);
-    expect(declineFor(135, true)).toBeCloseTo(14);
-    expect(declineFor(135, false)).toBe(10);
+  });
+
+  it('gives the reigning League 1 champion the smaller boost, and the full one once the title is lost', () => {
+    const c = newCareer({ rating: 99, difficulty: 'medium', seed: 3, team: 'BRA' }, footballSport);
+    const boosts: [string | null, number][] = [];
+    for (let season = 0; season < 8; season++) {
+      playSeason(c, footballSport);
+      boosts.push([c.history.at(-1)?.outcome ?? null, c.pending!.boost]);
+      allocatePoints(c, evenSplit(c));
+    }
+    for (const [before, boost] of boosts) expect(boost).toBe(before === 'champion' ? RATING_TUNING.championBoost.medium : RATING_TUNING.difficultyBoost.medium);
+    expect(boosts.some(([before]) => before === 'champion')).toBe(true);
   });
 
   it('keeps stats within the bounds and passes the excess to other stats', () => {
@@ -392,13 +401,13 @@ describe('starting position', () => {
 });
 
 describe('AI clubs', () => {
-  it('are randomly attacking or defensive, leaning 10 either way', () => {
+  it('are randomly attacking or defensive, leaning by the style skew either way', () => {
     const styles = { attacking: 0, defensive: 0, balanced: 0 };
     for (let seed = 1; seed <= 20; seed++) {
       const c = newCareer({ rating: 50, difficulty: 'medium', seed }, footballSport);
       for (const club of c.clubs.filter((x) => !x.isPlayer)) {
         styles[club.style]++;
-        expect(Math.abs(club.attack - club.defence)).toBeCloseTo(20);
+        expect(Math.abs(club.attack - club.defence)).toBeCloseTo(2 * STYLE_TUNING.skew);
         expect(Math.sign(club.attack - club.defence)).toBe(club.style === 'attacking' ? 1 : -1);
       }
     }
