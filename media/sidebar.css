@@ -1130,8 +1130,7 @@ table.league {
 }
 
 @media (max-width: 250px) {
-  .wide,
-  .head .form {
+  .wide {
     display: none;
   }
 
@@ -1192,14 +1191,25 @@ table.league {
     font-size: calc(var(--vscode-font-size) * 0.85);
   }
 
-  .head .crest,
-  .league th:nth-child(7),
-  .league td:nth-child(7) {
+  /* Narrowest: just the header, stacked — club, league and position, form, controls. */
+  #app:not(.needs-choice) #main {
     display: none;
   }
 
+  .head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .head .club .name {
+    white-space: normal;
+  }
+
   .head .right {
-    gap: 0;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
   }
 
   .kit {
@@ -1278,14 +1288,8 @@ table.league {
 
 @media (max-height: 260px) {
   /* Just the essentials: header, tabs, live score and latest events. */
-  .head .form,
   .legend {
     display: none;
-  }
-
-  .head .right {
-    flex-direction: row;
-    align-items: center;
   }
 
   .clock-big {

@@ -553,7 +553,7 @@ In rough priority order:
 | AI promotion investment (+4) | Promoted clubs finished in the bottom half 91% of the time against ~78% in the real Premier League |
 | M8 visuals: match report newest-first, compact scoreboard, own league marked on table chips, legend shows only that table's zones (Champions in L1) | Latest event always in view; the box often lives in a small corner of the screen; clear which league is yours |
 | Badge colours picked at setup: 6 main × 6 second; the second row only shows colours that go with the main (from a pool of 9), so nothing is ever greyed out | Players own their club's look; a fixed palette keeps every badge readable, and the main colour (used for the header tint) excludes black and white so it shows on any theme |
-| Responsive box (CSS only): narrow (≤250px / ≤200px) drops table W/D/L then GD, form dots, towns, smaller font; short (≤420px / ≤260px) tightens spacing and puts the scoreboard on one line | Many players keep it in a small corner; score, clock, position and controls always stay |
+| Responsive box (CSS only): ≤250px wide drops table W/D/L, towns and running scores, speed button shows just ⏱; ≤200px wide shows only the header (club, badge, league, position, form, ⏱ and pause), except while a summer choice waits; short (≤420px / ≤260px) tightens spacing and puts the scoreboard on one line | Many players keep it in a small corner; at its narrowest it's a status card, widen it to manage |
 
 ## 17. Name ✅
 

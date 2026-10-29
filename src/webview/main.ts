@@ -224,6 +224,8 @@ function renderGame(v: GameView): void {
     app.innerHTML = '<div id="top"></div><div id="main"></div>';
     app.dataset.mode = 'game';
   }
+  // The narrowest layout shows only the header, except when a summer choice is waiting.
+  app.classList.toggle('needs-choice', !!v.seasonEnd);
   patch(document.getElementById('top')!, [headerHtml(v)]);
   const tabs: [Tab, string][] = [
     ['match', 'Match'],
@@ -248,7 +250,7 @@ function headerHtml(v: GameView): string {
     <div class="right">
       <span class="form" aria-label="Form">${dots}</span>
       <span class="controls">
-        <button type="button" id="speed" class="chip" data-next="${next}" title="Match length: ${DURATION_LABELS[h.duration]}. Click for ${DURATION_LABELS[next]}." aria-label="Match length ${DURATION_LABELS[h.duration]}"><span class="wide">⏱ </span>${DURATION_LABELS[h.duration]}</button>
+        <button type="button" id="speed" class="chip" data-next="${next}" title="Match length: ${DURATION_LABELS[h.duration]}. Click for ${DURATION_LABELS[next]}." aria-label="Match length ${DURATION_LABELS[h.duration]}"><span>⏱</span><span class="wide"> ${DURATION_LABELS[h.duration]}</span></button>
         <button type="button" id="pause" class="chip icon" title="${h.paused ? 'Play' : 'Pause'}" aria-label="${h.paused ? 'Play' : 'Pause'}">${h.paused ? '▶' : '⏸'}</button>
       </span>
     </div>
