@@ -29,21 +29,30 @@ export const BADGE_SECOND: [hex: string, label: string][] = [
   ['#6cabdd', 'Sky blue'],
   ['#fdb913', 'Amber'],
   ['#c8102e', 'Red'],
+  ['#a7a9ac', 'Silver'],
+  ['#f47b20', 'Orange'],
+  ['#00843d', 'Green'],
 ];
 /** Pairs that are the same colour or too close to tell apart. */
 const BADGE_CLASHES: Record<string, string[]> = {
-  '#c8102e': ['#c8102e'],
+  '#c8102e': ['#c8102e', '#f47b20', '#00843d'],
   '#003399': ['#1c2c5b'],
   '#6cabdd': ['#6cabdd'],
-  '#00843d': ['#c8102e'],
-  '#fdb913': ['#fdb913', '#ffffff'],
+  '#00843d': ['#c8102e', '#00843d'],
+  '#fdb913': ['#fdb913', '#ffffff', '#f47b20'],
   '#7a263a': ['#c8102e', '#111111'],
 };
+const SECOND_SHOWN = 6;
 
 export function badgeAllowed(main: string, second: string): boolean {
   return (
     BADGE_MAIN.some(([c]) => c === main) && BADGE_SECOND.some(([c]) => c === second) && !(BADGE_CLASHES[main] ?? []).includes(second)
   );
+}
+
+/** The second colours offered with a main colour: always six, clashes left out rather than greyed. */
+export function secondOptions(main: string): [hex: string, label: string][] {
+  return BADGE_SECOND.filter(([c]) => badgeAllowed(main, c)).slice(0, SECOND_SHOWN);
 }
 
 export interface TeamBadge {

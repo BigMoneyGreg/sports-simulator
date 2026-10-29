@@ -1,7 +1,6 @@
 import {
   BADGE_MAIN,
-  BADGE_SECOND,
-  badgeAllowed,
+  secondOptions,
   DURATION_LABELS,
   type Difficulty,
   type Duration,
@@ -110,21 +109,21 @@ function seg(name: string, options: Option[], value: string): string {
 }
 
 function randomBadge(): [string, string] {
-  const pairs = BADGE_MAIN.flatMap(([m]) => BADGE_SECOND.filter(([s]) => badgeAllowed(m, s)).map(([s]): [string, string] => [m, s]));
+  const pairs = BADGE_MAIN.flatMap(([m]) => secondOptions(m).map(([s]): [string, string] => [m, s]));
   return pairs[Math.floor(Math.random() * pairs.length)];
 }
 
-/** Two rows of colours with a live preview; second colours that clash with the main one are greyed out. */
+/** Two rows of colours with a live preview; the second row only offers colours that go with the main one. */
 function badgePicker(): string {
   const [main, second] = setup.colours;
   const row = (kit: 'main' | 'second', options: [string, string][], value: string) =>
     `<div class="kit-row" role="radiogroup" aria-label="${kit === 'main' ? 'Main colour' : 'Second colour'}">${options
-      .map(([hex, label]) => {
-        const off = kit === 'second' && !badgeAllowed(main, hex);
-        return `<button type="button" role="radio" class="kit ${hex === value ? 'on' : ''}" data-kit="${kit}" data-value="${hex}" data-c1="${hex}" data-c2="${hex}" aria-checked="${hex === value}" title="${label}" aria-label="${label}"${off ? ' disabled' : ''}></button>`;
-      })
+      .map(
+        ([hex, label]) =>
+          `<button type="button" role="radio" class="kit ${hex === value ? 'on' : ''}" data-kit="${kit}" data-value="${hex}" data-c1="${hex}" data-c2="${hex}" aria-checked="${hex === value}" title="${label}" aria-label="${label}"></button>`,
+      )
       .join('')}</div>`;
-  return `<div class="badge-pick">${swatch({ colours: setup.colours }, 'crest big')}<div class="kit-rows">${row('main', BADGE_MAIN, main)}${row('second', BADGE_SECOND, second)}</div></div>`;
+  return `<div class="badge-pick">${swatch({ colours: setup.colours }, 'crest big')}<div class="kit-rows">${row('main', BADGE_MAIN, main)}${row('second', secondOptions(main), second)}</div></div>`;
 }
 
 function renderSetup(v: SetupView): void {
@@ -518,8 +517,9 @@ app.addEventListener('click', (e) => {
   } else if (button.dataset.kit) {
     const hex = button.dataset.value!;
     if (button.dataset.kit === 'main') {
-      // Keep the second colour unless it now clashes; then take the first one that works.
-      const second = badgeAllowed(hex, setup.colours[1]) ? setup.colours[1] : BADGE_SECOND.find(([s]) => badgeAllowed(hex, s))![0];
+      // Keep the second colour if it's still offered; otherwise take the first one that is.
+      const options = secondOptions(hex);
+      const second = options.some(([s]) => s === setup.colours[1]) ? setup.colours[1] : options[0][0];
       setup.colours = [hex, second];
     } else {
       setup.colours = [setup.colours[0], hex];

@@ -1,4 +1,4 @@
-import { BADGE_MAIN, BADGE_SECOND, badgeAllowed } from '../src/shared/view';
+import { BADGE_MAIN, badgeAllowed, secondOptions } from '../src/shared/view';
 import { describe, expect, it } from 'vitest';
 import { newCareer } from '../src/core/career';
 import { Rng } from '../src/core/rng';
@@ -85,8 +85,12 @@ describe('player club naming', () => {
     expect(c.clubs[0].colours).toEqual(['#7a263a', '#6cabdd']);
   });
 
-  it('every main colour has a second colour that works, and clashes are refused', () => {
-    for (const [main] of BADGE_MAIN) expect(BADGE_SECOND.some(([second]) => badgeAllowed(main, second))).toBe(true);
+  it('offers six second colours for every main colour, none clashing', () => {
+    for (const [main] of BADGE_MAIN) {
+      const options = secondOptions(main);
+      expect(options).toHaveLength(6);
+      expect(options.every(([second]) => badgeAllowed(main, second))).toBe(true);
+    }
     expect(badgeAllowed('#c8102e', '#c8102e')).toBe(false);
     expect(badgeAllowed('#123456', '#ffffff')).toBe(false);
   });

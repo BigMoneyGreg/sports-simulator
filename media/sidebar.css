@@ -264,11 +264,6 @@ input:focus-visible {
   outline-offset: 2px;
 }
 
-.kit:disabled {
-  opacity: 0.2;
-  cursor: not-allowed;
-}
-
 .row {
   display: flex;
   gap: 4px;
