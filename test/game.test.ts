@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fillAllocation } from '../src/core/career';
-import { Game, MINUTE_MS, type SavedGame } from '../src/extension/game';
+import { Game, migrate, MINUTE_MS, SAVE_VERSION, type SavedGame } from '../src/extension/game';
 import { buildView, statusText } from '../src/extension/viewModel';
 
 function setup() {
@@ -184,5 +184,40 @@ describe('match length', () => {
     const short = play('30s');
     expect(play('2m')).toBe(short);
     expect(play('5m')).toBe(short);
+  });
+});
+
+describe('saves from other versions', () => {
+  const current = () => {
+    const { game } = setup();
+    game.start({ rating: 50, difficulty: 'medium', seed: 11 });
+    game.shutdown();
+    return JSON.parse(JSON.stringify(game.snapshot())) as SavedGame;
+  };
+
+  it('runs each upgrade in turn up to the current version', () => {
+    const old = { ...current(), version: SAVE_VERSION - 2, paused: false };
+    const migrations = {
+      [SAVE_VERSION - 2]: (s: SavedGame) => ({ ...s, paused: true }),
+      [SAVE_VERSION - 1]: (s: SavedGame) => ({ ...s, live: null }),
+    };
+    expect(migrate(old, migrations)).toMatchObject({ version: SAVE_VERSION, paused: true, live: null });
+  });
+
+  it("can't read a save with a gap in its upgrades, or one from a newer version", () => {
+    expect(migrate({ ...current(), version: SAVE_VERSION - 1 }, {})).toBeNull();
+    expect(migrate({ ...current(), version: SAVE_VERSION + 1 }, {})).toBeNull();
+    expect(migrate(current(), {})).not.toBeNull();
+  });
+
+  it('hands an unreadable save to the host once, from the window running the game', () => {
+    const unreadable = vi.fn();
+    const game = new Game({ save: () => {}, changed: () => {}, unreadable });
+    const old = { ...current(), version: SAVE_VERSION + 1 };
+    game.load(old, false);
+    expect(unreadable).not.toHaveBeenCalled();
+    game.load(old);
+    expect(unreadable).toHaveBeenCalledWith(old);
+    expect(game.career).toBeNull();
   });
 });

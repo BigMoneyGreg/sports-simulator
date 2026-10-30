@@ -58,6 +58,20 @@ export function activate(context: vscode.ExtensionContext): void {
           else owner.whenOwner(() => game.career?.pending?.season === end.season && game.chooseFocus(choices[choice as keyof typeof choices]));
         });
     },
+    unreadable: (old) => {
+      // Kept whole as a backup, and its history archived like a finished career, before the player starts again.
+      storage.backup(old);
+      try {
+        const c = old.career;
+        const history = c.history ?? [];
+        void storage.archive({ club: c.clubs[c.playerClubId].name, archivedAt: new Date().toISOString(), seasons: history.length, history, records: c.records });
+      } catch {
+        // Too different to read; the backup still has it all.
+      }
+      void vscode.window.showInformationMessage(
+        "Sports Simulator was updated and your career couldn't carry over. Its history and a full backup have been kept. Start a new career in the Sports Simulator box.",
+      );
+    },
   });
   game.duration = duration();
   // Shown straight away; the clock only runs once this window owns the game.

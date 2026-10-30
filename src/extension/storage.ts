@@ -57,6 +57,12 @@ export class Storage implements LockStore {
     if (this.memento.get(LEGACY_KEY) !== undefined) void this.memento.update(LEGACY_KEY, undefined);
   }
 
+  /** Moves a save this version can't read out of the way, whole, as `career.v<version>.json`. */
+  backup(game: SavedGame): void {
+    writeFile(path.join(path.dirname(this.savePath), `career.v${game.version}.json`), JSON.stringify(game));
+    this.save(null);
+  }
+
   read(): Lock {
     try {
       return JSON.parse(readFile(this.lockPath) ?? '') as Lock;

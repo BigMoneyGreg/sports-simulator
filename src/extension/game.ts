@@ -26,6 +26,24 @@ import type { Duration } from '../shared/view';
 
 export const SAVE_VERSION = 7;
 
+/**
+ * Upgrades for older saves: `MIGRATIONS[n]` turns a version-n save into
+ * version n + 1. Whenever SAVE_VERSION goes up, add one here, so players'
+ * careers carry over.
+ */
+export const MIGRATIONS: Record<number, (saved: SavedGame) => SavedGame> = {};
+
+/** The save brought up to SAVE_VERSION, or null if it can't be (too old, or from a newer version). */
+export function migrate(saved: SavedGame, migrations = MIGRATIONS): SavedGame | null {
+  let s = saved;
+  while (s.version < SAVE_VERSION) {
+    const upgrade = migrations[s.version];
+    if (!upgrade) return null;
+    s = { ...upgrade(s), version: s.version + 1 };
+  }
+  return s.version === SAVE_VERSION ? s : null;
+}
+
 /** Real milliseconds per match-minute. */
 export const MINUTE_MS: Record<Duration, number> = {
   '30s': 30_000 / 90,
@@ -64,6 +82,8 @@ export interface GameHost {
   changed(): void;
   fullTime?(match: FootballMatch, fixture: Fixture): void;
   seasonOver?(end: SeasonEnd): void;
+  /** A save that couldn't be brought up to date: keep it somewhere before a new career replaces it. */
+  unreadable?(saved: SavedGame): void;
 }
 
 export type Phase = 'idle' | 'live' | 'fullTime' | 'seasonOver';
@@ -86,13 +106,16 @@ export class Game {
   // -- lifecycle ------------------------------------------------------------
 
   /** Loads a save; with `run` false it's only shown (another window is running the game). */
-  load(saved: SavedGame | null, run = true): void {
+  load(found: SavedGame | null, run = true): void {
     this.stop();
     this.lastMatch = null;
-    if (!saved || saved.version !== SAVE_VERSION) {
+    const saved = found && migrate(found);
+    if (!saved) {
       this.career = null;
       this.live = null;
       this.phase = 'idle';
+      // Only the window running the game deals with it, so it's kept once.
+      if (found && run) this.host.unreadable?.(found);
       return;
     }
     this.career = saved.career;

@@ -466,6 +466,7 @@ The game uses real nations, not clubs: country names, flags and colours are free
 | Where it runs | **Extension host** runs the game clock and engine (so the game and status bar keep running even when the sidebar is collapsed). The webview only *displays* state it receives |
 | UI | `WebviewViewProvider` registered in the Explorer; plain HTML/CSS with a small amount of TypeScript; uses VS Code theme colours for light and dark themes |
 | Saving | A file in the extension's global storage folder (the career follows you across all projects); saved at every goal, full-time and season end, when VS Code closes, and when another window takes over. Older saves in `globalState` carry over once |
+| Save versions | Every save carries a version. Changing the save's shape means raising `SAVE_VERSION` in `game.ts` **and** adding an upgrade to `MIGRATIONS`, so careers carry over. A save that still can't be read (a gap in the upgrades, or from a newer version) is never just dropped: it's kept whole as `career.v<N>.json`, its history archived, and the player told once |
 | Several windows | Every window shares one save, so only one runs the clock: the one you last focused. It takes over within a second or two: the old window saves and stops, then the new one loads that save and carries on. Other windows only show the game. A lone window keeps running when unfocused |
 | Performance | One tick per match-minute for all 50 matches (at most a few per second), no animation loop, idle when paused |
 
@@ -568,6 +569,7 @@ In rough priority order:
 | Hard has no boost | Matches its description; reaching 99 from the bottom becomes a near-impossible grind, and that's the point of Hard |
 | Match lengths 30s · 2 min · 5 min | Three clearly different paces; 1 minute dropped |
 | Pause when VS Code closes | You never miss matches; no catch-up simulation |
+| Saves are upgraded, never silently dropped | History is the reward: once the game is public, one update that wiped careers would lose players for good |
 | One window runs the game; focusing another hands it over | Each window used to run its own clock on the shared save, so two windows played different matches and overwrote each other (a summer choice could be lost). Many people keep several windows open all day |
 | Fictional club names only, checked against real club lists | Avoid trademark issues; renaming handled locally later |
 | Engine runs in extension host | Game and status bar keep running without the sidebar open |

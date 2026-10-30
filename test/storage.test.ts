@@ -44,6 +44,15 @@ describe('storage', () => {
     expect(s.load()).toEqual(save(3));
   });
 
+  it('backs up a save it can\'t read, under its version, and clears it', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ss-storage-'));
+    const s = new Storage(dir, memento());
+    s.save(save(4));
+    s.backup({ ...save(4), version: 5 });
+    expect(s.load()).toBeNull();
+    expect(readdirSync(dir)).toEqual(['career.v5.json']);
+  });
+
   it('reads a missing or broken lock as nobody running the game', () => {
     const dir = mkdtempSync(join(tmpdir(), 'ss-storage-'));
     const s = new Storage(dir, memento());
