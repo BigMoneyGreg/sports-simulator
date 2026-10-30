@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fillAllocation } from '../src/core/career';
 import { Game, migrate, MINUTE_MS, SAVE_VERSION, type SavedGame } from '../src/extension/game';
-import { buildView, statusText } from '../src/extension/viewModel';
+import { buildView, collapsedText, GoalWatch, statusText, statusTooltip } from '../src/extension/viewModel';
 
 function setup() {
   const saves: (SavedGame | null)[] = [];
@@ -219,5 +219,44 @@ describe('saves from other versions', () => {
     game.load(old);
     expect(unreadable).toHaveBeenCalledWith(old);
     expect(game.career).toBeNull();
+  });
+});
+
+describe('outside the box', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('asks for a career in the status bar until one starts', () => {
+    const { game } = setup();
+    expect(statusText(game)).toBe('⚽ Start a career');
+    expect(statusTooltip(game)).toMatch(/start a career/);
+    expect(collapsedText(game)).toBeUndefined();
+  });
+
+  it('calls out a goal in the player\'s match for a few seconds, then goes back to the score', () => {
+    const { game } = setup();
+    game.start({ rating: 50, difficulty: 'medium', seed: 21, team: 'SCO' });
+    const watch = new GoalWatch();
+    const goals = () => game.shownMatch!.match.home.goals + game.shownMatch!.match.away.goals;
+    let now = 0;
+    expect(watch.check(game, now)).toBe(false);
+    while (game.phase === 'live' && goals() === 0) {
+      vi.advanceTimersByTime(minute);
+      now += minute;
+      if (game.phase === 'live' && goals() === 0) expect(watch.check(game, now)).toBe(false);
+    }
+    expect(game.phase).toBe('live'); // seed 21 has a goal
+    expect(watch.check(game, now)).toBe(true);
+    expect(statusText(game, true)).toMatch(/^⚽ GOAL! SCO|^⚽ GOAL! [A-Z]{3} \d–\d SCO/);
+    expect(watch.check(game, now + GoalWatch.MS + 1)).toBe(false);
+  });
+
+  it('sums up the club in the hover and beside the collapsed box', () => {
+    const { game } = setup();
+    game.start({ rating: 50, difficulty: 'medium', seed: 22, team: 'WAL' });
+    vi.advanceTimersByTime(minute * 30);
+    expect(statusTooltip(game)).toMatch(/^\*\*Wales\*\* · League \d, \d+(st|nd|rd|th) · 0\/38 played/);
+    expect(statusTooltip(game)).toMatch(/Expected to finish \d+/);
+    expect(collapsedText(game)).toMatch(/^\d+(st|nd|rd|th) · [A-Z]{3} \d+–\d+ [A-Z]{3} 30'$/);
   });
 });

@@ -42,7 +42,7 @@ interface UiState {
 
 const ui: UiState = { tab: 'match', tableTier: null, cup: 'cup', ...((vscode.getState() as Partial<UiState>) ?? {}) };
 let view: View | null = null;
-/** The summer focus picked but not yet confirmed, and the season it belongs to. */
+/** The side to rebuild, picked but not yet confirmed, and the season it belongs to. */
 const summer = { season: 0, focus: null as Focus | null, sent: false };
 
 const setup = {
@@ -323,7 +323,7 @@ function panelParts(v: GameView): string[] {
 }
 
 function matchParts(v: GameView): string[] {
-  if (v.waiting === 'seasonOver') return [`<p class="notice">The season is over. Choose your summer focus.</p>`];
+  if (v.waiting === 'seasonOver') return [`<p class="notice">The season is over. Which side do you rebuild?</p>`];
   const m = v.match;
   if (!m) return [`<p class="muted">Next match about to kick off…</p>`];
   // Newest first, so the latest event is always in view.

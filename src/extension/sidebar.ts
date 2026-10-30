@@ -10,12 +10,29 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     private readonly onMessage: (message: ToHost) => void,
   ) {}
 
+  /** What the box's title bar shows while it's collapsed, and the badge for a decision waiting. */
+  private info: { description?: string; badge?: vscode.ViewBadge } = {};
+
   get visible(): boolean {
     return this.view?.visible ?? false;
   }
 
+  /** The description only shows while the box is collapsed, where the header can't be seen. */
+  setInfo(description: string | undefined, badge: vscode.ViewBadge | undefined): void {
+    this.info = { description, badge };
+    this.applyInfo();
+  }
+
+  private applyInfo(): void {
+    if (!this.view) return;
+    const description = this.view.visible ? undefined : this.info.description;
+    if (this.view.description !== description) this.view.description = description;
+    if (this.view.badge?.value !== this.info.badge?.value) this.view.badge = this.info.badge;
+  }
+
   resolveWebviewView(view: vscode.WebviewView): void {
     this.view = view;
+    this.applyInfo();
     view.webview.options = {
       enableScripts: true,
       localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'dist'), vscode.Uri.joinPath(this.extensionUri, 'media')],
@@ -23,6 +40,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     view.webview.html = this.html(view.webview);
     view.webview.onDidReceiveMessage((m: ToHost) => this.onMessage(m));
     view.onDidChangeVisibility(() => {
+      this.applyInfo();
       if (view.visible) this.onMessage({ type: 'ready' });
     });
     view.onDidDispose(() => {

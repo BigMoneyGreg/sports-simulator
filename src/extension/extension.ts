@@ -9,7 +9,7 @@ import { Ownership, POLL_MS } from './ownership';
 import { SidebarProvider } from './sidebar';
 import { StatusBar } from './statusBar';
 import { Storage } from './storage';
-import { buildView, statusText } from './viewModel';
+import { buildView, collapsedText, GoalWatch, statusText, statusTooltip } from './viewModel';
 
 let ownership: Ownership | undefined;
 
@@ -26,11 +26,13 @@ export function activate(context: vscode.ExtensionContext): void {
   const sidebar = new SidebarProvider(context.extensionUri, (message) => handle(message));
   const durations: Duration[] = DURATIONS;
 
+  const goals = new GoalWatch();
   const refresh = () => {
-    sidebar.post({ type: 'view', view: buildView(game, { fullTimeOverlay: config().get('fullTimeOverlay', true), durations, language: vscode.env.language }) });
-    const text = statusText(game);
-    const seasonOver = !!game.career?.pending;
-    statusBar.update(config().get('statusBarScore', true) || seasonOver ? text : null);
+    if (sidebar.visible) sidebar.post({ type: 'view', view: buildView(game, { fullTimeOverlay: config().get('fullTimeOverlay', true), durations, language: vscode.env.language }) });
+    // Starting a career and the summer choice show even with the score turned off: they're waiting on the player.
+    const waiting = !game.career || !!game.career.pending;
+    statusBar.update(config().get('statusBarScore', true) || waiting ? statusText(game, goals.check(game)) : null, statusTooltip(game));
+    sidebar.setInfo(collapsedText(game), game.career?.pending ? { value: 1, tooltip: 'Season over: which side do you rebuild?' } : undefined);
   };
 
   const game = new Game({
@@ -172,6 +174,12 @@ export function activate(context: vscode.ExtensionContext): void {
   );
   owner.activate(vscode.window.state.focused);
   refresh();
+
+  // First install: open the box once, so it's clear where the game lives.
+  if (!game.career && !context.globalState.get('sportsSimulator.welcomed')) {
+    void context.globalState.update('sportsSimulator.welcomed', true);
+    void vscode.commands.executeCommand('sportsSimulator.open');
+  }
 }
 
 /** VS Code is closing: stop the clock exactly where it is, save, and free the game for the next window. */

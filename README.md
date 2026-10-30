@@ -22,11 +22,13 @@ An international football sim that lives in a small box in your VS Code sidebar.
 
 - 100 nations across 5 leagues, with promotion, play-offs and relegation; big nations start near the top, shuffled a little every career
 - The Nations Cup every season and the World Championship every four, each with its own Cups tab (draws, groups, results and past winners)
-- Live match report and live tables, with your score in the status bar
+- Live match report and live tables, with your score in the status bar (and a *GOAL!* when one goes in); hover it for your position and expected finish
+- Collapse the box and its title still shows your position and score
 - A goal flash in the box: green when you score, red when you concede
 - Fits any size: shrink the box and it keeps just the essentials (club, league, position, form and controls)
 - Season reports, trophy cabinet, club history and records
 - Pauses when VS Code closes, so you never miss a match
+- With several VS Code windows open, the game runs in the one you're working in
 
 Player names are generated and fictional. Competitions are the game's own, not official tournaments.
 

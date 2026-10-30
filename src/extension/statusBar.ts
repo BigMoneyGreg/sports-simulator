@@ -9,9 +9,10 @@ export class StatusBar implements vscode.Disposable {
     this.item.name = 'Sports Simulator';
   }
 
-  update(text: string | null): void {
+  update(text: string | null, tooltip?: string): void {
     if (text) {
       this.item.text = text;
+      this.item.tooltip = tooltip === undefined ? 'Sports Simulator: open' : new vscode.MarkdownString(tooltip);
       this.item.show();
     } else {
       this.item.hide();

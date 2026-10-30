@@ -377,7 +377,17 @@ All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned wi
 
 ### Status bar
 
-`⚽ ASH 2–1 HOL 67'`, which you can click to open the sidebar box.
+`⚽ SCO 2–1 RSA 67'`, which you can click to open the sidebar box.
+
+- For about 4 seconds after a goal in your match: `⚽ GOAL! SCO 2–1 RSA 67'`.
+- Hovering shows the essentials without opening the box: club, league and position, games played, expected finish, and the match in progress.
+- Before a career starts: `⚽ Start a career` (shown even with the score turned off, like the summer choice).
+
+### When the box is collapsed
+
+- Its title bar shows the position and score: *SPORTS SIMULATOR 3rd · SCO 1–1 RSA 59'* (VS Code only does this once the box has been opened in that window).
+- While the summer choice waits, a **1** badge sits on the Explorer icon.
+- On first install the box opens once, so it's clear where the game lives.
 
 ### Full-time overlay
 
@@ -401,7 +411,7 @@ This is the **only thing in Sports Simulator that asks for your attention**, bec
 - When the season ends (after the play-offs), **the game waits**. Nothing continues until you've allocated your points.
 - The end-of-season screen opens **inside the Sports Simulator box**.
 - If the box is hidden or collapsed, **one VS Code notification** appears with the result and the clue, e.g. *"Season 4 over: 3rd in League 4. Scored 52 (6th in the league), conceded 61 (15th). Which side do you rebuild?"*, and buttons **Rebuild attack · Rebuild defence · Open**. This is the only VS Code notification Sports Simulator ever shows.
-- The status bar shows `⚽ Season over — allocate points` until you do.
+- The status bar shows `🔔 Season over: which side do you rebuild?` until you do.
 
 Screen contents:
 
@@ -569,6 +579,7 @@ In rough priority order:
 | Hard has no boost | Matches its description; reaching 99 from the bottom becomes a near-impossible grind, and that's the point of Hard |
 | Match lengths 30s · 2 min · 5 min | Three clearly different paces; 1 minute dropped |
 | Pause when VS Code closes | You never miss matches; no catch-up simulation |
+| Status bar goal call-out, rich hover, collapsed-box score and a badge for the summer choice | Most of the time the box is closed: these keep the game noticeable at a glance without a single extra notification |
 | Saves are upgraded, never silently dropped | History is the reward: once the game is public, one update that wiped careers would lose players for good |
 | One window runs the game; focusing another hands it over | Each window used to run its own clock on the shared save, so two windows played different matches and overwrote each other (a summer choice could be lost). Many people keep several windows open all day |
 | Fictional club names only, checked against real club lists | Avoid trademark issues; renaming handled locally later |

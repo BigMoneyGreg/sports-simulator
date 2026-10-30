@@ -608,18 +608,84 @@ function cupView(career: Career, cup: Cup, live = false): CupView {
   return view;
 }
 
-/** Text for the status bar. */
-export function statusText(game: Game): string | null {
-  const career = game.career;
-  if (!career) return null;
-  if (career.pending) return '$(bell) Season over — choose your summer focus';
+/** The score line shared by the status bar and the collapsed box: "SCO 1–1 RSA 59'" or "FT SCO 1–1 RSA". */
+function scoreLine(game: Game): string | null {
+  const career = game.career!;
   const shown = game.shownMatch;
   if (!shown) return null;
   const { match, fixture } = shown;
   const h = career.clubs[fixture.home].short;
   const a = career.clubs[fixture.away].short;
-  const pause = game.paused ? '⏸ ' : '';
-  if (match.period === 'done') return `⚽ ${pause}FT ${h} ${match.home.goals}–${match.away.goals} ${a}`;
-  return `⚽ ${pause}${h} ${match.home.goals}–${match.away.goals} ${a} ${matchClock(match)}`;
+  if (match.period === 'done') return `FT ${h} ${match.home.goals}–${match.away.goals} ${a}`;
+  return `${h} ${match.home.goals}–${match.away.goals} ${a} ${matchClock(match)}`;
+}
+
+const SEASON_OVER = 'Season over: which side do you rebuild?';
+
+/** Text for the status bar; `goal` while a goal in the player's match is fresh. */
+export function statusText(game: Game, goal = false): string | null {
+  const career = game.career;
+  if (!career) return '⚽ Start a career';
+  if (career.pending) return `$(bell) ${SEASON_OVER}`;
+  const score = scoreLine(game);
+  if (!score) return null;
+  return `⚽ ${game.paused ? '⏸ ' : ''}${goal && !score.startsWith('FT') ? 'GOAL! ' : ''}${score}`;
+}
+
+/** Where the player's club stands in its league table before the matchday in progress. */
+function leaguePlace(career: Career): { tier: number; position: number; played: number } {
+  const league = career.season.leagues.find((l) => l.clubIds.includes(career.playerClubId))!;
+  const table = sortTable(league.table);
+  const position = table.findIndex((r) => r.clubId === career.playerClubId) + 1;
+  return { tier: league.tier, position, played: table[position - 1].played };
+}
+
+/** The status bar's hover: the essentials of the box without opening it (Markdown). */
+export function statusTooltip(game: Game): string {
+  const career = game.career;
+  if (!career) return 'Sports Simulator: pick your country and start a career.';
+  const me = career.clubs[career.playerClubId];
+  const place = leaguePlace(career);
+  const lines = [`**${me.name}** · League ${place.tier}, ${ordinal(place.position)} · ${place.played}/${leagueRounds(career.season)} played`];
+  if (career.pending) lines.push(SEASON_OVER);
+  else {
+    lines.push(`Expected to finish ${ordinal(career.season.expected[me.id])}`);
+    const shown = game.shownMatch;
+    if (shown) lines.push(`${competition(shown.fixture, career)}: ${scoreLine(game)}${game.paused ? ' (paused)' : ''}`);
+  }
+  lines.push('Click to open');
+  return lines.join('\n\n');
+}
+
+/** Shown beside the box's title while it's collapsed: "3rd · SCO 1–1 RSA 59'". */
+export function collapsedText(game: Game): string | undefined {
+  const career = game.career;
+  if (!career) return undefined;
+  if (career.pending) return 'Season over';
+  const place = ordinal(leaguePlace(career).position);
+  const score = scoreLine(game);
+  return score ? `${place} · ${score}` : place;
+}
+
+/** Spots a goal in the player's match between updates, so the status bar can call it out for a few seconds. */
+export class GoalWatch {
+  static readonly MS = 4000;
+  private key = '';
+  private goals = 0;
+  private until = 0;
+
+  /** True while a goal in the player's match is fresh. */
+  check(game: Game, now = Date.now()): boolean {
+    const shown = game.live && game.shownMatch;
+    if (!shown) return false;
+    const { match, fixture } = shown;
+    const key = `${game.career!.season.number}-${game.career!.season.round}-${fixture.home}-${fixture.away}`;
+    const goals = match.home.goals + match.away.goals;
+    if (key === this.key && goals > this.goals) this.until = now + GoalWatch.MS;
+    if (key !== this.key) this.until = 0;
+    this.key = key;
+    this.goals = goals;
+    return now < this.until;
+  }
 }
 
