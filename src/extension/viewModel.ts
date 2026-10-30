@@ -7,6 +7,7 @@ import { outcome, type SideKey } from '../sports/football/match';
 import { NATIONS } from '../sports/football/data/nations';
 import { naturalTier, shortName, surname } from '../sports/football/names';
 import { role } from '../sports/football/squad';
+import { ordinal } from '../shared/format';
 import { DURATIONS, type Duration } from '../shared/view';
 import type { CupRunView, CupsView, CupTieView, CupView, NationOption, CabinetView, QuestionView, ClubView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, TableView, TeamBadge, View } from '../shared/view';
 import { fullTimePause } from './game';
@@ -332,7 +333,7 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
       topScorer: scorer && scorer.goals > 0 ? `${scorer.name} (${scorer.goals})` : undefined,
       cups: [s.cup, s.championship].flatMap((cup) => (cup ? [seasonCupLine(career, cup)] : [])),
     },
-    points: { total: end.points, base: 10, performance: end.performance, bonus: end.bonus, boosted: end.boost > 0 },
+    performance: end.performance > 0 ? 'above' : end.performance < 0 ? 'below' : 'expected',
     squad: squadChanges(career),
     question: summerQuestion(career),
     summary: summaryLine({ season: end.season, tier: end.tier, position: end.position, won: row.won, drawn: row.drawn, lost: row.lost, outcome: end.outcome }),
@@ -340,11 +341,6 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
   };
 }
 
-function ordinal(n: number): string {
-  const sfx = ['th', 'st', 'nd', 'rd'];
-  const v = n % 100;
-  return n + (sfx[(v - 20) % 10] ?? sfx[v] ?? sfx[0]);
-}
 
 function rivalView(career: Career, tables: TableView[]): ClubView['rival'] {
   if (career.rival === null || career.rival === undefined) return undefined;

@@ -20,8 +20,7 @@ import {
   type ToWebview,
   type View,
 } from '../shared/view';
-
-
+import { ordinal } from '../shared/format';
 
 declare function acquireVsCodeApi(): { postMessage(m: ToHost): void; getState(): unknown; setState(s: unknown): void };
 
@@ -71,11 +70,6 @@ function esc(s: string | number): string {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 }
 
-function ordinal(n: number): string {
-  const s = ['th', 'st', 'nd', 'rd'];
-  const v = n % 100;
-  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
-}
 
 function swatch(b: Pick<TeamBadge, 'colours'>, cls = 'swatch'): string {
   return `<span class="${cls}" data-colours="${esc(b.colours.join(' '))}"></span>`;
@@ -172,7 +166,6 @@ function renderSetup(v: SetupView): void {
 
 // ---------------------------------------------------------------------------
 // Game
-
 
 function renderOverlay(ft: FullTimeView | null): void {
   if (!ft) {
@@ -312,7 +305,7 @@ function panelParts(v: GameView): string[] {
           return `<button type="button" class="${x.tier === tier ? 'on' : ''} ${mine ? 'mine' : ''}" data-tier="${x.tier}"${mine ? ' title="Your league"' : ''}>L${x.tier}</button>`;
         })
         .join('')}</div>`;
-      return [chips, tableHtml(v.tables, tier, false), playoff ? playoffHtml(playoff) : ''];
+      return [chips, tableHtml(v.tables, tier), playoff ? playoffHtml(playoff) : ''];
     }
     case 'fixtures':
       return [fixturesHtml(v.fixtures)];
@@ -353,11 +346,8 @@ function scoreboard(m: LiveMatchView): string {
     </div>`;
 }
 
-function tableHtml(tables: TableView[], tier: number, withChips = true): string {
+function tableHtml(tables: TableView[], tier: number): string {
   const t = tables[tier - 1];
-  const chips = withChips
-    ? `<div class="seg chips">${tables.map((x) => `<button type="button" class="${x.tier === tier ? 'on' : ''}" data-tier="${x.tier}">L${x.tier}</button>`).join('')}</div>`
-    : '';
   const rows = t.rows
     .map(
       (r) => `<tr class="${r.zone ?? ''} ${r.isPlayer ? 'me' : ''}">
@@ -367,8 +357,7 @@ function tableHtml(tables: TableView[], tier: number, withChips = true): string 
       <td>${r.played}</td><td>${r.won}</td><td>${r.drawn}</td><td>${r.lost}</td><td>${r.gd > 0 ? '+' : ''}${r.gd}</td><td class="pts">${r.points}</td></tr>`,
     )
     .join('');
-  return `${chips}
-    <div class="card flush"><table class="league"><thead><tr><th></th><th></th><th title="Played">P</th><th title="Won">W</th><th title="Drawn">D</th><th title="Lost">L</th><th title="Goal difference">GD</th><th title="Points">Pts</th></tr></thead>
+  return `<div class="card flush"><table class="league"><thead><tr><th></th><th></th><th title="Played">P</th><th title="Won">W</th><th title="Drawn">D</th><th title="Lost">L</th><th title="Goal difference">GD</th><th title="Points">Pts</th></tr></thead>
     <tbody>${rows}</tbody></table></div>
     ${legendHtml(t)}`;
 }
@@ -446,11 +435,10 @@ function cupParts(v: GameView): string[] {
 
 function seasonEndHtml(e: SeasonEndView): string {
   const r = e.report;
-  const perf = e.points.performance;
   const verdict =
-    perf > 0
+    e.performance === 'above'
       ? `You beat expectations: expected ${ordinal(e.expected)}, finished ${ordinal(e.position)}. Plenty to build with this summer.`
-      : perf < 0
+      : e.performance === 'below'
         ? `You fell short: expected ${ordinal(e.expected)}, finished ${ordinal(e.position)}. Less to build with this summer.`
         : `You finished where you were expected: ${ordinal(e.position)}.`;
   if (summer.season !== e.season) Object.assign(summer, { season: e.season, focus: null, sent: false });
@@ -503,7 +491,7 @@ function seasonEndHtml(e: SeasonEndView): string {
     </div>
 
     <h3 class="sub">Final table</h3>
-    ${tableHtml([e.table], 1, false)}
+    ${tableHtml([e.table], 1)}
     ${e.playoffs ? playoffHtml(e.playoffs) : ''}
   </div>`;
 }

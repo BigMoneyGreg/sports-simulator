@@ -229,7 +229,8 @@ export interface SeasonEndView {
     topScorer?: string;
     cups: CupRunView[];
   };
-  points: { total: number; base: number; performance: number; bonus: number; boosted: boolean };
+  /** How the finish compared with expectation; the summer's points themselves stay in the host. */
+  performance: 'above' | 'expected' | 'below';
   /** The squad's summer changes: "Finlay Ross · striker · retires after 9 seasons, 142 goals" leaving, new names arriving. */
   squad: { leaving: string[]; arriving: string[] };
   /** The summer's one question; one answer rebuilds the attack, the other the defence. */

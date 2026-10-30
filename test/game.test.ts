@@ -159,9 +159,11 @@ describe('season end view', () => {
     expect(JSON.stringify(e.question)).not.toMatch(/\d/);
     expect(e.playoffs?.semis).toHaveLength(2);
 
-    expect(() => game.allocate({ attack: e.points.total + 1, defence: 0 })).toThrow();
-    const half = Math.floor(e.points.total / 2);
-    game.allocate({ attack: half, defence: e.points.total - half });
+    expect(e).not.toHaveProperty('points');
+    const points = game.career!.pending!.points;
+    expect(() => game.allocate({ attack: points + 1, defence: 0 })).toThrow();
+    const half = Math.floor(points / 2);
+    game.allocate({ attack: half, defence: points - half });
     expect(game.career!.history).toHaveLength(1);
     expect(buildView(game).screen).toBe('game');
   });

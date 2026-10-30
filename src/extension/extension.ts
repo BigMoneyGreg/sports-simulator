@@ -3,6 +3,7 @@ import { fullHistory } from '../core/career';
 import { goalRanks, startRating } from '../core/league';
 import { Rng } from '../core/rng';
 import { isNation } from '../sports/football/names';
+import { ordinal } from '../shared/format';
 import { DURATIONS, type Duration, type ToHost } from '../shared/view';
 import { Game } from './game';
 import { Ownership, POLL_MS } from './ownership';
@@ -224,10 +225,4 @@ export function activate(context: vscode.ExtensionContext): void {
 /** VS Code is closing: stop the clock exactly where it is, save, and free the game for the next window. */
 export function deactivate(): void {
   ownership?.release();
-}
-
-function ordinal(n: number): string {
-  const s = ['th', 'st', 'nd', 'rd'];
-  const v = n % 100;
-  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
 }
