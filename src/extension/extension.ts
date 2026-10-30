@@ -9,7 +9,7 @@ import { Ownership, POLL_MS } from './ownership';
 import { SidebarProvider } from './sidebar';
 import { StatusBar } from './statusBar';
 import { Storage } from './storage';
-import { buildView, collapsedText, GoalWatch, statusText, statusTooltip } from './viewModel';
+import { buildView, collapsedText, GoalWatch, leaversLine, SEASON_OVER, statusText, statusTooltip, summerQuestion } from './viewModel';
 
 let ownership: Ownership | undefined;
 
@@ -32,7 +32,7 @@ export function activate(context: vscode.ExtensionContext): void {
     // Starting a career and the summer choice show even with the score turned off: they're waiting on the player.
     const waiting = !game.career || !!game.career.pending;
     statusBar.update(config().get('statusBarScore', true) || waiting ? statusText(game, goals.check(game)) : null, statusTooltip(game));
-    sidebar.setInfo(collapsedText(game), game.career?.pending ? { value: 1, tooltip: 'Season over: which side do you rebuild?' } : undefined);
+    sidebar.setInfo(collapsedText(game), game.career?.pending ? { value: 1, tooltip: SEASON_OVER } : undefined);
   };
 
   const game = new Game({
@@ -43,21 +43,24 @@ export function activate(context: vscode.ExtensionContext): void {
     changed: refresh,
     seasonOver: (end) => {
       if (sidebar.visible) return;
-      // The one notification: the result, the clue (where scoring and conceding ranked) and the summer choice.
-      const table = game.career!.season.leagues[end.tier - 1].table;
-      const me = table.find((r) => r.clubId === game.career!.playerClubId)!;
+      // The one notification: the result, the clues (goal ranks and who's leaving) and the summer's question.
+      const career = game.career!;
+      const table = career.season.leagues[end.tier - 1].table;
+      const me = table.find((r) => r.clubId === career.playerClubId)!;
       const ranks = goalRanks(table, me.clubId);
-      const choices = { 'Rebuild attack': 'attack', 'Rebuild defence': 'defence' } as const;
+      const question = summerQuestion(career);
+      const leavers = leaversLine(career);
       void vscode.window
         .showInformationMessage(
-          `Season ${end.season} over: ${ordinal(end.position)} in League ${end.tier}. Scored ${me.goalsFor} (${ordinal(ranks.scored)} in the league), conceded ${me.goalsAgainst} (${ordinal(ranks.conceded)}). Which side do you rebuild?`,
-          ...Object.keys(choices),
+          `Season ${end.season} over: ${ordinal(end.position)} in League ${end.tier}. Scored ${me.goalsFor} (${ordinal(ranks.scored)}), conceded ${me.goalsAgainst} (${ordinal(ranks.conceded)}).${leavers ? ` ${leavers}` : ''} ${question.prompt}`,
+          ...question.options.map((o) => o.title),
           'Open',
         )
         .then((choice) => {
           if (!choice) return;
-          if (choice === 'Open') void vscode.commands.executeCommand('sportsSimulator.open');
-          else owner.whenOwner(() => game.career?.pending?.season === end.season && game.chooseFocus(choices[choice as keyof typeof choices]));
+          const answer = question.options.find((o) => o.title === choice);
+          if (!answer) void vscode.commands.executeCommand('sportsSimulator.open');
+          else owner.whenOwner(() => game.career?.pending?.season === end.season && game.chooseFocus(answer.focus));
         });
     },
     unreadable: (old) => {

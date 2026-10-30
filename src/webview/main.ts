@@ -323,7 +323,7 @@ function panelParts(v: GameView): string[] {
 }
 
 function matchParts(v: GameView): string[] {
-  if (v.waiting === 'seasonOver') return [`<p class="notice">The season is over. Which side do you rebuild?</p>`];
+  if (v.waiting === 'seasonOver') return [`<p class="notice">The season is over: one decision waiting.</p>`];
   const m = v.match;
   if (!m) return [`<p class="muted">Next match about to kick off…</p>`];
   // Newest first, so the latest event is always in view.
@@ -452,13 +452,9 @@ function seasonEndHtml(e: SeasonEndView): string {
       : perf < 0
         ? `You fell short: expected ${ordinal(e.expected)}, finished ${ordinal(e.position)}. Less to build with this summer.`
         : `You finished where you were expected: ${ordinal(e.position)}.`;
-  const FOCUS_TEXT: Record<Focus, [string, string]> = {
-    attack: ['Rebuild attack', 'Most of the work goes into scoring'],
-    defence: ['Rebuild defence', 'Most of the work goes into defending'],
-  };
   if (summer.season !== e.season) Object.assign(summer, { season: e.season, focus: null, sent: false });
-  const option = (o: SeasonEndView['options'][number]) => `<button type="button" role="radio" aria-checked="${summer.focus === o.focus}" class="focus ${o.focus} ${summer.focus === o.focus ? 'on' : ''}" data-focus="${o.focus}"${summer.sent ? ' disabled' : ''}>
-      <strong>${FOCUS_TEXT[o.focus][0]}</strong><span class="muted small">${FOCUS_TEXT[o.focus][1]}</span>
+  const option = (o: SeasonEndView['question']['options'][number]) => `<button type="button" role="radio" aria-checked="${summer.focus === o.focus}" class="focus ${o.focus} ${summer.focus === o.focus ? 'on' : ''}" data-focus="${o.focus}"${summer.sent ? ' disabled' : ''}>
+      <strong>${esc(o.title)}</strong>${o.line ? `<span class="muted small">${esc(o.line)}</span>` : ''}
     </button>`;
   return `<div class="season-end">
     <div class="card hero ${e.outcome ?? ''}">
@@ -479,8 +475,8 @@ function seasonEndHtml(e: SeasonEndView): string {
     </dl>
     ${
       e.squad.leaving.length
-        ? `<h3 class="sub">Leaving this summer</h3><ul class="plain small">${e.squad.leaving.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
-           <p class="muted small">Joining: ${e.squad.arriving.map(esc).join(', ')}</p>`
+        ? `<h3 class="sub">Leaving the squad</h3><ul class="plain small">${e.squad.leaving.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+           ${e.squad.arriving.length ? `<p class="muted small">Joining: ${e.squad.arriving.map(esc).join(', ')}</p>` : ''}`
         : ''
     }
     </div>
@@ -493,11 +489,11 @@ function seasonEndHtml(e: SeasonEndView): string {
       <div class="clue-row"><span>Defence</span><strong>${ordinal(r.concededRank)}</strong><span class="muted small">for goals conceded</span></div>
     </div>
     <details class="howto small"><summary>How does summer work?</summary>
-      <p class="muted">Every summer players age and leave, and the squad loses strength, split at random between attack and defence. The higher you climb, the more you lose. You aren't told which side took the hit: your season is the clue. The side that ranked worse in the league is usually the one that dropped off.</p>
-      <p class="muted">Rebuild it: most of the summer's work goes there. Let one side fall too far behind and opponents exploit it, and at the top there's less room for a weak side.</p>
+      <p class="muted">Every summer some players retire or are dropped, and the squad loses strength, more at one end of the pitch than the other. Who's leaving shows where most of it went; your season shows where you were already short.</p>
+      <p class="muted">Whatever the question, one answer strengthens the attack and the other the defence. Let one side fall too far behind and opponents exploit it, and at the top there's less room for a weak side.</p>
     </details>
-    <p class="small strong">Which side do you rebuild?</p>
-    <div class="focus-row" role="radiogroup">${e.options.map(option).join('')}</div>
+    <p class="small strong">${esc(e.question.prompt)}</p>
+    <div class="focus-row" role="radiogroup">${e.question.options.map(option).join('')}</div>
     <button type="button" id="nextSeason" class="primary"${summer.focus && !summer.sent ? '' : ' disabled'}>Start next season</button>
     ${e.canRetire ? '<p class="muted small center">Start next season to defend the title.</p>' : ''}
     ${e.canRetire ? `<button type="button" id="newCareer" class="secondary">Start a new career</button>` : ''}

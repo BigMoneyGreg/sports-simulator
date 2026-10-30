@@ -196,6 +196,12 @@ export interface PlayoffView {
 
 export type SeasonOutcome = 'champion' | 'promoted' | 'playoffWinner' | 'playoffs' | 'relegated' | null;
 
+export interface QuestionView {
+  /** e.g. "Retirements leave gaps. Who gets the call?" */
+  prompt: string;
+  options: { focus: Focus; title: string; line?: string }[];
+}
+
 export interface SeasonEndView {
   season: number;
   tier: number;
@@ -222,10 +228,10 @@ export interface SeasonEndView {
     cups: CupRunView[];
   };
   points: { total: number; base: number; performance: number; bonus: number; boosted: boolean };
-  /** The squad's summer changes: "Finlay Ross · 9 seasons, 142 goals" leaving, new names arriving. */
+  /** The squad's summer changes: "Finlay Ross · striker · retires after 9 seasons, 142 goals" leaving, new names arriving. */
   squad: { leaving: string[]; arriving: string[] };
-  /** The three summer choices and how each would split the points. */
-  options: { focus: Focus; attack: number; defence: number }[];
+  /** The summer's one question; one answer rebuilds the attack, the other the defence. */
+  question: QuestionView;
   summary: string;
   /** Won League 1: offer to start a new career instead of carrying on. */
   canRetire: boolean;

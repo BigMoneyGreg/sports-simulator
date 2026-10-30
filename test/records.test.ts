@@ -126,7 +126,7 @@ describe('squads over time', () => {
     if (v.screen !== 'game' || !v.seasonEnd) throw new Error('expected the summer screen');
     const mine = c.pending!.turnover.find((t) => t.clubId === c.playerClubId)!;
     expect(v.seasonEnd.squad.leaving).toHaveLength(mine.out.length);
-    expect(v.seasonEnd.squad.leaving[0]).toMatch(/· 1 season/);
+    expect(v.seasonEnd.squad.leaving[0]).toMatch(/· dropped$/);
     allocatePoints(c, fillAllocation(c.clubs[0], c.pending!.points, { attack: 1, defence: 1 }));
     c.clubs.forEach((club, i) => {
       const changed = club.squad.filter((p) => !before[i].includes(p.id));

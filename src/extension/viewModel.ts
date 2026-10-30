@@ -1,4 +1,4 @@
-import { currentSlot, FOCUSES, focusAllocation, leagueRounds, type Career, type Playoff, type SeasonRecord, type Slot } from '../core/career';
+import { currentSlot, FOCUSES, leagueRounds, type Career, type Focus, type Playoff, type QuestionStyle, type SeasonRecord, type Slot } from '../core/career';
 import { CHAMPIONSHIP_EVERY, CUP_NAMES, cupFixtures, cupRun, cupStages, stageLabel, stillIn, type Cup, type CupId, type CupTie } from '../core/cups';
 import { emptyRecords, topScorers } from '../core/records';
 import { goalRanks, LEAGUE_COUNT, LEAGUE_SIZE, recordResult, sortTable, zone, type Fixture, type TableRow } from '../core/league';
@@ -6,8 +6,9 @@ import { matchClock, timeline } from '../sports/football/commentary';
 import { outcome, type SideKey } from '../sports/football/match';
 import { NATIONS } from '../sports/football/data/nations';
 import { naturalTier, shortName, surname } from '../sports/football/names';
+import { role } from '../sports/football/squad';
 import { DURATIONS, type Duration } from '../shared/view';
-import type { CupRunView, CupsView, CupTieView, CupView, NationOption, CabinetView, ClubView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, TableView, TeamBadge, View } from '../shared/view';
+import type { CupRunView, CupsView, CupTieView, CupView, NationOption, CabinetView, QuestionView, ClubView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, TableView, TeamBadge, View } from '../shared/view';
 import { fullTimePause } from './game';
 import type { Game } from './game';
 
@@ -134,7 +135,10 @@ function cupLine(r: Pick<SeasonRecord, 'cup' | 'championship'>): string | undefi
   return parts.length ? parts.join(' · ') : undefined;
 }
 
-/** The player's summer comings and goings, with a leaver's seasons and goals for the club. */
+/** Long servants retire from international football; the rest are dropped. */
+const RETIRES_AFTER = 5;
+
+/** The player's summer comings and goings: who leaves, what they play and why, and the newcomers already settled. */
 function squadChanges(career: Career): SeasonEndView['squad'] {
   const change = career.pending?.turnover?.find((t) => t.clubId === career.playerClubId);
   if (!change) return { leaving: [], arriving: [] };
@@ -144,9 +148,42 @@ function squadChanges(career: Career): SeasonEndView['squad'] {
     const p = me.squad.find((x) => x.id === id)!;
     const seasons = season - (p.joined ?? 1) + 1;
     const goals = career.records?.scorers[id]?.goals ?? 0;
-    return `${p.name} · ${seasons} season${seasons === 1 ? '' : 's'}${goals ? `, ${goals} goal${goals === 1 ? '' : 's'}` : ''}`;
+    const why = seasons >= RETIRES_AFTER ? `retires after ${seasons} seasons${goals ? `, ${goals} goal${goals === 1 ? '' : 's'}` : ''}` : 'dropped';
+    return `${p.name} · ${role(p).label} · ${why}`;
   });
-  return { leaving, arriving: change.in.map((p) => p.name) };
+  // A call-up may take a newcomer's place, so those places wait for the answer.
+  const open = Object.values(career.pending?.question?.callUps ?? {}).map((c) => c.replaces);
+  return { leaving, arriving: change.in.filter((p) => !open.includes(p.id)).map((p) => p.name) };
+}
+
+const QUESTION_COPY: Record<QuestionStyle, { prompt: string; titles?: Record<Focus, string> }> = {
+  callUp: { prompt: 'Retirements leave gaps. Who gets the call?' },
+  coach: { prompt: 'Your assistant has moved on. Who do you bring in?' },
+  formation: { prompt: 'Time for a new shape?', titles: { attack: 'Three up front', defence: 'A back five' } },
+  training: { prompt: 'What does the summer camp work on?', titles: { attack: 'Finishing', defence: 'Defending' } },
+};
+
+/** The summer's question as the player sees it, attack answer first. */
+export function summerQuestion(career: Career): QuestionView {
+  const q = career.pending?.question ?? { style: 'formation' };
+  const copy = QUESTION_COPY[q.style];
+  return {
+    prompt: copy.prompt,
+    options: FOCUSES.map((focus) => {
+      const person = q.people?.[focus];
+      if (!person || copy.titles) return { focus, title: (copy.titles ?? QUESTION_COPY.formation.titles!)[focus] };
+      return q.style === 'coach' ? { focus, title: `Appoint ${person.name}`, line: `former ${person.role}` } : { focus, title: `Call up ${person.name}`, line: person.role };
+    }),
+  };
+}
+
+/** For the notification: "Finlay Ross (striker) and 2 others leave." */
+export function leaversLine(career: Career): string | undefined {
+  const change = career.pending?.turnover?.find((t) => t.clubId === career.playerClubId);
+  const first = change && career.clubs[career.playerClubId].squad.find((p) => p.id === change.out[0]);
+  if (!change || !first) return undefined;
+  const others = change.out.length - 1;
+  return `${first.name} (${role(first).label})${others ? ` and ${others} other${others === 1 ? '' : 's'}` : ''} ${others ? 'leave' : 'leaves'}.`;
 }
 
 /** The season report's line for a competition: how far you went, and who won if it wasn't you. */
@@ -297,7 +334,7 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
     },
     points: { total: end.points, base: 10, performance: end.performance, bonus: end.bonus, boosted: end.boost > 0 },
     squad: squadChanges(career),
-    options: FOCUSES.map((focus) => ({ focus, ...focusAllocation(me, end.points, focus) })),
+    question: summerQuestion(career),
     summary: summaryLine({ season: end.season, tier: end.tier, position: end.position, won: row.won, drawn: row.drawn, lost: row.lost, outcome: end.outcome }),
     canRetire: end.outcome === 'champion',
   };
@@ -620,7 +657,7 @@ function scoreLine(game: Game): string | null {
   return `${h} ${match.home.goals}–${match.away.goals} ${a} ${matchClock(match)}`;
 }
 
-const SEASON_OVER = 'Season over: which side do you rebuild?';
+export const SEASON_OVER = 'Season over: one decision waiting';
 
 /** Text for the status bar; `goal` while a goal in the player's match is fresh. */
 export function statusText(game: Game, goal = false): string | null {

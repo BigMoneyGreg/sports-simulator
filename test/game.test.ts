@@ -153,10 +153,10 @@ describe('season end view', () => {
     expect(JSON.stringify(v.club)).not.toMatch(/"attack"|"defence"|"rating"/);
     expect(e).not.toHaveProperty('decline');
     expect(v.club.goals.played).toBe(38);
-    expect(e.options.map((o) => o.focus)).toEqual(['attack', 'defence']);
-    for (const o of e.options) expect(o.attack + o.defence).toBe(e.points.total);
-    const focused = e.options[0];
-    expect(focused.attack).toBeGreaterThan(focused.defence);
+    // One question: attack answer first, and nothing about how the points split.
+    expect(e.question.options.map((o) => o.focus)).toEqual(['attack', 'defence']);
+    expect(e.question.prompt).toMatch(/\?$/);
+    expect(JSON.stringify(e.question)).not.toMatch(/\d/);
     expect(e.playoffs?.semis).toHaveLength(2);
 
     expect(() => game.allocate({ attack: e.points.total + 1, defence: 0 })).toThrow();

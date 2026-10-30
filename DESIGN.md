@@ -17,7 +17,7 @@ Football management with almost nothing to manage. Your only decisions are:
 
 1. **Which country you are, and which league it starts in:** any of FIFA's ~210 nations, in League 1 to 5 (its usual level by default), starting mid-table
 2. **How long a match lasts:** 30 seconds, 2 or 5 real minutes
-3. **Which side to rebuild each summer:** attack or defence
+3. **One summer question:** asked in different ways (call-ups, a new assistant coach, a formation, the training camp), but one answer always rebuilds the attack and the other the defence
 
 Everything else runs by itself: fixtures, matches, commentary, tables, scorers, play-offs, promotion and relegation, the Nations Cup and the World Championship, and the other 99 nations rising and falling. You glance at it between tasks, react at the end of each season, and build a club history worth keeping.
 
@@ -25,7 +25,7 @@ Everything else runs by itself: fixtures, matches, commentary, tables, scorers, 
 
 - **Realistic.** League sizes, promotion rules, results and club movement should feel like real football.
 - **Glanceable, not demanding.** It should never need attention mid-match.
-- **One meaningful decision per season.** Choosing which side to rebuild is the whole game, so it has to matter.
+- **One meaningful decision per season.** The summer question is the whole game, so it has to matter.
 - **History is the reward.** Trophies, records and club history are why people keep it installed.
 - **Nothing happens while you're away.** Closing VS Code pauses everything.
 - **Near-zero resource use.** It must never slow the editor.
@@ -55,7 +55,7 @@ End of season
   └─ final table, promotion / relegation
   └─ season report (what went well, what didn't)
   └─ decline applied to every club
-  └─ choose which side to rebuild: attack · defence
+  └─ answer the summer question (one answer rebuilds attack, the other defence)
   └─ trophies & records updated
         │
         ▼
@@ -69,7 +69,7 @@ Next season … (won league 1? → carry on, or start a new career)
 | Option | Values | Notes |
 |---|---|---|
 | League | 1–5 (buttons) | Where you start. Your rating is random within the league, weighted to mid-table: 50% chance of 40–60% of the way up the league's band, 25% of 20–40%, 25% of 60–80% (never the very top or bottom). Not shown; you find out from the table |
-| Difficulty | Easy / Medium / Hard | *A helpful boost each season* · *A subtle boost each season* · *No extra season boost*: Easy +10, Medium +5, Hard 0 (§7) |
+| Difficulty | Easy / Medium / Hard | *A helpful boost each season* · *A subtle boost each season* · *No extra season boost*: Easy +10, Medium +7, Hard 0 (§7) |
 | Match duration | 30 sec · 2 min · 5 min | Length of one 90-minute match; can be changed any time from the ⏱ button in the box. Default 2 min |
 | Country | Type to search; matches appear as you type | Sets the league picker to its usual level (marked *Usual*); any league can be picked, but only once a country is chosen. Preselected from VS Code's display language when it points to one country (German → Germany; plain English doesn't). See §10 |
 
@@ -103,7 +103,7 @@ AI clubs have a "style", a fixed **shape** around their rating: attacking clubs 
 
 Players are generated (names, positions, shirt numbers). They're flavour only: they score goals, get cards and appear in commentary and records. There is no squad management, and none of this changes a team's strength.
 
-- **Squads turn over:** each summer 2–4 players leave every club, long servants likeliest, and new names from the country's pool take their positions and shirts. The summer screen lists who's leaving (*Finlay Ross · 9 seasons, 142 goals*) and who's joining. Leavers keep their goals in the all-time records.
+- **Squads turn over:** each summer 2–4 players leave every club, long servants likeliest, and new names from the country's pool take their positions and shirts. Your leavers come mostly from the end of the pitch that lost most this summer (§7), so they're a clue. The summer screen lists them with what they play: long servants (5+ seasons) retire, the rest are dropped (*Finlay Ross · striker · retires after 9 seasons, 142 goals*, *Callum Reid · centre-back · dropped*), and who's joining. Leavers keep their goals in the all-time records.
 - **Suspensions:** a player sent off misses his club's next match, in any competition; the next man in that position starts. The scoreboard notes it for your matches (*Suspended: Ross*). Bans don't carry over the summer.
 - **AI managers change:** each summer about 1 AI club in 10 switches style (attacking ↔ defensive), so a club's character shifts over a long career.
 
@@ -214,7 +214,7 @@ Cups never change ratings: only league finishes feed the summer (§7). They brin
 
 ### Every club, every season
 
-1. **Decline:** every club, including yours, loses **10** rating (ageing, players leaving), which is **20 stat points**, at the end of the season, however strong it is. For your club it's **split at random** between attack and defence, each side taking a quarter to three quarters of it (a key striker leaves, the defence ages). **You're never told the split**, and your attack and defence numbers are hidden once the career starts.
+1. **Decline:** every club, including yours, loses **10** rating (ageing, players leaving), which is **20 stat points**, at the end of the season, however strong it is. For your club it's **split at random** between attack and defence, each side taking a tenth to nine tenths of it, and your leavers mostly come from the side that took more (two strikers retire, the defence ages). **You're never told the split**, and your attack and defence numbers are hidden once the career starts.
 2. **Gains:** clubs regain rating based on **how they finished compared with what was expected**. The average gain is **+10**.
 3. **Ratings carry forward** into the next season for every club, so clubs rise and fall over the years like real life.
 
@@ -259,20 +259,29 @@ Examples (at the start of a career, when each rating is used exactly once):
 
 ### Where the player's skill comes in
 
-Your one decision each summer is **which side to rebuild: attack or defence**. There's no balanced option, because a safe middle made the choice meaningless (measured: always-balanced did as well as perfect knowledge, so nobody had a reason to look). **65%** of the summer's points go to the side you rebuild, **35%** to the other.
+Your one decision each summer is **the summer question**. It's asked in one of four styles, but one answer always rebuilds the attack and the other the defence. There's no balanced option, because a safe middle made the choice meaningless (measured: always-balanced did as well as perfect knowledge, so nobody had a reason to look). **65%** of the summer's points go to the side you rebuild, **35%** to the other.
 
-- **The clue:** the summer screen shows where you ranked in your league for **goals scored** and **goals conceded**. The side that ranked worse is usually the one that dropped off. It's plain football information; no ratings are shown.
+| Style | Prompt | Attack answer | Defence answer |
+|---|---|---|---|
+| Call-ups (drawn twice as often) | *Retirements leave gaps. Who gets the call?* | **Call up [name]** · striker, winger or attacking midfielder | **Call up [name]** · centre-back, full-back, defensive midfielder or goalkeeper |
+| Assistant coach | *Your assistant has moved on. Who do you bring in?* | **Appoint [name]** · former striker (etc.) | **Appoint [name]** · former centre-back (etc.) |
+| Formation | *Time for a new shape?* | **Three up front** | **A back five** |
+| Training camp | *What does the summer camp work on?* | **Finishing** | **Defending** |
+
+The same style is never asked two summers running. A call-up joins the squad in his position, taking the place of a newcomer at his end of the pitch (or of its longest servant); the other candidate doesn't. Names come from the nation's own pool.
+
+- **Two clues:** where you ranked in your league for **goals scored** and **goals conceded** (where you were already short), and **who's leaving** (where this summer's loss mostly fell, §4). It's plain football information; no ratings are shown.
+- **Why both:** at the top the ranks are often level (1st for both), and then only the leavers tell you anything. Measured with the loss split 10–90%: reading the ranks, then the leavers when the ranks are level, is right about 82% of the time below 99 and 76% above it (ranks alone: 66% at the top). A 0–100% split was too harsh: even a perfect reader sank.
 - **Why it matters:** a side that falls behind gets exploited (§4), gradually at first and steeply above 99.
-- **How readable it is** (60 careers): the ranks point at the weaker side **95%** of the time when the gap is big (12+), 72% when it's medium, and only 50% when it's small, but a small gap costs almost nothing. They're right 99% of the time after a bad season and 65% after a good one: winning papers over the cracks. Ranks 5+ places apart are a clear read (91%). Promotion doesn't spoil it (92% in a promoted team's first season).
 - **Measured** (12 seasons from five starting ratings, medium), places above expectation per season:
 
 | Player | Places a season |
 |---|---|
-| Reads the ranks | **±0** |
-| Guesses (coin flip) | **−5.6** |
-| Always rebuilds attack | −8.9 |
+| Reads the ranks, then the leavers | **−1.0** |
+| Guesses (coin flip) | **−6.2** |
+| Always rebuilds attack | −10.0 |
 
-So reading the season keeps you level with expectation, while guessing costs over 5 places a season and ignoring it sinks you.
+So reading the summer keeps you close to expectation, while guessing costs over 6 places a season and ignoring it sinks you. The wider split made Medium harder to climb (0→99 took 12–39 seasons), so Medium's boost went from 5 to 7; 0→99 is now 8–19 seasons for a reader and the reader's peak beyond 99 averages 161, against 132 for a guesser.
 
 ### Difficulty: a hidden boost 🟢 NOW
 
@@ -281,7 +290,7 @@ Each season your club gets an extra boost. It's **new rating, not taken from the
 | Difficulty | Your boost per season | While reigning League 1 champion |
 |---|---|---|
 | Easy | +10 | +4 |
-| Medium | +5 | +2 |
+| Medium | +7 | +2 |
 | Hard | 0 | 0 |
 
 The smaller boost applies for the season after you win League 1; lose the title and it's back to the full one. Winning when you're expected to scores 0, so at the top the champion's boost is the only way up.
@@ -403,15 +412,15 @@ This is the **only thing in Sports Simulator that asks for your attention**, bec
 
 - When the season ends (after the play-offs), **the game waits**. Nothing continues until you've allocated your points.
 - The end-of-season screen opens **inside the Sports Simulator box**.
-- If the box is hidden or collapsed, **one VS Code notification** appears with the result and the clue, e.g. *"Season 4 over: 3rd in League 4. Scored 52 (6th in the league), conceded 61 (15th). Which side do you rebuild?"*, and buttons **Rebuild attack · Rebuild defence · Open**. This is the only VS Code notification Sports Simulator ever shows.
-- The status bar shows `🔔 Season over: which side do you rebuild?` until you do.
+- If the box is hidden or collapsed, **one VS Code notification** appears with the result, the clues and the question, e.g. *"Season 4 over: 3rd in League 4. Scored 52 (6th), conceded 61 (15th). Finlay Ross (striker) and 2 others leave. Retirements leave gaps. Who gets the call?"*, with the two answers as buttons and **Open**. This is the only VS Code notification Sports Simulator ever shows.
+- The status bar shows `🔔 Season over: one decision waiting` until you do.
 
 Screen contents:
 
 1. Final table with promotion, play-offs and relegation
 2. **Season report:** goals scored and conceded against the league average, goals a game in your matches against the league's, best and worst runs, top scorer. No verdict: reading it is the player's job (lots of goals at both ends = leaning attacking).
 3. Decline: the overall rating drop only (e.g. 55 → 45), never the attack/defence split
-4. Summer choice: the clue (*Attack 10th for goals scored · Defence 4th for goals conceded*), then two buttons (**Rebuild attack · Rebuild defence**). The chosen side gets 65% of the points and the other 35%. Picking one highlights it; a separate **Start next season** button below confirms it
+4. Leaving the squad (who, what they play, retired or dropped), then the clue (*Attack 10th for goals scored · Defence 4th for goals conceded*), then the summer question with two answers (§7). Picking one highlights it; a separate **Start next season** button below confirms it
 
 ### Copy summary button
 
@@ -575,6 +584,7 @@ In rough priority order:
 | Match lengths 30s · 2 min · 5 min | Three clearly different paces; 1 minute dropped |
 | Pause when VS Code closes | You never miss matches; no catch-up simulation |
 | Status bar goal call-out, rich hover, collapsed-box score and a badge for the summer choice | Most of the time the box is closed: these keep the game noticeable at a glance without a single extra notification |
+| One summer question in four styles (call-ups, assistant coach, formation, training camp), always attack v defence underneath; leavers matched to the loss; loss split 10–90%; Medium boost 7 | Named people give a sense of power without more decisions. More levers (fitness, mentality, home/away…) were rejected: their clues come from half-seasons and would mostly be luck. Leavers alone were no clue at the old 25–75% split; at 10–90% they make the top readable (66% → 76% right). Medium needed +2 to keep its climb on target |
 | Saves are upgraded, never silently dropped | History is the reward: once the game is public, one update that wiped careers would lose players for good |
 | One window runs the game; focusing another hands it over | Each window used to run its own clock on the shared save, so two windows played different matches and overwrote each other (a summer choice could be lost). Many people keep several windows open all day |
 | Fictional club names only, checked against real club lists | Avoid trademark issues; renaming handled locally later |

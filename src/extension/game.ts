@@ -3,7 +3,7 @@
 
 import {
   allocatePoints,
-  focusAllocation,
+  chooseFocus,
   type Focus,
   completeRound,
   endSeason,
@@ -174,14 +174,20 @@ export class Game {
     if (!paused) this.run();
   }
 
+  /** The summer answer: a call-up joins, most of the points go to that side, and the next season starts. */
   chooseFocus(focus: Focus): void {
     if (!this.career?.pending) return;
-    this.allocate(focusAllocation(this.career.clubs[this.career.playerClubId], this.career.pending.points, focus));
+    chooseFocus(this.career, focus);
+    this.nextSeason();
   }
 
   allocate(allocation: Record<Stat, number>): void {
     if (!this.career?.pending) return;
     allocatePoints(this.career, allocation);
+    this.nextSeason();
+  }
+
+  private nextSeason(): void {
     this.phase = 'idle';
     this.save();
     this.host.changed();

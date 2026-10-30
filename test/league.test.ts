@@ -323,14 +323,14 @@ describe('allocation and decline', () => {
     expect(a.attack + a.defence).toBe(12);
   });
 
-  it('splits the decline at random, each side taking a quarter to three quarters, always totalling the amount', () => {
+  it('splits the decline at random, each side taking a tenth to nine tenths, always totalling the amount', () => {
     const rng = new Rng(4);
     let spread = 0;
     for (let i = 0; i < 200; i++) {
       const club = { attack: 60, defence: 50 } as Club;
       const d = applyDecline(club, 10, rng);
       expect(d.attack + d.defence).toBeCloseTo(20);
-      expect(Math.min(d.attack, d.defence)).toBeGreaterThanOrEqual(5 - 1e-9);
+      expect(Math.min(d.attack, d.defence)).toBeGreaterThanOrEqual(2 - 1e-9);
       spread += Math.abs(d.attack - d.defence);
     }
     expect(spread / 200).toBeGreaterThan(2);

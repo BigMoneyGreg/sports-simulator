@@ -9,12 +9,12 @@ export const RATING_TUNING = {
   /** Rating every club loses each summer, split at random between attack and defence. */
   decline: 10,
   /** The share of the decline that hits attack is drawn from this range; defence takes the rest. */
-  declineSplit: [0.25, 0.75] as [number, number],
+  declineSplit: [0.1, 0.9] as [number, number],
   averageGain: 10,
   performanceMultiplier: 1.0,
   topBonus: [6, 4, 2],
   bottomBonus: [-2, -4, -6],
-  difficultyBoost: { easy: 10, medium: 5, hard: 0 } as Record<Difficulty, number>,
+  difficultyBoost: { easy: 10, medium: 7, hard: 0 } as Record<Difficulty, number>,
   /** The smaller boost while the player is reigning League 1 champion; back to the full one once they lose the title. */
   championBoost: { easy: 4, medium: 2, hard: 0 } as Record<Difficulty, number>,
   /** Standard deviation of the AI-only random variation, in rating points. */

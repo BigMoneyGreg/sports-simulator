@@ -9,7 +9,7 @@
  */
 import { allocatePoints, focusAllocation, newCareer, nextRound, playRound, endSeason, type Career, type Focus, type RoundResult } from '../src/core/career';
 import { rating, type Stat } from '../src/core/club';
-import { band, LEAGUE_COUNT, sortTable } from '../src/core/league';
+import { band, goalRanks, LEAGUE_COUNT, sortTable } from '../src/core/league';
 import { totalRating, type Difficulty } from '../src/core/ratings';
 import { Rng } from '../src/core/rng';
 import { footballSport } from '../src/sports/football';
@@ -27,18 +27,21 @@ type Strategy = (career: Career, rng: Rng) => Record<Stat, number>;
 
 const spend = (career: Career, focus: Focus) => focusAllocation(career.clubs[career.playerClubId], career.pending!.points, focus);
 
-/** Goals scored and conceded against the league average: below 1 means that side is the weaker. */
-function sides(career: Career): { attack: number; defence: number } {
-  const table = career.season.leagues[career.pending!.tier - 1].table;
-  const me = table.find((r) => r.clubId === career.playerClubId)!;
-  const avg = table.reduce((t, r) => t + r.goalsFor, 0) / table.length;
-  return { attack: me.goalsFor / avg, defence: avg / Math.max(1, me.goalsAgainst) };
-}
-
-/** Reads the season like a good player: rebuilds whichever side did worse against the league. */
-const reader: Strategy = (career) => {
-  const { attack, defence } = sides(career);
-  return spend(career, attack < defence ? 'attack' : 'defence');
+/**
+ * Reads the summer like a good player, from what the summer screen shows:
+ * rebuilds the side that ranked worse for goals, and when the ranks are level
+ * (often, at the top), the side most of the leavers came from.
+ */
+const reader: Strategy = (career, rng) => {
+  const p = career.pending!;
+  const ranks = goalRanks(career.season.leagues[p.tier - 1].table, career.playerClubId);
+  if (ranks.scored !== ranks.conceded) return spend(career, ranks.scored > ranks.conceded ? 'attack' : 'defence');
+  const change = p.turnover.find((t) => t.clubId === career.playerClubId)!;
+  const squad = career.clubs[career.playerClubId].squad;
+  const fromAttack = change.out.filter((id) => footballSport.role(squad.find((x) => x.id === id)!).side === 'attack').length;
+  const fromDefence = change.out.length - fromAttack;
+  if (fromAttack !== fromDefence) return spend(career, fromAttack > fromDefence ? 'attack' : 'defence');
+  return spend(career, rng.next() < 0.5 ? 'attack' : 'defence');
 };
 
 /** An average player not paying attention: picks a side at random. */

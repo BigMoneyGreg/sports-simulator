@@ -38,6 +38,8 @@ export interface SportDefinition<M = unknown> {
   /** A new player's name for a club, not repeating a surname already in its squad. */
   namePlayer(rng: Rng, club: ClubIdentity, squad: Player[]): string;
   lineup(squad: Player[], unavailable?: ReadonlySet<number>): TeamSheet['lineup'];
+  /** What a player plays ("striker") and which end of the pitch: summer leavers follow the side that lost most. */
+  role(player: Pick<Player, 'number' | 'position'>): { label: string; side: Stat };
   /**
    * The world for a career: the player's team (`code`, or a random one), the
    * other `count - 1` teams, strongest first, and the short code of the
@@ -152,7 +154,26 @@ export interface SeasonEnd {
   playoffWinners: Record<number, number>;
   /** This summer's squad changes, every club: who leaves and who replaces them (applied as the next season starts). */
   turnover: SquadChange[];
+  /** The summer's one question; missing in saves from before it was asked. */
+  question?: SummerQuestion;
 }
+
+/**
+ * Different ways of asking the same summer decision: one answer always
+ * rebuilds the attack, the other the defence.
+ */
+export type QuestionStyle = 'callUp' | 'coach' | 'formation' | 'training';
+
+export interface SummerQuestion {
+  style: QuestionStyle;
+  /** Call-ups and coach: who each answer names and what they play (or played). */
+  people?: Record<Focus, { name: string; role: string }>;
+  /** Call-ups: the player joining for each answer, and the squad place he takes. */
+  callUps?: Record<Focus, { player: Player; replaces: number }>;
+}
+
+/** How often each style is drawn; call-ups twice as often, as the one that brings a new face. */
+const QUESTION_WEIGHTS: Record<QuestionStyle, number> = { callUp: 2, coach: 1, formation: 1, training: 1 };
 
 export interface SquadChange {
   clubId: number;
@@ -204,6 +225,8 @@ export interface Career {
   suspended: number[];
   /** Id for the next new player. */
   nextPlayerId: number;
+  /** Last summer's question style, so the same one isn't asked twice running. */
+  lastQuestion?: QuestionStyle;
   /** The player's rival for the whole career, shown on the Team tab. */
   rival: number | null;
 }
@@ -559,6 +582,11 @@ export function endSeason(career: Career, sport: SportDefinition): SeasonEnd {
   }
   points = Math.min(points, allocationCapacity(me));
 
+  // The player's leavers come mostly from the end of the pitch that lost most: the summer's clue.
+  const attackShare = declineByStat.attack / Math.max(1e-9, declineByStat.attack + declineByStat.defence);
+  const turnover = career.clubs.map((club) => planTurnover(career, club, sport, rng, club.isPlayer ? attackShare : undefined));
+  const question = planQuestion(career, turnover[me.id], sport, rng);
+
   career.rng = rng.state;
   career.pending = {
     season: s.number,
@@ -578,20 +606,29 @@ export function endSeason(career: Career, sport: SportDefinition): SeasonEnd {
     promoted,
     relegated,
     playoffWinners,
-    turnover: career.clubs.map((club) => planTurnover(career, club, sport, rng)),
+    turnover,
+    question,
   };
+  career.lastQuestion = question.style;
   career.rng = rng.state;
   return career.pending;
 }
 
-/** Who leaves a club this summer (long servants are likeliest to go) and who comes in, same positions and shirts. */
-function planTurnover(career: Career, club: Club, sport: SportDefinition, rng: Rng): SquadChange {
+/**
+ * Who leaves a club this summer (long servants are likeliest to go) and who
+ * comes in, same positions and shirts. With `attackShare`, that share of the
+ * leavers (give or take) comes from the attacking end.
+ */
+function planTurnover(career: Career, club: Club, sport: SportDefinition, rng: Rng, attackShare?: number): SquadChange {
   const season = career.season.number;
   const count = rng.int(TURNOVER.min, TURNOVER.max);
+  const fromAttack = attackShare === undefined ? null : clamp(Math.round(count * attackShare + (rng.next() - 0.5) * 0.6), 0, count);
   const candidates = [...club.squad];
   const out: Player[] = [];
   for (let i = 0; i < count; i++) {
-    const leaver = rng.weighted(candidates, (p) => season - (p.joined ?? 1) + 1);
+    const side: Stat | null = fromAttack === null ? null : i < fromAttack ? 'attack' : 'defence';
+    const pool = side ? candidates.filter((p) => sport.role(p).side === side) : candidates;
+    const leaver = rng.weighted(pool.length ? pool : candidates, (p) => season - (p.joined ?? 1) + 1);
     out.push(leaver);
     candidates.splice(candidates.indexOf(leaver), 1);
   }
@@ -602,6 +639,40 @@ function planTurnover(career: Career, club: Club, sport: SportDefinition, rng: R
     incoming.push({ id: career.nextPlayerId++, name, position: leaver.position, number: leaver.number, joined: season + 1 });
   }
   return { clubId: club.id, out: out.map((p) => p.id), in: incoming };
+}
+
+/** Draws the summer's question (not last summer's style) and, for call-ups and a new coach, the people in it. */
+function planQuestion(career: Career, change: SquadChange, sport: SportDefinition, rng: Rng): SummerQuestion {
+  const styles = (Object.keys(QUESTION_WEIGHTS) as QuestionStyle[]).filter((s) => s !== career.lastQuestion);
+  const style = rng.weighted(styles, (s) => QUESTION_WEIGHTS[s]);
+  const club = career.clubs[career.playerClubId];
+  const taken = [...club.squad, ...change.in];
+  const name = () => {
+    const n = sport.namePlayer(rng, club, taken);
+    taken.push({ id: -1, name: n, position: '', number: 0 });
+    return n;
+  };
+  if (style === 'coach') {
+    const played = (side: Stat) => rng.pick(club.squad.filter((p) => sport.role(p).side === side)).number;
+    const people = {} as Record<Focus, { name: string; role: string }>;
+    for (const focus of FOCUSES) people[focus] = { name: name(), role: sport.role({ number: played(focus), position: '' }).label };
+    return { style, people };
+  }
+  if (style !== 'callUp') return { style };
+
+  const season = career.season.number;
+  const people = {} as Record<Focus, { name: string; role: string }>;
+  const callUps = {} as Record<Focus, { player: Player; replaces: number }>;
+  for (const focus of FOCUSES) {
+    // He takes the place of a newcomer at his end of the pitch if there is one, or else of its longest servant.
+    const slot = change.out.findIndex((id) => sport.role(club.squad.find((p) => p.id === id)!).side === focus);
+    const staying = club.squad.filter((p) => !change.out.includes(p.id) && sport.role(p).side === focus);
+    const place = slot >= 0 ? change.in[slot] : staying.reduce((a, b) => ((a.joined ?? 1) <= (b.joined ?? 1) ? a : b));
+    const player: Player = { id: career.nextPlayerId++, name: name(), position: place.position, number: place.number, joined: season + 1 };
+    callUps[focus] = { player, replaces: place.id };
+    people[focus] = { name: player.name, role: sport.role(player).label };
+  }
+  return { style, people, callUps };
 }
 
 function seasonOutcome(tier: number, pos: number, playoffs: Playoff[], id: number): SeasonOutcome {
@@ -655,10 +726,21 @@ export function focusAllocation(club: Club, points: number, focus: Focus): Recor
   return fillAllocation(club, points, weights);
 }
 
-/** Spends the summer's points on a focus and starts the next season. */
+/** Answers the summer's question (a call-up joins the squad), spends the points on that side and starts the next season. */
 export function chooseFocus(career: Career, focus: Focus): void {
-  if (!career.pending) throw new Error('no points to allocate');
-  allocatePoints(career, focusAllocation(career.clubs[career.playerClubId], career.pending.points, focus));
+  const pending = career.pending;
+  if (!pending) throw new Error('no points to allocate');
+  const callUp = pending.question?.callUps?.[focus];
+  const change = pending.turnover.find((t) => t.clubId === career.playerClubId);
+  if (callUp && change) {
+    const newcomer = change.in.findIndex((p) => p.id === callUp.replaces);
+    if (newcomer >= 0) change.in[newcomer] = callUp.player;
+    else {
+      change.out.push(callUp.replaces);
+      change.in.push(callUp.player);
+    }
+  }
+  allocatePoints(career, focusAllocation(career.clubs[career.playerClubId], pending.points, focus));
 }
 
 /**
