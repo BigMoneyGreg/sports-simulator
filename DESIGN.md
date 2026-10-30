@@ -533,6 +533,8 @@ Each milestone finishes in a working state.
 
 **Review fixes (30 Oct 2026):** after a full review aimed at keeping people using it in the background: one window runs the game at a time (saves moved to a file), old saves are upgraded or backed up instead of dropped, and the game is noticeable with the box closed (GOAL! in the status bar, rich hover, score beside the collapsed box, summer badge, box opens on first install). 115 tests pass.
 
+**Summer question (30 Oct 2026):** one question a summer in four styles (call-ups, assistant coach, formation, training camp), always attack or defence underneath; leavers matched to a 10–90% loss split as a second clue; Medium boost 5 → 7. 122 tests and all 30 balance targets pass.
+
 **Before publishing (M9):** done: GitHub repo renamed to `sports-simulator`; Marketplace publisher **bigdevgreg** created and set in package.json; cleaned history force-pushed and the backup branch deleted. Still to do: try the build (fn+F5, ideally with two windows open; the current save carries over); make the GitHub repo public (README screenshots load from it); `npx @vscode/vsce package` (0.1.0 has never been published, so no bump for the first upload) and upload the `.vsix` by hand at marketplace.visualstudio.com/manage (no Azure DevOps token needed). Updates: bump the version, package, upload with **Update**.
 
 ---

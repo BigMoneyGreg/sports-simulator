@@ -5,7 +5,7 @@ An international football sim that lives in a small box in your VS Code sidebar.
 <p>
   <img src="media/screenshots/match.png" width="220" alt="A live match: scoreboard and match report">
   <img src="media/screenshots/table.png" width="220" alt="The live league table, with teams moving as goals go in">
-  <img src="media/screenshots/seasonOver.png" width="220" alt="The end of a season">
+  <img src="media/screenshots/seasonOver.png" width="220" alt="The end of a season: who is leaving, the clues and the summer question">
   <img src="media/screenshots/cups.png" width="220" alt="The World Championship knockout rounds in the Cups tab">
 </p>
 
