@@ -3,6 +3,10 @@
   "displayName": "Sports Simulator",
   "description": "An international football sim that plays itself in your sidebar while you code: leagues, cups and a World Championship.",
   "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#1b5e3a",
+    "theme": "dark"
+  },
   "version": "0.1.0",
   "publisher": "bigdevgreg",
   "license": "MIT",

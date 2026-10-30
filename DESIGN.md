@@ -17,7 +17,7 @@ Football management with almost nothing to manage. Your only decisions are:
 
 1. **Which country you are, and which league it starts in:** any of FIFA's ~210 nations, in League 1 to 5 (its usual level by default), starting mid-table
 2. **How long a match lasts:** 30 seconds, 2 or 5 real minutes
-3. **Where to focus each summer:** attack, defence or balanced
+3. **Which side to rebuild each summer:** attack or defence
 
 Everything else runs by itself: fixtures, matches, commentary, tables, scorers, play-offs, promotion and relegation, the Nations Cup and the World Championship, and the other 99 nations rising and falling. You glance at it between tasks, react at the end of each season, and build a club history worth keeping.
 
@@ -25,7 +25,7 @@ Everything else runs by itself: fixtures, matches, commentary, tables, scorers, 
 
 - **Realistic.** League sizes, promotion rules, results and club movement should feel like real football.
 - **Glanceable, not demanding.** It should never need attention mid-match.
-- **One meaningful decision per season.** Point allocation is the whole game, so it has to matter.
+- **One meaningful decision per season.** Choosing which side to rebuild is the whole game, so it has to matter.
 - **History is the reward.** Trophies, records and club history are why people keep it installed.
 - **Nothing happens while you're away.** Closing VS Code pauses everything.
 - **Near-zero resource use.** It must never slow the editor.
@@ -37,25 +37,25 @@ Everything else runs by itself: fixtures, matches, commentary, tables, scorers, 
 
 ```
 New career
-  └─ choose a league (1–5) → you start mid-table: rated band minimum + 10, expected 10th
+  └─ choose a country, and the league it starts in (1–5) → somewhere around mid-table
   └─ choose difficulty (easy / medium / hard)
-  └─ choose match duration, optionally lean attacking or defensive
+  └─ choose match duration; every team starts balanced
         │
         ▼
 Season (runs automatically, 38 matchdays)
   └─ matchday → all 50 matches across 5 leagues play at the same time
-  └─ your match shown live: score + commentary feed
+  └─ your match shown live: scoreboard + match report
   └─ full-time overlay in the sidebar box (fades after 5s) → next matchday
         │
         ▼
-Play-offs (if you finished 3rd–6th)
+Play-offs (if you finished 3rd–6th); Nations Cup ties during the season, World Championship every 4th summer
         │
         ▼
 End of season
   └─ final table, promotion / relegation
   └─ season report (what went well, what didn't)
   └─ decline applied to every club
-  └─ choose a summer focus: attack · balanced · defence
+  └─ choose which side to rebuild: attack · defence
   └─ trophies & records updated
         │
         ▼
@@ -75,15 +75,7 @@ Next season … (won league 1? → carry on, or start a new career)
 
 ### Starting position
 
-The engine still takes a rating from 0 to 99 (balance tool and tests use the full range). The setup screen offers only the five mid-table starts.
-
----|---|---|
-| Bottom quarter | "Relegation battle — League N" | 80–84 |
-| Lower-middle | "Lower half — League N" | 85–89 |
-| Upper-middle | "Upper half — League N" | 90–94 |
-| Top quarter | "Title contender — League N" | 95–99 |
-
-Examples: **85** → *"Lower half — League 1"* · **14** → *"Upper half — League 5"* · **99** → *"Title contender — League 1"* (strongest club in the game at the start).
+The engine still takes a rating from 0 to 99 (the balance tool and tests use the full range). Players only pick a league; their rating is drawn from it as above and never shown.
 
 ---
 
@@ -123,11 +115,12 @@ Players are generated (names, positions, shirt numbers). They're flavour only: t
 
 All matches on a matchday are simulated minute by minute at the same time. Only your match is shown live; other scores update in the tables.
 
-**Starting model (to be tuned):**
+**Model** (values in `TUNING`, `src/sports/football/match.ts`):
 
 - Each team's **effective** attack and defence:
   `effAttack = attack − weakness`, `effDefence = defence − weakness`,
-  where `weakness = 2 × max(0, |attack − defence| / 2 − 5)`
+  where `weakness = perPoint × max(0, |attack − defence| / 2 − 2)` and `perPoint = 1.2 + 0.12 × max(0, rating − 99)` (§4)
+- Gaps between attack and the opponent's defence beyond 32 count only 30% (§16)
 - Each team's expected goals per match:
   `xG = 1.13 × e^(0.25 × (effAttack − opponentEffDefence) / 10)` × home 1.14 / away 0.90 (tuned from 1.35 so the average is 2.7 once added time is included)
 - Per-minute scoring chance = `xG / 90`, slightly weighted towards late in the game
@@ -529,7 +522,9 @@ Each milestone finishes in a working state.
 
 **M8b (29 Oct 2026):** decided during the trial, before publishing, and all built: clubs became nations (relatable everywhere, and players can follow teams they know), both cups, real rivals, a design-review polish of every screen, a summer decision that rewards reading results (rebuild attack or defence, ranks as the clue), no rating ceiling for the player (flat decline, smaller boost while champion, imbalance steeper above 99), a softer AI ceiling, squad turnover, red-card bans and AI style changes, and a simpler setup (no style, countries appear as you type). 98 tests and all 30 balance targets pass.
 
-**Before publishing (M9):** done: GitHub repo renamed to `sports-simulator`; Marketplace publisher **bigdevgreg** created and set in package.json; cleaned history force-pushed and the backup branch deleted. Still to do: try the M8b build (fn+F5; old saves reset); make the GitHub repo public (README screenshots load from it); bump the version; `npx @vscode/vsce package` and upload the `.vsix` by hand at marketplace.visualstudio.com/manage (no Azure DevOps token needed). Updates: bump the version, package, upload with **Update**.
+**Review fixes (30 Oct 2026):** after a full review aimed at keeping people using it in the background: one window runs the game at a time (saves moved to a file), old saves are upgraded or backed up instead of dropped, and the game is noticeable with the box closed (GOAL! in the status bar, rich hover, score beside the collapsed box, summer badge, box opens on first install). 115 tests pass.
+
+**Before publishing (M9):** done: GitHub repo renamed to `sports-simulator`; Marketplace publisher **bigdevgreg** created and set in package.json; cleaned history force-pushed and the backup branch deleted. Still to do: try the build (fn+F5, ideally with two windows open; the current save carries over); make the GitHub repo public (README screenshots load from it); `npx @vscode/vsce package` (0.1.0 has never been published, so no bump for the first upload) and upload the `.vsix` by hand at marketplace.visualstudio.com/manage (no Azure DevOps token needed). Updates: bump the version, package, upload with **Update**.
 
 ---
 
@@ -589,7 +584,7 @@ In rough priority order:
 | Sport-agnostic core + sport modules | Rugby/cricket can be added later without a rewrite |
 | One extension for all sports (later) | One codebase; keywords handle discovery |
 | Two stats (attack, defence); chemistry removed (M8) | A simple, readable decision: score more or concede less, judged from the season report. M3 had shown chemistry either did nothing or needed a complicated model to matter |
-| Free lean of ±5, then the weak side is exploited | Leaning is a real style choice, but a side drained too far needs fixing; without it attack and defence are interchangeable and the split doesn't matter |
+| Free lean of ±5 (now ±2, then 1.2 a point; §4), then the weak side is exploited | Leaning is a real style choice, but a side drained too far needs fixing; without it attack and defence are interchangeable and the split doesn't matter |
 | Uneven, random decline between attack and defence | Creates something to read and fix each season; tuned so ignoring it (even split) roughly holds and fixing it climbs |
 | Summer focus (attack · balanced · defence, 70/30) instead of assigning points | One simple decision that matches what a player can know with hidden stats; exact points were false precision |
 | The drain's split and the attack/defence numbers are hidden | The decision should come from reading results (goals for and against), not from a number telling you what to fix |
