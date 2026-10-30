@@ -465,7 +465,8 @@ The game uses real nations, not clubs: country names, flags and colours are free
 | Multi-sport ready | Engine split into a **shared league core** (leagues, fixtures, tables, ratings, promotion, career) and a **sport module** (match simulation, commentary, scoring rules). Version 1 ships football only |
 | Where it runs | **Extension host** runs the game clock and engine (so the game and status bar keep running even when the sidebar is collapsed). The webview only *displays* state it receives |
 | UI | `WebviewViewProvider` registered in the Explorer; plain HTML/CSS with a small amount of TypeScript; uses VS Code theme colours for light and dark themes |
-| Saving | `context.globalState` (the career follows you across all projects); saved at every goal, full-time and season end, and when VS Code closes |
+| Saving | A file in the extension's global storage folder (the career follows you across all projects); saved at every goal, full-time and season end, when VS Code closes, and when another window takes over. Older saves in `globalState` carry over once |
+| Several windows | Every window shares one save, so only one runs the clock: the one you last focused. It takes over within a second or two: the old window saves and stops, then the new one loads that save and carries on. Other windows only show the game. A lone window keeps running when unfocused |
 | Performance | One tick per match-minute for all 50 matches (at most a few per second), no animation loop, idle when paused |
 
 ### Proposed structure
@@ -567,6 +568,7 @@ In rough priority order:
 | Hard has no boost | Matches its description; reaching 99 from the bottom becomes a near-impossible grind, and that's the point of Hard |
 | Match lengths 30s · 2 min · 5 min | Three clearly different paces; 1 minute dropped |
 | Pause when VS Code closes | You never miss matches; no catch-up simulation |
+| One window runs the game; focusing another hands it over | Each window used to run its own clock on the shared save, so two windows played different matches and overwrote each other (a summer choice could be lost). Many people keep several windows open all day |
 | Fictional club names only, checked against real club lists | Avoid trademark issues; renaming handled locally later |
 | Engine runs in extension host | Game and status bar keep running without the sidebar open |
 | End of season is the only VS Code notification; the game waits for your allocation | It's the one moment that needs a decision; everything else stays in the box |

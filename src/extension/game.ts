@@ -85,14 +85,21 @@ export class Game {
 
   // -- lifecycle ------------------------------------------------------------
 
-  load(saved: SavedGame | null): void {
+  /** Loads a save; with `run` false it's only shown (another window is running the game). */
+  load(saved: SavedGame | null, run = true): void {
     this.stop();
-    if (!saved || saved.version !== SAVE_VERSION) return;
+    this.lastMatch = null;
+    if (!saved || saved.version !== SAVE_VERSION) {
+      this.career = null;
+      this.live = null;
+      this.phase = 'idle';
+      return;
+    }
     this.career = saved.career;
     this.live = saved.live;
     this.paused = saved.paused;
     this.phase = this.career.pending ? 'seasonOver' : this.live ? 'live' : 'idle';
-    this.run();
+    if (run) this.run();
   }
 
   start(options: CareerOptions): void {
@@ -124,7 +131,8 @@ export class Game {
 
   setDuration(duration: Duration): void {
     this.duration = duration;
-    if (this.phase === 'live' && !this.paused) {
+    // Only a running clock is rescheduled: a window that's just showing the game must not start one.
+    if (this.phase === 'live' && this.timer !== null) {
       this.stop();
       this.schedule(() => this.tick(), MINUTE_MS[duration]);
     }
