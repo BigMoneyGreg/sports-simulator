@@ -1,5 +1,6 @@
 import {
   DURATION_LABELS,
+  SEASON_LABELS,
   type CupView,
   type Difficulty,
   type Duration,
@@ -142,7 +143,7 @@ function renderSetup(v: SetupView): void {
   app.innerHTML = `
   <div class="setup card">
     <h2>New career</h2>
-    <p class="muted">Pick your country and where it starts. Every match plays on its own; each summer you decide which side to rebuild.</p>
+    <p class="muted">Pick your country and where it starts. Every match plays on its own; each summer you answer one question that shapes your team.</p>
 
     <div class="field">Country
       ${chosen ? `<div class="chosen">${swatch(chosen, 'crest big')}<strong>${esc(chosen.name)}</strong></div>` : ''}
@@ -162,7 +163,7 @@ function renderSetup(v: SetupView): void {
       setup.difficulty,
     )}</div>
 
-    <div class="field">Match length ${seg('duration', v.durations.map((d): Option => [d, DURATION_LABELS[d]]), setup.duration)}</div>
+    <div class="field">Match length ${seg('duration', v.durations.map((d): Option => [d, DURATION_LABELS[d], SEASON_LABELS[d]]), setup.duration)}</div>
 
     <button type="button" id="start" class="primary" ${chosen ? '' : 'disabled'}>${chosen ? 'Start career' : 'Pick a country'}</button>
   </div>`;
@@ -290,7 +291,7 @@ function headerHtml(v: GameView): string {
     <div class="right">
       <span class="form" aria-label="Form">${dots}</span>
       <span class="controls">
-        <button type="button" id="speed" class="chip" data-next="${next}" title="Match length: ${DURATION_LABELS[h.duration]}. Click for ${DURATION_LABELS[next]}." aria-label="Match length ${DURATION_LABELS[h.duration]}"><span>⏱</span><span class="wide"> ${DURATION_LABELS[h.duration]}</span></button>
+        <button type="button" id="speed" class="chip" data-next="${next}" title="Match length: ${DURATION_LABELS[h.duration]} (${SEASON_LABELS[h.duration].toLowerCase()}). Click for ${DURATION_LABELS[next]}." aria-label="Match length ${DURATION_LABELS[h.duration]}"><span>⏱</span><span class="wide"> ${DURATION_LABELS[h.duration]}</span></button>
         <button type="button" id="pause" class="chip icon" title="${h.paused ? 'Play' : 'Pause'}" aria-label="${h.paused ? 'Play' : 'Pause'}">${h.paused ? '▶' : '⏸'}</button>
       </span>
     </div>

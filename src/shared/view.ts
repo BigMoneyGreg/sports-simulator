@@ -4,6 +4,8 @@
 export type Duration = '30s' | '2m' | '5m';
 export const DURATIONS: Duration[] = ['30s', '2m', '5m'];
 export const DURATION_LABELS: Record<Duration, string> = { '30s': '30 sec', '2m': '2 min', '5m': '5 min' };
+/** Roughly how long a whole season takes at each match length (measured: about 40 matches with full-time pauses). */
+export const SEASON_LABELS: Record<Duration, string> = { '30s': 'Season 25 min', '2m': 'Season 1½ hr', '5m': 'Season 3¾ hr' };
 export type Difficulty = 'easy' | 'medium' | 'hard';
 export type Focus = 'attack' | 'defence';
 export type Zone = 'champion' | 'promotion' | 'playoff' | 'relegation' | null;

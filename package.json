@@ -74,9 +74,9 @@
             "5m"
           ],
           "enumDescriptions": [
-            "30 seconds",
-            "2 minutes",
-            "5 minutes"
+            "30 seconds (a season takes about 25 minutes)",
+            "2 minutes (a season takes about 1½ hours)",
+            "5 minutes (a season takes about 3¾ hours)"
           ],
           "default": "2m",
           "description": "Real time one 90-minute match takes."
@@ -95,6 +95,7 @@
     }
   },
   "scripts": {
+    "vscode:prepublish": "node esbuild.mjs --production",
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
     "typecheck": "tsc --noEmit",

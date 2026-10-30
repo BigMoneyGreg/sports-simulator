@@ -36,7 +36,7 @@ Player names are generated and fictional. Competitions are the game's own, not o
 
 | Setting | Default | What it does |
 |---|---|---|
-| `sportsSimulator.matchDuration` | `2m` | Real time one 90-minute match takes: 30 seconds, 2 minutes or 5 minutes. Also on the ⏱ button. |
+| `sportsSimulator.matchDuration` | `2m` | Real time one 90-minute match takes: 30 seconds, 2 minutes or 5 minutes (a season takes about 25 minutes, 1½ hours or 3¾ hours). Also on the ⏱ button. |
 | `sportsSimulator.fullTimeOverlay` | `true` | Show the full-time result over the box for a few seconds after your match. |
 | `sportsSimulator.statusBarScore` | `true` | Show your live score in the status bar. Click it to open the box. |
 
