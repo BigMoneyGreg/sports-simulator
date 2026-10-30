@@ -474,17 +474,18 @@ function seasonEndHtml(e: SeasonEndView): string {
       ${r.topScorer ? `<dt>Top scorer</dt><dd>${esc(r.topScorer)}</dd>` : ''}
       ${r.cups.map((x) => `<dt>${esc(x.name)}</dt><dd>${esc(x.run)}</dd>`).join('')}
     </dl>
-    ${
-      e.squad.leaving.length
-        ? `<h3 class="sub">Leaving the squad</h3><ul class="plain small">${e.squad.leaving.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
-           ${e.squad.arriving.length ? `<p class="muted small">Joining: ${e.squad.arriving.map(esc).join(', ')}</p>` : ''}`
-        : ''
-    }
     </div>
 
     <div class="card accent-card">
     <h3 class="sub first">Summer</h3>
     <p class="small">${esc(verdict)}</p>
+    ${
+      // Both clues sit with the question: who's leaving, then where the season ranked.
+      e.squad.leaving.length
+        ? `<h3 class="sub">Leaving the squad</h3><ul class="plain small">${e.squad.leaving.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+           ${e.squad.arriving.length ? `<p class="muted small">Joining: ${e.squad.arriving.map(esc).join(', ')}</p>` : ''}`
+        : ''
+    }
     <div class="clue">
       <div class="clue-row"><span>Attack</span><strong>${ordinal(r.scoredRank)}</strong><span class="muted small">for goals scored</span></div>
       <div class="clue-row"><span>Defence</span><strong>${ordinal(r.concededRank)}</strong><span class="muted small">for goals conceded</span></div>

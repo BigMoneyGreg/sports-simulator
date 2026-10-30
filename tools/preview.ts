@@ -124,7 +124,7 @@ writeFileSync(
   `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>html { ${vars} --vscode-font-family: -apple-system, BlinkMacSystemFont, sans-serif; --vscode-font-size: 13px; background: ${theme.background}; } body { width: 280px; } .ft-card { animation: none !important; } .ft-layer { width: 284px; right: auto; }</style>
 <link rel="stylesheet" href="../../media/sidebar.css"></head>
-<body><div id="app"></div>
+<body${theme === light ? ' class="vscode-light"' : ''}><div id="app"></div>
 <script src="views.js"></script>
 <script>
   const screen = new URLSearchParams(location.search).get('screen') || 'match';

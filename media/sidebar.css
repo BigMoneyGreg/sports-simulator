@@ -1088,6 +1088,15 @@ table.league {
   color: var(--vscode-charts-blue, #58a6ff);
 }
 
+/* Light themes: the chart colours are too pale on white, so darken the text. */
+body.vscode-light .focus.attack strong {
+  color: color-mix(in srgb, var(--vscode-charts-orange, #d18616) 65%, #000);
+}
+
+body.vscode-light .focus.defence strong {
+  color: color-mix(in srgb, var(--vscode-charts-blue, #1a85ff) 75%, #000);
+}
+
 .seg button .sub-label {
   display: block;
   margin-top: 1px;
@@ -1180,6 +1189,20 @@ table.league {
 }
 
 @media (max-width: 250px) {
+  /* Narrow: the summer decision comes straight after the headline, before the season report. */
+  .season-end {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .season-end > .hero {
+    order: -2;
+  }
+
+  .season-end > .accent-card {
+    order: -1;
+  }
+
   /* Records: label above value, so long values keep the full width. */
   .records {
     grid-template-columns: 1fr;

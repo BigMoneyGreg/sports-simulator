@@ -420,7 +420,7 @@ Screen contents:
 1. Final table with promotion, play-offs and relegation
 2. **Season report:** goals scored and conceded against the league average, goals a game in your matches against the league's, best and worst runs, top scorer. No verdict: reading it is the player's job (lots of goals at both ends = leaning attacking).
 3. Decline: the overall rating drop only (e.g. 55 → 45), never the attack/defence split
-4. Leaving the squad (who, what they play, retired or dropped), then the clue (*Attack 10th for goals scored · Defence 4th for goals conceded*), then the summer question with two answers (§7). Picking one highlights it; a separate **Start next season** button below confirms it
+4. The Summer card holds both clues and the question: leaving the squad (who, what they play, retired or dropped), then the clue (*Attack 10th for goals scored · Defence 4th for goals conceded*), then the summer question with two answers (§7). Picking one highlights it; a separate **Start next season** button below confirms it
 
 ### Copy summary button
 
@@ -606,6 +606,7 @@ In rough priority order:
 | M8 visuals: match report newest-first, compact scoreboard, own league marked on table chips, legend shows only that table's zones (Champions in L1) | Latest event always in view; the box often lives in a small corner of the screen; clear which league is yours |
 | Badge colours picked at setup: 6 main × 6 second; the second row only shows colours that go with the main (from a pool of 9), so nothing is ever greyed out | Players own their club's look; a fixed palette keeps every badge readable, and the main colour (used for the header tint) excludes black and white so it shows on any theme |
 | Responsive box (CSS only): ≤250px wide drops table W/D/L, towns and running scores, speed button shows just ⏱; ≤200px wide shows only the header (club, badge, league, position, form, ⏱ and pause), except while a summer choice waits; short (≤420px / ≤260px) tightens spacing and puts the scoreboard on one line | Many players keep it in a small corner; at its narrowest it's a status card, widen it to manage |
+| Summer card first when the box is narrow (≤250px), with both clues inside it; light themes get darker answer colours | In a small corner the decision was several screens down, below the season report; the chart orange was hard to read on white |
 | Summer focus is picked, then confirmed with a separate "Start next season" button | Picking straight into the next season felt abrupt; players can change their mind and read the report first |
 | Live table shows ▲▼ for places moved since kick-off instead of a dot on every playing club | Every club plays at once, so dots said nothing; movement is what makes a live table interesting |
 | Derby markers removed (rival still on the Club tab) | Hardly noticed in play; one less thing on screen |
