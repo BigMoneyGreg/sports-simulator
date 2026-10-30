@@ -8,10 +8,13 @@ import { Game } from './game';
 import { Ownership, POLL_MS } from './ownership';
 import { SidebarProvider } from './sidebar';
 import { StatusBar } from './statusBar';
-import { Storage } from './storage';
+import { Storage, type LiveStatus } from './storage';
 import { buildView, collapsedText, GoalWatch, leaversLine, SEASON_OVER, statusText, statusTooltip, summerQuestion } from './viewModel';
 
 let ownership: Ownership | undefined;
+
+/** How long another window's shared status text counts as current (it's rewritten every match-minute while a match is on). */
+const LIVE_FRESH_MS = 30_000;
 
 export function activate(context: vscode.ExtensionContext): void {
   const storage = new Storage(context.globalStorageUri.fsPath, context.globalState);
@@ -27,12 +30,34 @@ export function activate(context: vscode.ExtensionContext): void {
   const durations: Duration[] = DURATIONS;
 
   const goals = new GoalWatch();
+  let lastLive = '';
+  /**
+   * The status bar and collapsed-box text. The window running the game works
+   * it out and shares it through a small file; the other windows show that
+   * while it's fresh, and otherwise what their copy of the save says.
+   */
+  const outside = (): LiveStatus => {
+    if (owner.owning) {
+      const live = { at: Date.now(), text: statusText(game, goals.check(game)), tooltip: statusTooltip(game), description: collapsedText(game) };
+      const key = JSON.stringify({ ...live, at: 0 });
+      if (key !== lastLive) {
+        lastLive = key;
+        storage.writeLive(live);
+      }
+      return live;
+    }
+    const shared = storage.readLive();
+    if (shared && Date.now() - shared.at < LIVE_FRESH_MS) return shared;
+    return { at: 0, text: statusText(game), tooltip: statusTooltip(game), description: collapsedText(game) };
+  };
+
   const refresh = () => {
     if (sidebar.visible) sidebar.post({ type: 'view', view: buildView(game, { fullTimeOverlay: config().get('fullTimeOverlay', true), durations, language: vscode.env.language }) });
+    const live = outside();
     // Starting a career and the summer choice show even with the score turned off: they're waiting on the player.
     const waiting = !game.career || !!game.career.pending;
-    statusBar.update(config().get('statusBarScore', true) || waiting ? statusText(game, goals.check(game)) : null, statusTooltip(game));
-    sidebar.setInfo(collapsedText(game), game.career?.pending ? { value: 1, tooltip: SEASON_OVER } : undefined);
+    statusBar.update(config().get('statusBarScore', true) || waiting ? live.text : null, live.tooltip);
+    sidebar.setInfo(live.description, game.career?.pending ? { value: 1, tooltip: SEASON_OVER } : undefined);
   };
 
   const game = new Game({
@@ -154,7 +179,18 @@ export function activate(context: vscode.ExtensionContext): void {
     });
   }
 
-  const poll = setInterval(() => owner.poll(), POLL_MS);
+  let followedSave = 0;
+  const poll = setInterval(() => {
+    owner.poll();
+    if (owner.owning) return;
+    // Another window runs the game: follow its save, so this window's box keeps up with goals and full time.
+    const at = storage.savedAt();
+    if (at !== followedSave) {
+      followedSave = at;
+      game.load(storage.load(), false);
+    }
+    refresh();
+  }, POLL_MS);
 
   context.subscriptions.push(
     statusBar,

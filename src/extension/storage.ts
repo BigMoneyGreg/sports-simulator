@@ -8,6 +8,15 @@ import type { Lock, LockStore } from './ownership';
 const LEGACY_KEY = 'sportsSimulator.career';
 const ARCHIVE_KEY = 'sportsSimulator.archive';
 
+/** What the status bar and the collapsed box show, as worked out by the window running the game. */
+export interface LiveStatus {
+  /** When it was written: a window only trusts it while it's fresh. */
+  at: number;
+  text: string | null;
+  tooltip: string;
+  description?: string;
+}
+
 /** What's kept of a finished career. */
 export interface ArchivedCareer {
   club: string;
@@ -25,6 +34,7 @@ export interface ArchivedCareer {
 export class Storage implements LockStore {
   private readonly savePath: string;
   private readonly lockPath: string;
+  private readonly livePath: string;
 
   constructor(
     dir: string,
@@ -33,6 +43,7 @@ export class Storage implements LockStore {
     fs.mkdirSync(dir, { recursive: true });
     this.savePath = path.join(dir, 'career.json');
     this.lockPath = path.join(dir, 'clock.json');
+    this.livePath = path.join(dir, 'live.json');
   }
 
   load(): SavedGame | null {
@@ -61,6 +72,28 @@ export class Storage implements LockStore {
   backup(game: SavedGame): void {
     writeFile(path.join(path.dirname(this.savePath), `career.v${game.version}.json`), JSON.stringify(game));
     this.save(null);
+  }
+
+  /** When the save last changed on disk (0 if there's none), so other windows can follow it. */
+  savedAt(): number {
+    try {
+      return fs.statSync(this.savePath).mtimeMs;
+    } catch {
+      return 0;
+    }
+  }
+
+  /** The running window's status bar and collapsed-box text, for the other windows to show. */
+  writeLive(live: LiveStatus): void {
+    writeFile(this.livePath, JSON.stringify(live));
+  }
+
+  readLive(): LiveStatus | null {
+    try {
+      return JSON.parse(readFile(this.livePath) ?? '') as LiveStatus;
+    } catch {
+      return null;
+    }
   }
 
   read(): Lock {

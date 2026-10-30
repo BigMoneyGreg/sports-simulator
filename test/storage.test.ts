@@ -60,4 +60,15 @@ describe('storage', () => {
     s.write({ owner: 'a', ready: true });
     expect(s.read()).toEqual({ owner: 'a', ready: true });
   });
+
+  it('shares the running window\'s status text and tells other windows when the save changed', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ss-storage-'));
+    const s = new Storage(dir, memento());
+    expect(s.readLive()).toBeNull();
+    expect(s.savedAt()).toBe(0);
+    s.writeLive({ at: 5, text: "⚽ SCO 1–0 ENG 30'", tooltip: 'Scotland', description: "3rd · SCO 1–0 ENG 30'" });
+    expect(new Storage(dir, memento()).readLive()).toMatchObject({ text: "⚽ SCO 1–0 ENG 30'" });
+    s.save(save(5));
+    expect(s.savedAt()).toBeGreaterThan(0);
+  });
 });
