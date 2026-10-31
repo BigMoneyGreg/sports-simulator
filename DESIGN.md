@@ -586,7 +586,7 @@ Football's numbers and behaviour are unchanged: whole careers on fixed seeds has
 
 **AI titles, re-measured (31 Oct 2026).** Most titles for one AI side in 40 seasons: rugby median 7, worst 13; cricket median 8, worst 16 (40 of 40 balance targets met). With 8 or 6 sides in a league, an even share of 40 titles is already 5 or nearly 7, so a typical top side is close to what chance alone gives, and the worst cases are rare. No change made.
 
-**Where it stands (31 Oct 2026).** Several sports at once, Honours, rival call-outs and the End… question are on branch `multi-sport`, built from `rugby-and-cricket`. 218 tests pass and VS Code starts with it loaded; the box has been clicked through in headless Chrome with sample games, but not yet played in the real sidebar, so a real End, Reset career and Reset honours are still to try. `main` is still football only.
+**Where it stands (31 Oct 2026).** Rugby, cricket, several sports at once, Honours, rival call-outs and the End… question are merged into `main`. 218 tests pass and VS Code starts with it loaded; the box has been clicked through in headless Chrome with sample games, but a real End, Reset career and Reset honours are still to try before publishing.
 
 **Worlds** come from the rankings: men's rugby, July 2026 (an unofficial copy of the World Rugby table); men's T20I, October 2026. Lower down rugby's list some nations rarely play. Only nations in a sport's world can be chosen there, unlike football's 210. Players' names work as in every sport (§10).
 
@@ -633,6 +633,7 @@ In rough priority order:
 | Football first; other sports only after it's finished | Keeps version 1 small |
 | Rugby 6 × 8, 2 up 2 down, no play-offs; cricket T20 only, 5 × 6, 1 up 1 down; cups fitted to the team count | The user's choices after measuring (§13b). Favourites win more than in football because seasons are short |
 | Several sports at once, as a list with one open at a time | The user's design. Careers no longer stop on switching; minimised rows keep it glanceable, and the corner still shows one score rather than three |
+| Reset honours leaves running careers alone | Honours are a side record: wiping them shouldn't cost seasons of play, and End and Reset already deal with careers one at a time |
 | One End… button instead of separate End and Reset; the Reset command removed | Two ways to stop a career needed explaining; asking at the moment makes the difference clear. VS Code's pop-ups can't be red, so these questions live in the box |
 | Honours list only what's been earned | Players work things out; no greyed-out goals or checklist |
 | No format choice in cricket | T20 fits a 2-minute match, has no draws and is the only format with 30 real nations; a choice would be options for the sake of it |
