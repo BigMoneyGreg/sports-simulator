@@ -1,0 +1,19 @@
+/**
+ * Real star players the name pools could otherwise produce by chance in
+ * rugby and cricket: squads are fictional, so these names are never drawn.
+ * Football's pools were built to leave its stars out already.
+ */
+export const FAMOUS_PLAYERS = new Set(
+  [
+    // Cricket
+    'Virat Kohli', 'Rohit Sharma', 'Sachin Tendulkar', 'Jasprit Bumrah', 'Shubman Gill', 'Hardik Pandya', 'Ravindra Jadeja', 'Rishabh Pant', 'Suryakumar Yadav', 'Kuldeep Yadav', 'Axar Patel', 'Parthiv Patel', 'Mohammed Shami', 'Mohammed Siraj', 'Arshdeep Singh', 'Yuvraj Singh', 'Harbhajan Singh', 'Rahul Dravid', 'Rahul Sharma', 'Ishant Sharma', 'Abhishek Sharma', 'Shikhar Dhawan', 'Sourav Ganguly', 'Babar Azam', 'Shaheen Afridi', 'Shahid Afridi', 'Mohammad Rizwan', 'Mohammad Amir', 'Imran Khan', 'Rashid Khan', 'Wasim Akram', 'Waqar Younis', 'Shakib Hasan', 'Tamim Iqbal', 'Mustafizur Rahman', 'Kumar Sangakkara', 'Mahela Jayawardene', 'Lasith Malinga', 'Muttiah Muralitharan', 'Kusal Perera', 'Thisara Perera', 'Sandeep Lamichhane',
+    'Joe Root', 'Ben Stokes', 'Jos Buttler', 'Harry Brook', 'Jofra Archer', 'Jack Leach', 'Mark Wood', 'Chris Woakes', 'James Anderson', 'Stuart Broad', 'Alastair Cook', 'Ian Botham', 'Moeen Ali', 'Adil Rashid', 'Jonny Bairstow', 'Sam Curran', 'Liam Livingstone', 'Ben Duckett', 'Zak Crawley', 'Steve Smith', 'David Warner', 'Pat Cummins', 'Mitchell Starc', 'Travis Head', 'Glenn Maxwell', 'Josh Hazlewood', 'Nathan Lyon', 'Marnus Labuschagne', 'Mitchell Marsh', 'Ricky Ponting', 'Shane Warne', 'Adam Gilchrist', 'Kane Williamson', 'Trent Boult', 'Tim Southee', 'Brendon McCullum', 'Daryl Mitchell', 'Quinton de Kock', 'Kagiso Rabada', 'AB de Villiers', 'Chris Gayle', 'Brian Lara', 'Vivian Richards', 'Nicholas Pooran', 'Andre Russell', 'Paul Stirling', 'Andy Balbirnie',
+    'MS Dhoni', 'Mahendra Dhoni', 'Anil Kumble', 'Kapil Dev', 'Sunil Gavaskar', 'Sanju Samson', 'Ishan Kishan', 'Rinku Singh', 'Tilak Varma', 'Ajit Agarkar', 'Varun Chakravarthy', 'Yashasvi Jaiswal', 'Harshit Rana', 'Akash Deep', 'Karun Nair', 'Harsh Patel', 'Rahul Tewatia',
+    'Kusal Mendis', 'Angelo Mathews', 'Dinesh Chandimal', 'Dimuth Karunaratne', 'Pathum Nissanka', 'Sanath Jayasuriya', 'Chaminda Vaas', 'Rangana Herath', 'Tillakaratne Dilshan', 'Isuru Udana', 'Nuwan Kulasekara', 'Nuwan Pradeep', 'Lahiru Kumara', 'Lahiru Thirimanne',
+    'Litton Das', 'Mushfiqur Rahim', 'Mahmudullah Riyad', 'Mehidy Hasan', 'Taskin Ahmed', 'Mominul Haque', 'Nazmul Hossain', 'Soumya Sarkar', 'Rubel Hossain', 'Sabbir Rahman', 'Imrul Kayes', 'Anamul Haque',
+    'Naseem Shah', 'Fakhar Zaman', 'Shadab Khan', 'Haris Rauf', 'Hamza Khan', 'Junaid Khan', 'Usman Khan', 'Faisal Iqbal', 'Kamran Akmal', 'Yasir Shah', 'Salman Butt', 'Salman Ahmed', 'Bilal Asif', 'Asad Shafiq', 'Saad Ali', 'Zubair Hamza', 'Danish Kaneria',
+    'Paras Khadka', 'Rohit Paudel', 'Sandeep Lamichhane', 'Karan KC', 'Gyanendra Malla', 'Binod Bhandari',
+    // Rugby
+    'Jonah Lomu', 'Richie McCaw', 'Dan Carter', 'Daniel Carter', 'Beauden Barrett', 'Scott Barrett', 'Jordie Barrett', 'Ardie Savea', 'Aaron Smith', 'Sonny Bill Williams', 'Siya Kolisi', 'Eben Etzebeth', 'Cheslin Kolbe', 'Handre Pollard', 'Antoine Dupont', 'Romain Ntamack', 'Thomas Ramos', 'Damian Penaud', 'Sebastien Chabal', 'Jonny Wilkinson', 'Owen Farrell', 'Maro Itoje', 'Marcus Smith', 'Jason Robinson', 'Martin Johnson', 'Ben Earl', 'Sam Underhill', 'Tom Curry', 'Ben Youngs', 'Brian O\'Driscoll', 'Paul O\'Connell', 'Johnny Sexton', 'Conor Murray', 'Peter O\'Mahony', 'Bundee Aki', 'Tadhg Furlong', 'James Lowe', 'Finn Russell', 'Stuart Hogg', 'Duhan van der Merwe', 'Gavin Hastings', 'Alun Wyn Jones', 'Shane Williams', 'Sam Warburton', 'Gareth Edwards', 'George North', 'Leigh Halfpenny', 'Michael Hooper', 'David Pocock', 'Wallace Sititi', 'Agustin Creevy', 'Sergio Parisse', 'Semi Radradra',
+  ],
+);

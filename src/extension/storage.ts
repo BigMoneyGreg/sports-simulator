@@ -37,6 +37,8 @@ export class Storage implements LockStore {
   private readonly dir: string;
   private readonly sportPath: string;
   private readonly lockPath: string;
+  /** Each save's country, kept until its file changes: the box asks on every refresh. */
+  private readonly careerNames = new Map<SportId, { at: number; name?: string }>();
   private readonly livePath: string;
 
   constructor(
@@ -69,9 +71,14 @@ export class Storage implements LockStore {
   careers(): Partial<Record<SportId, string>> {
     const out: Partial<Record<SportId, string>> = {};
     for (const sport of SPORT_IDS) {
-      const c = this.load(sport)?.career;
-      const name = c?.clubs?.[c.playerClubId]?.name;
-      if (name) out[sport] = name;
+      const at = this.savedAt(sport);
+      let known = this.careerNames.get(sport);
+      if (known?.at !== at) {
+        const c = at ? this.load(sport)?.career : undefined;
+        known = { at, name: c?.clubs?.[c.playerClubId]?.name };
+        this.careerNames.set(sport, known);
+      }
+      if (known.name) out[sport] = known.name;
     }
     return out;
   }
@@ -106,9 +113,9 @@ export class Storage implements LockStore {
   }
 
   /** When the save last changed on disk (0 if there's none), so other windows can follow it. */
-  savedAt(): number {
+  savedAt(sport: SportId = this.activeSport()): number {
     try {
-      return fs.statSync(this.savePath()).mtimeMs;
+      return fs.statSync(this.savePath(sport)).mtimeMs;
     } catch {
       return 0;
     }

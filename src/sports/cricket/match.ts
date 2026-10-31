@@ -32,7 +32,7 @@ export type CricketEvent =
   | { type: 'milestone'; over: string; side: SideKey; playerId: number; runs: number }
   | { type: 'inningsBreak'; over: string; text: string }
   | { type: 'superOver'; over: string; score: [number, number]; decided: boolean }
-  | { type: 'result'; over: string; text: string };
+  | { type: 'result'; over: string };
 
 export interface Side {
   sheet: TeamSheet;
@@ -173,7 +173,7 @@ function bowl(m: CricketMatch, rng: Rng, bowler: number): void {
     side.wickets++;
     const how = rng.weighted(['c', 'b', 'lbw', 'run out'] as const, (x) => ({ c: 6, b: 2, lbw: 1.5, 'run out': 0.5 })[x]);
     if (how !== 'run out') fielding.wicketsBy[bowler] = (fielding.wicketsBy[bowler] ?? 0) + 1;
-    m.events.push({ type: 'wicket', over: overLabel(side.balls), side: other(key), batter, bowler, how, runs: side.runsBy[batter] ?? 0, score: `${side.goals}/${side.wickets}` });
+    m.events.push({ type: 'wicket', over: overLabel(side.balls), side: other(key), batter, bowler, how, runs: side.runsBy[batter] ?? 0, score: side.wickets >= 10 ? String(side.goals) : `${side.goals}/${side.wickets}` });
     m.striker = m.nextIn++;
     return;
   }
@@ -209,7 +209,7 @@ export function step(m: CricketMatch, rng: Rng): void {
         const side = m[m.batting];
         m.target = side.goals + 1;
         m.period = 'break';
-        m.events.push({ type: 'inningsBreak', over: overLabel(side.balls), text: `${side.goals}/${side.wickets}` });
+        m.events.push({ type: 'inningsBreak', over: overLabel(side.balls), text: side.wickets >= 10 ? String(side.goals) : `${side.goals}/${side.wickets}` });
       }
       return;
     case 'break':
@@ -256,7 +256,7 @@ function superOver(m: CricketMatch, rng: Rng): void {
 
 function finish(m: CricketMatch): void {
   m.period = 'done';
-  m.events.push({ type: 'result', over: 'FT', text: resultLine(m, [m.home.sheet.clubId, m.away.sheet.clubId].map(String) as [string, string]) });
+  m.events.push({ type: 'result', over: 'FT' });
 }
 
 function winnerOf(m: CricketMatch): SideKey {

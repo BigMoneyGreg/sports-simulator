@@ -530,16 +530,42 @@ Each milestone finishes in a working state.
 
 ---
 
+## 13b. Rugby and cricket
+
+Football's numbers and behaviour are unchanged: whole careers on fixed seeds hash the same as before the change. Everything that differs is in `SportFormat` (`src/core/format.ts`) and each sport's module (`src/sports/rugby`, `src/sports/cricket`: engine, squad, world order, words).
+
+| | Football | Rugby | Cricket (T20) |
+|---|---|---|---|
+| World | 5 × 20 | 6 × 8 | 5 × 6 |
+| Movement | 2 up + play-off, 3 down | 2 up, 2 down | 1 up, 1 down |
+| League matches | 38 | 14 | 10 |
+| Rating per place | 1 | 2.5 | 3.5 |
+| Top/bottom bonus | 6, 4, 2 / 2, 4, 6 | 6, 3, 0 / 0, 3, 6 | 6, 3, 0 / 0, 3, 6 |
+| Favourite wins (of decided games) | about 64% | about 78%, target 79 | about 74%, target 75 |
+| Match lengths | 30s, 2m, 5m | 1m, 2m, 5m | 2m, 5m |
+| Season, shortest length | 23 min | 18 min | 27 min |
+| Nations Cup | top 64 | top 32 | top 16 |
+| World Championship | 40: 8 groups of 5 | 16: 4 groups of 4 | 12: 4 groups of 3 |
+
+**Why these values.** Fewer places mean each is worth more, or reading a season stops paying: rugby at football's value of 1 gave reader v guesser 154 v 139. The rugby and cricket movement rules came from measuring: 1 up in rugby made promoted sides too strong, 2 up in cricket made them yo-yo. Ratings are spaced evenly across 0–99 in every sport, so decline, boost and the AI ceiling carry over.
+
+**Rugby's engine.** Overall strength sets the margin and levels off for huge gaps; team shape only moves how open the game is. Letting attack v defence do both meant two attacking sides traded tries and the better one barely showed (favourites stalled at 74%, with thrashings).
+
+**Cricket's engine.** One tick is an over, simulated ball by ball; a chasing side takes risks when behind the rate and plays safe when ahead. The summer clue ranks run rates, not totals, because a side stops batting once it has won: measured over 720 seasons, ranks pointed the right way 89% of the time when not level, against 78% for totals (they are level more often, 58% v 32%, and then the leavers decide). A side bowled out counts its full 20 overs, the real rule. Favourites at 75% are by choice above real T20 (about 65% on the one, unverified, figure found).
+
+**Worlds** come from the rankings: men's rugby, July 2026 (an unofficial copy of the World Rugby table); men's T20I, October 2026. Lower down rugby's list some nations rarely play. Only nations in a sport's world can be chosen there, unlike football's 210. South Asian cricket sides have their own name pools. Real stars the pools could produce are never drawn in rugby or cricket (`src/sports/famous.ts`).
+
+**Saves.** One file per sport, football's still `career.json`; `sport.json` says which is being played, and every window follows it. Only that career's clock runs.
+
+---
+
 ## 14. Later 🔵
 
 In rough priority order:
 
 1. **Continental championships:** in the years between World Championships, by confederation
 2. **Player lifecycle:** ages and youth players (squads already turn over each summer)
-3. **Other sports in the same extension** (after football is finished): sport choice at setup, separate career per sport, keywords for each sport so it shows up in search
-   - **Rugby union:** bonus points, tries/conversions/penalties commentary
-   - **Cricket:** most different (formats, overs, innings, draws in multi-day games); highest effort
-4. **Hall of Fame:** archive of past careers
+3. **Hall of Fame:** archive of past careers
 
 ## 15. Ideas ⚪
 
@@ -570,6 +596,8 @@ In rough priority order:
 | Total rating fixed; normalisation across AI clubs | Average stays 49.5 forever; no inflation |
 | Renamed from Sideline to Sports Simulator | *Sideline - Live Sports Scores* already exists on the Marketplace; the plain name says what it is |
 | Football first; other sports only after it's finished | Keeps version 1 small |
+| Rugby 6 × 8, 2 up 2 down, no play-offs; cricket T20 only, 5 × 6, 1 up 1 down; cups fitted to the team count | The user's choices after measuring (§13b). Favourites win more than in football because seasons are short |
+| No format choice in cricket | T20 fits a 2-minute match, has no draws and is the only format with 30 real nations; a choice would be options for the sake of it |
 | Unbeaten-run tracker in status bar: **rejected** | Unnecessary; records page covers it |
 | League picker with a random, mid-weighted start instead of a 0–99 rating | Simpler: choose where to start, not a number; a little uncertainty about how good you are |
 | No rating numbers shown to players (M8) | Players have no context for a 0–99 rating. The game shows expected finish, results and plain-English summaries; ratings, points and boosts stay internal |

@@ -1,7 +1,7 @@
 {
   "name": "sports-simulator",
   "displayName": "Sports Simulator",
-  "description": "An international football sim that plays itself in your sidebar while you code: leagues, cups and a World Championship.",
+  "description": "International football, rugby and cricket sims that play themselves in your sidebar while you code: leagues, cups and a World Championship.",
   "icon": "media/icon.png",
   "galleryBanner": {
     "color": "#1b5e3a",
@@ -24,6 +24,8 @@
   "keywords": [
     "football",
     "soccer",
+    "rugby",
+    "cricket",
     "sport",
     "sports",
     "manager",
@@ -61,6 +63,10 @@
       {
         "command": "sportsSimulator.resetCareer",
         "title": "Sports Simulator: Reset Career"
+      },
+      {
+        "command": "sportsSimulator.switchSport",
+        "title": "Sports Simulator: Switch Sport"
       }
     ],
     "configuration": {
@@ -70,16 +76,18 @@
           "type": "string",
           "enum": [
             "30s",
+            "1m",
             "2m",
             "5m"
           ],
           "enumDescriptions": [
-            "30 seconds (a season takes about 25 minutes)",
-            "2 minutes (a season takes about 1½ hours)",
-            "5 minutes (a season takes about 3¾ hours)"
+            "30 seconds (football only: a season takes about 25 minutes)",
+            "1 minute (rugby only: a season takes about 20 minutes)",
+            "2 minutes (a season takes about 1½ hours in football, 35 minutes in rugby, 25 minutes in cricket)",
+            "5 minutes (a season takes about 3¾ hours in football, 1½ hours in rugby, 1 hour in cricket)"
           ],
           "default": "2m",
-          "description": "Real time one 90-minute match takes."
+          "description": "Real time one match takes. If your sport doesn't offer this length, the next longer one is used."
         },
         "sportsSimulator.fullTimeOverlay": {
           "type": "boolean",
@@ -101,6 +109,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "balance": "tsx tools/balance.ts",
+    "balance:sports": "tsx tools/balance-sports.ts",
     "package": "npx @vscode/vsce package --no-dependencies",
     "test:integration": "npm run build && node test/integration/run.mjs",
     "preview": "npm run build && tsx tools/preview.ts"

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Rugby:** 48 nations in 6 leagues of 8. Tries, conversions, penalties, drop goals and sin bins; bonus points; kicking contests in knockouts; matches from 1 minute
+- **Cricket (T20):** 30 nations in 5 leagues of 6, including the West Indies. Overs, wickets and the chase ("need 34 from 18 balls"); net run rate; super overs; run scorers and wicket takers; matches from 2 minutes
+- Each sport has its own career, cups, summer questions and records; switch from the Team tab or the **Switch Sport** command, and each career waits where you left it
+
 ## 0.1.0
 
 First release.

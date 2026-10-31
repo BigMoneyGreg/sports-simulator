@@ -464,6 +464,31 @@ input:focus-visible {
   font-weight: 400;
 }
 
+/* Two cricket totals don't fit side by side in a narrow box, so they stack. */
+.goals.long {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 1.15rem;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.goals.long span {
+  font-size: 0.7rem;
+  margin: 0;
+  opacity: 0.6;
+}
+
+.situation {
+  text-align: center;
+  margin-top: 4px;
+}
+
+.report-feed .minor {
+  opacity: 0.6;
+}
+
 .clock-big {
   margin-top: 2px;
   font-size: 0.9em;
@@ -1436,4 +1461,29 @@ ul.plain {
 
 ul.plain li + li {
   margin-top: 2px;
+}
+
+/* Cricket has no draw column, so its last two columns sit one earlier, and net run rates are wider than goal differences. */
+.league.no-draws th:nth-child(6),
+.league.no-draws td:nth-child(6) {
+  width: 38px;
+}
+
+.league.no-draws th:nth-child(7),
+.league.no-draws td:nth-child(7) {
+  width: 25px;
+  padding-right: 6px;
+}
+
+.league.group.no-draws th:nth-child(4),
+.league.group.no-draws td:nth-child(4) {
+  width: 38px;
+}
+
+/* In the narrow table, net run rate stays, as goal difference does: it often decides promotion. */
+@media (max-width: 250px) {
+  .league.no-draws th:nth-child(6),
+  .league.no-draws td:nth-child(6) {
+    display: table-cell;
+  }
 }

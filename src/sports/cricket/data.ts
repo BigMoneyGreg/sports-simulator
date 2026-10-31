@@ -1,3 +1,5 @@
+import type { NamePoolKey } from '../football/data/names';
+
 /**
  * The 30 nations in cricket's world, strongest first: the men's T20 rankings of
  * October 2026. Pots straddling a league line let a team just outside a league
@@ -10,6 +12,9 @@ export const CRICKET_ORDER: string[] = [
   ...['OMA', 'CAN', 'UGA', 'PNG', 'ITA', 'HKG'],
   ...['MAS', 'KUW', 'ESP', 'QAT', 'JER', 'BHR'],
 ];
+
+/** Cricket's South Asian sides, whose names fans will know, each get their own pool rather than one shared across the region. */
+export const CRICKET_NAMES: Record<string, NamePoolKey> = { IND: 'indian', PAK: 'pakistani', BAN: 'bangladeshi', SRI: 'sriLankan', NEP: 'nepali' };
 
 /** Real cricket rivalries; anyone else takes their nearest neighbour in the world. */
 export const CRICKET_RIVALS: Record<string, string> = {

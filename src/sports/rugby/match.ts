@@ -55,8 +55,10 @@ export interface Side {
   tryRate: number;
   penaltyRate: number;
   reds: number;
-  /** Minutes at which players in the sin bin come back. */
-  binned: number[];
+  /** Players in the sin bin, and the minute each comes back. */
+  binned: { id: number; back: number }[];
+  /** Who has been shown a yellow: a second is a red. */
+  yellows: number[];
   sentOff: number[];
 }
 
@@ -108,6 +110,7 @@ export function createMatch(home: TeamSheet, away: TeamSheet, options: MatchOpti
     penaltyRate: e.penalties / 80,
     reds: 0,
     binned: [],
+    yellows: [],
     sentOff: [],
   });
   return {
@@ -168,7 +171,7 @@ function playMinute(m: RugbyMatch, rng: Rng): void {
   for (const key of ['home', 'away'] as const) {
     const side = m[key];
     const other = m[key === 'home' ? 'away' : 'home'];
-    side.binned = side.binned.filter((back) => back > m.minute);
+    side.binned = side.binned.filter((b) => b.back > m.minute);
     const short = (s: Side) => s.reds + s.binned.length;
     const factor = TUNING.shortOwnFactor ** short(side) * TUNING.shortOpponentFactor ** short(other);
 
@@ -187,26 +190,40 @@ function playMinute(m: RugbyMatch, rng: Rng): void {
 
     if (rng.chance(TUNING.yellowsPerTeam / 80)) {
       const playerId = pick(side, rng, CARD_WEIGHT);
-      side.binned.push(m.minute + TUNING.sinBinMinutes);
-      m.events.push({ type: 'yellow', minute: m.minute, side: key, playerId });
+      if (side.yellows.includes(playerId)) sendOff(m, key, playerId);
+      else {
+        side.yellows.push(playerId);
+        side.binned.push({ id: playerId, back: m.minute + TUNING.sinBinMinutes });
+        m.events.push({ type: 'yellow', minute: m.minute, side: key, playerId });
+      }
     } else if (rng.chance(TUNING.straightRedsPerTeam / 80)) {
-      const playerId = pick(side, rng, CARD_WEIGHT);
-      side.reds++;
-      side.sentOff.push(playerId);
-      m.events.push({ type: 'red', minute: m.minute, side: key, playerId });
+      sendOff(m, key, pick(side, rng, CARD_WEIGHT));
     }
   }
 }
 
+function sendOff(m: RugbyMatch, key: SideKey, playerId: number): void {
+  const side = m[key];
+  side.reds++;
+  side.sentOff.push(playerId);
+  m.events.push({ type: 'red', minute: m.minute, side: key, playerId });
+}
+
+/** The players on the field: not sent off, not in the sin bin. */
+function onField(side: Side): TeamSheet['lineup'] {
+  const off = (id: number) => side.sentOff.includes(id) || side.binned.some((b) => b.id === id);
+  const left = side.sheet.lineup.filter((p) => !off(p.id));
+  return left.length ? left : side.sheet.lineup;
+}
+
 function pick(side: Side, rng: Rng, weights: Record<string, number>): number {
-  const remaining = side.sheet.lineup.filter((p) => !side.sentOff.includes(p.id));
-  return rng.weighted(remaining.length ? remaining : side.sheet.lineup, (p) => weights[p.position] ?? 1).id;
+  return rng.weighted(onField(side), (p) => weights[p.position] ?? 1).id;
 }
 
 /** The fly-half kicks; if he's off, whoever is left. */
 function kicker(side: Side): number {
-  const remaining = side.sheet.lineup.filter((p) => !side.sentOff.includes(p.id));
-  return (remaining.find((p) => p.position === 'FH') ?? remaining[0] ?? side.sheet.lineup[0]).id;
+  const field = onField(side);
+  return (field.find((p) => p.position === 'FH') ?? field[0]).id;
 }
 
 /** Level after extra time: five kicks each, then one at a time until someone misses. */

@@ -2,11 +2,15 @@ import type { SportPresenter, TimelineItem } from '../../core/sport';
 import { surname } from '../football/names';
 import { overLabel, resultLine, TUNING, type CricketMatch, type Side, type SideKey } from './match';
 
-/** "156/4"; empty until the side has batted. */
+/** "156/4", or "130" when all out. */
+function runs(s: Side): string {
+  return s.wickets >= 10 ? String(s.goals) : `${s.goals}/${s.wickets}`;
+}
+
+/** A side's total as shown; empty until it has batted. */
 function total(m: CricketMatch, key: SideKey): string {
-  const s: Side = m[key];
-  const yetToBat = s.balls === 0 && !(m.batting === key && m.period !== 'break');
-  return yetToBat ? '' : `${s.goals}/${s.wickets}`;
+  const yetToBat = m[key].balls === 0 && !(m.batting === key && m.period !== 'break');
+  return yetToBat ? '' : runs(m[key]);
 }
 
 export const cricketPresenter: SportPresenter<CricketMatch> = {
@@ -74,7 +78,7 @@ export const cricketPresenter: SportPresenter<CricketMatch> = {
           items.push({ clock: 'SO', kind: 'break', text: `Super over ${e.score[0]}–${e.score[1]}${e.decided ? '' : ', level again'}` });
           break;
         case 'result':
-          items.push({ clock: 'FT', kind: 'break', text: `${m.home.goals}/${m.home.wickets} v ${m.away.goals}/${m.away.wickets}` });
+          items.push({ clock: 'FT', kind: 'break', text: `${runs(m.home)} v ${runs(m.away)}` });
           break;
       }
     }

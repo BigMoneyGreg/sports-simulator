@@ -389,7 +389,7 @@ function rivalView(career: Career, tables: TableView[]): ClubView['rival'] {
   return {
     ...badge(career, career.rival),
     where: `League ${table.tier}, ${ordinal(row.pos)}`,
-    record: played ? `Played ${played} · W${r.won} D${r.drawn} L${r.lost}` : 'Not played yet',
+    record: played ? `Played ${played} · W${r.won}${sportOf(career).present.terms.draws ? ` D${r.drawn}` : ''} L${r.lost}` : 'Not played yet',
   };
 }
 

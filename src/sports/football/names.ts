@@ -1,6 +1,6 @@
 import type { ClubIdentity } from '../../core/career';
 import type { Rng } from '../../core/rng';
-import { NAME_POOLS } from './data/names';
+import { NAME_POOLS, type NamePoolKey } from './data/names';
 import { EXTRA_LOCATIONS, EXTRA_NATIONS, LOCATIONS, NATIONS, RIVALS, WORLD_ORDER, type Nation } from './data/nations';
 
 const BY_CODE = new Map([...NATIONS, ...EXTRA_NATIONS].map((n) => [n.code, n]));
@@ -67,15 +67,17 @@ export function sportWorld(order: string[], rivals: Record<string, string>, leag
 }
 
 /** A name generator for one squad: surnames only repeat once the pool runs out, as with Kims and Nguyens. */
-export function playerNamer(code: string, squad: { name: string }[] = []): (rng: Rng) => string {
-  const pools = [nation(code).names].flat().map((k) => NAME_POOLS[k]);
+export function playerNamer(code: string, squad: { name: string }[] = [], avoid: ReadonlySet<string> = new Set(), poolKey?: NamePoolKey): (rng: Rng) => string {
+  const pools = [poolKey ?? nation(code).names].flat().map((k) => NAME_POOLS[k]);
   const used = new Set(squad.map((p) => surname(p.name)));
   return (rng) => {
     const pool = pools.length > 1 && rng.next() < 0.25 ? pools[1] : pools[0];
     const fresh = pool.last.filter((s) => !used.has(s));
     const surname = rng.pick(fresh.length ? fresh : pool.last);
     used.add(surname);
-    return `${rng.pick(pool.first)} ${surname}`;
+    let full = `${rng.pick(pool.first)} ${surname}`;
+    while (avoid.has(full)) full = `${rng.pick(pool.first)} ${surname}`;
+    return full;
   };
 }
 

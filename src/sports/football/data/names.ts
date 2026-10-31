@@ -146,6 +146,26 @@ export const NAME_POOLS = {
     'Rahul Arjun Vikram Sunil Anirudh Rohit Sandeep Amit Imran Bilal Usman Hamza Tanvir Rakib Saman Kasun Bikash Suraj',
     'Singh Kumar Sharma Patel Gupta Das Nair Reddy Bhutia Khan Ahmed Hussain Malik Rahman Hossain Perera Fernando Silva Thapa Gurung',
   ),
+  indian: pool(
+    'Aarav Arjun Vikram Rahul Rohan Karan Nikhil Ankit Aditya Siddharth Varun Ajay Manish Deepak Sanjay Ravi Harsh Yash Pranav Akash',
+    'Sharma Verma Patel Singh Kumar Reddy Nair Iyer Desai Joshi Menon Rao Gupta Chauhan Mishra Pillai Yadav Kulkarni Bhat Saxena',
+  ),
+  pakistani: pool(
+    'Usman Bilal Hamza Faisal Tariq Asad Salman Junaid Zubair Omar Danish Kamran Yasir Saad Ahmed Adnan Waleed Rizwan',
+    'Khan Ahmed Malik Hussain Iqbal Butt Sheikh Qureshi Shah Mirza Akhtar Javed Aslam Rana Mahmood Siddiqui Anwar Raza',
+  ),
+  bangladeshi: pool(
+    'Tanvir Rakib Sabbir Nasir Mahmud Imrul Rubel Soumya Taskin Anamul Arafat Sohan Jubair Mominul Nazmul Rafiq',
+    'Rahman Hossain Islam Ahmed Das Chowdhury Sarkar Miah Uddin Alam Haque Karim Mollah Talukder Biswas Sikder',
+  ),
+  sriLankan: pool(
+    'Saman Nuwan Kasun Chamara Dilshan Lahiru Dimuth Tharindu Chaminda Sachith Ruwan Asela Isuru Niroshan Prasad Sanath',
+    'Perera Fernando Silva Mendis Jayasuriya Dissanayake Bandara Gunawardena Wickramasinghe Rathnayake Herath Kumara Rajapaksa Weerasinghe Karunaratne',
+  ),
+  nepali: pool(
+    'Bikash Rohit Suraj Dipesh Prakash Santosh Binod Anil Sagar Sandeep Kiran Roshan Gyanendra Karan',
+    'Gurung Thapa Shrestha Rai Magar Tamang Sharma Bhandari Karki Adhikari Poudel Lama KC Basnet',
+  ),
   caribbean: pool(
     'Andre Kemar Damion Shamar Ricardo Marlon Javain Romario Kevin Tyrese Jermaine Dwayne Shaquille Akeem Nathaniel Kareem',
     'Campbell Brown Williams Thompson Clarke Francis Joseph Grant Bailey Morgan Charles Lewis Hylton Sinclair Gordon Ferguson Baptiste Roberts Phillips',

@@ -5,7 +5,8 @@
  *   npm run build && npx tsx tools/preview.ts [--light]
  *   open dist/preview/index.html?screen=match
  *
- * Screens: setup, match, table, fixtures, club, cups, fullTime, seasonOver, championship, clubLater, championshipLater.
+ * Screens: setup, match, table, fixtures, club, cups, fullTime, seasonOver, championship, clubLater, championshipLater,
+ * and the same for the other sports with a prefix, such as rugby_match or cricket_seasonOver.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -76,6 +77,38 @@ views.championship = { view: buildView(game), tab: 'cups', cup: 'championship' }
 }
 views.clubLater = { view: buildView(game), tab: 'club' };
 views.championshipLater = { view: buildView(game), tab: 'cups', cup: 'championship' };
+// The other sports, through the same screens.
+for (const [sport, team, seed] of [['rugby', 'WAL', 7], ['cricket', 'SRI', 7]] as const) {
+  const g = new Game({ save: () => {}, changed: () => {} }, manual);
+  const at = () => g.phase;
+  g.selectSport(sport);
+  g.load(null);
+  views[`${sport}_setup`] = { view: buildView(g) };
+  g.start({ rating: 55, difficulty: 'medium', seed, team });
+  for (let md = 0; md < 4; md++) {
+    while (at() === 'live') run();
+    run();
+  }
+  run(sport === 'rugby' ? 55 : 28);
+  const now = buildView(g);
+  views[`${sport}_match`] = { view: now, tab: 'match' };
+  views[`${sport}_table`] = { view: now, tab: 'table' };
+  views[`${sport}_fixtures`] = { view: now, tab: 'fixtures' };
+  views[`${sport}_cups`] = { view: now, tab: 'cups' };
+  while (at() === 'live') run();
+  views[`${sport}_fullTime`] = { view: buildView(g), tab: 'match' };
+  while (at() !== 'seasonOver') run();
+  views[`${sport}_seasonOver`] = { view: buildView(g), tab: 'match' };
+  for (let season = 0; season < 3; season++) {
+    g.chooseFocus(season % 2 ? 'attack' : 'defence');
+    while (at() !== 'seasonOver') run();
+  }
+  views[`${sport}_championship`] = { view: buildView(g), tab: 'cups', cup: 'championship' };
+  g.chooseFocus('attack');
+  run(3);
+  views[`${sport}_club`] = { view: buildView(g), tab: 'club' };
+  views[`${sport}_championshipLater`] = { view: buildView(g), tab: 'cups', cup: 'championship' };
+}
 writeFileSync(join(out, 'views.js'), `window.__views = ${JSON.stringify(views)};`);
 
 const dark = {
@@ -129,6 +162,7 @@ writeFileSync(
 <script>
   const screen = new URLSearchParams(location.search).get('screen') || 'match';
   const entry = window.__views[screen];
+  if (new URLSearchParams(location.search).has('fit')) addEventListener('DOMContentLoaded', () => { document.body.style.width = 'auto'; });
   window.acquireVsCodeApi = () => ({ postMessage() {}, getState: () => ({ tab: entry.tab || 'match', cup: entry.cup || 'cup' }), setState() {} });
 </script>
 <script src="../webview.js"></script>

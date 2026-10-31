@@ -349,10 +349,10 @@ function tableHtml(tables: TableView[], tier: number, terms: SportTerms): string
       <td class="pos">${r.pos}</td><td class="team" title="${esc(r.name)}${r.isRival ? ' · your rival' : ''}">${esc(r.town)}${r.isRival ? ' <span class="rival-mark" aria-label="Your rival">⚔</span>' : ''}${
         r.move ? ` <span class="move ${r.move > 0 ? 'up' : 'down'}" title="${r.move > 0 ? 'Up' : 'Down'} ${Math.abs(r.move)} since kick-off">${r.move > 0 ? '▲' : '▼'}</span>` : ''
       }</td>
-      <td>${r.played}</td><td>${r.won}</td>${terms.draws ? `<td>${r.drawn}</td>` : ''}<td>${r.lost}</td><td>${esc(r.gdText)}</td><td class="pts">${r.points}</td></tr>`,
+      <td>${r.played}</td><td>${r.won}</td>${terms.draws ? `<td>${r.drawn}</td>` : ''}<td>${r.lost}</td><td class="diff">${esc(r.gdText)}</td><td class="pts">${r.points}</td></tr>`,
     )
     .join('');
-  return `<div class="card flush"><table class="league"><thead><tr><th></th><th></th><th title="Played">P</th><th title="Won">W</th>${terms.draws ? '<th title="Drawn">D</th>' : ''}<th title="Lost">L</th><th title="${esc(terms.diffLong)}">${esc(terms.diffShort)}</th><th title="Points">Pts</th></tr></thead>
+  return `<div class="card flush"><table class="league${terms.draws ? '' : ' no-draws'}"><thead><tr><th></th><th></th><th title="Played">P</th><th title="Won">W</th>${terms.draws ? '<th title="Drawn">D</th>' : ''}<th title="Lost">L</th><th title="${esc(terms.diffLong)}">${esc(terms.diffShort)}</th><th title="Points">Pts</th></tr></thead>
     <tbody>${rows}</tbody></table></div>
     ${legendHtml(t)}`;
 }
@@ -411,10 +411,10 @@ function cupParts(v: GameView): string[] {
       ]
     : [];
   const table = (g: CupView['groups'][number]) =>
-    `<table class="league group card flush"><thead><tr><th></th><th>Group ${esc(g.name)}</th><th>P</th><th>${esc(v.terms.diffShort)}</th><th>Pts</th></tr></thead><tbody>${g.rows
+    `<table class="league group${v.terms.draws ? '' : ' no-draws'} card flush"><thead><tr><th></th><th>Group ${esc(g.name)}</th><th>P</th><th>${esc(v.terms.diffShort)}</th><th>Pts</th></tr></thead><tbody>${g.rows
       .map(
         (r) =>
-          `<tr class="${r.through ? 'promotion' : ''} ${r.isPlayer ? 'me' : ''}"><td class="pos">${r.pos}</td><td class="team">${swatch(r.club)}${esc(r.town)}</td><td>${r.played}</td><td>${esc(r.gdText)}</td><td class="pts">${r.points}</td></tr>`,
+          `<tr class="${r.through ? 'promotion' : ''} ${r.isPlayer ? 'me' : ''}"><td class="pos">${r.pos}</td><td class="team">${swatch(r.club)}${esc(r.town)}</td><td>${r.played}</td><td class="diff">${esc(r.gdText)}</td><td class="pts">${r.points}</td></tr>`,
       )
       .join('')}</tbody></table>`;
   const groupTables = `<div class="groups">${c.groups.map(table).join('')}</div>`;
@@ -579,7 +579,7 @@ function clubHtml(v: GameView): string {
   <div class="card">
     <h3 class="sub first">Play another sport</h3>
     <p class="muted small">This career waits where you leave it.</p>
-    ${seg('sport', v.sports.map((s): Option => [s.id, `${s.icon} ${s.name}`, s.id === v.sport ? 'Playing' : (s.career ?? 'New')]), v.sport)}
+    ${seg('sport', v.sports.map((s): Option => [s.id, s.name, s.id === v.sport ? 'Playing' : (s.career ?? 'New')]), v.sport)}
   </div>`;
 }
 

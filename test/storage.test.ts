@@ -1,7 +1,7 @@
-import { mkdtempSync, readdirSync } from 'node:fs';
+import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { SavedGame } from '../src/extension/game';
 import { Storage } from '../src/extension/storage';
 
@@ -70,5 +70,55 @@ describe('storage', () => {
     expect(new Storage(dir, memento()).readLive()).toMatchObject({ text: "⚽ SCO 1–0 ENG 30'" });
     s.save(save(5));
     expect(s.savedAt()).toBeGreaterThan(0);
+  });
+
+  it('keeps one career per sport, and football in the file it always used', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ss-storage-'));
+    const s = new Storage(dir, memento());
+    expect(s.activeSport()).toBe('football');
+    s.save(save(1));
+    s.setActiveSport('rugby');
+    expect(s.load()).toBeNull();
+    s.save(save(2));
+    s.setActiveSport('cricket');
+    s.save(save(3));
+    expect(readdirSync(dir).sort()).toEqual(['career.cricket.json', 'career.json', 'career.rugby.json', 'sport.json']);
+    expect(s.load('football')).toEqual(save(1));
+    expect(s.load('rugby')).toEqual(save(2));
+    expect(s.load()).toEqual(save(3));
+    // A fresh window picks up the same sport.
+    expect(new Storage(dir, memento()).activeSport()).toBe('cricket');
+    // Resetting one leaves the others.
+    s.save(null);
+    expect(s.load('football')).toEqual(save(1));
+    expect(s.load('rugby')).toEqual(save(2));
+  });
+
+  it('never gives another sport football\'s old global-state save', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ss-storage-'));
+    const s = new Storage(dir, memento({ 'sportsSimulator.career': JSON.stringify(save(9)) }));
+    s.setActiveSport('rugby');
+    expect(s.load()).toBeNull();
+    expect(s.load('football')).toEqual(save(9));
+  });
+
+  it('names each sport\'s waiting career, and only re-reads a save that has changed', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ss-storage-'));
+    const s = new Storage(dir, memento());
+    const named = (name: string) => ({ version: 8, career: { playerClubId: 0, clubs: [{ name }] }, live: null, paused: false }) as unknown as SavedGame;
+    expect(s.careers()).toEqual({});
+    s.save(named('Scotland'));
+    s.setActiveSport('rugby');
+    s.save(named('Wales'));
+    expect(s.careers()).toEqual({ football: 'Scotland', rugby: 'Wales' });
+    const load = vi.spyOn(s, 'load');
+    s.careers();
+    expect(load).not.toHaveBeenCalled();
+  });
+
+  it('falls back to football if the sport file is damaged', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ss-storage-'));
+    writeFileSync(join(dir, 'sport.json'), 'nonsense');
+    expect(new Storage(dir, memento()).activeSport()).toBe('football');
   });
 });
