@@ -706,8 +706,8 @@ function scoreLine(game: Game, short = false): string | null {
   return `${line} ${short && present.shortClock ? present.shortClock(match) : present.clock(match)}`;
 }
 
-/** One VS Code icon for every sport: the status bar can't show the box's own. */
-const STATUS_ICON = '$(trophy)';
+/** Emoji, as the status bar can't show the box's own icons and VS Code's own set has no sports. */
+const STATUS_ICONS: Record<SportId, string> = { football: '⚽', rugby: '🏉', cricket: '🏏' };
 
 export const SEASON_OVER = 'Season over: one decision waiting';
 
@@ -715,12 +715,12 @@ export const SEASON_OVER = 'Season over: one decision waiting';
 export function statusText(game: Game, goal = false): string | null {
   const career = game.career;
   const { alert } = game.sport.present.terms;
-  if (!career) return `${STATUS_ICON} Start a career`;
+  if (!career) return '$(trophy) Start a Sports Simulator career';
   if (career.pending) return `$(bell) ${SEASON_OVER}`;
   const score = scoreLine(game);
   if (!score) return null;
   const rival = game.shownMatch && isRivalFixture(career, game.shownMatch.fixture) ? '⚔ ' : '';
-  return `${STATUS_ICON} ${rival}${game.paused ? '⏸ ' : ''}${goal && !score.startsWith('FT') ? `${alert} ` : ''}${score}`;
+  return `${STATUS_ICONS[game.sportId]} ${rival}${game.paused ? '⏸ ' : ''}${goal && !score.startsWith('FT') ? `${alert} ` : ''}${score} · ${standing(game)}`;
 }
 
 /** Where the player's club stands in its league table before the matchday in progress. */
@@ -768,13 +768,18 @@ export function collapsedText(game: Game): string | undefined {
   return score ? `${place} · ${score}` : place;
 }
 
-/** The status bar's line for one of several careers: "Rugby: Wk 7/14 · 2nd in League 3". */
-function standingText(game: Game): string {
+/** "Wk 7/14 · 2nd in League 3". */
+function standing(game: Game): string {
   const career = game.career!;
-  const name = game.sport.present.terms.name;
-  if (career.pending) return `$(bell) ${name}: season over`;
   const { position, tier } = leaguePlace(career);
-  return `${STATUS_ICON} ${name}: ${game.paused ? '⏸ ' : ''}Wk ${Math.max(1, leagueWeek(game))}/${leagueRounds(career.season)} · ${ordinal(position)} in League ${tier}`;
+  return `Wk ${Math.max(1, leagueWeek(game))}/${leagueRounds(career.season)} · ${ordinal(position)} in League ${tier}`;
+}
+
+/** The status bar's line for one of several careers: "🏉 Rugby: Wk 7/14 · 2nd in League 3". */
+function standingText(game: Game): string {
+  const name = game.sport.present.terms.name;
+  if (game.career!.pending) return `$(bell) ${name}: season over`;
+  return `${STATUS_ICONS[game.sportId]} ${name}: ${game.paused ? '⏸ ' : ''}${standing(game)}`;
 }
 
 /** The sports ticked in the settings. Unticking every one would leave an empty box, so that counts as all of them. */

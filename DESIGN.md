@@ -377,7 +377,7 @@ The box lists every sport, one row each. Only one opens fully at a time, beneath
 - **Pause:** a minimised row has its own ⏸/▶; the open sport's is in its header.
 - **Everything runs:** opening a sport only changes what you're looking at. Each sport's summer waits for its own answer while the others play on.
 
-With several careers the status bar shows each in turn for 5 seconds, paused ones included, as its sport, week and place (*Rugby: Wk 7/14 · 2nd in League 3*), with no live score or goal call-out; a bell appears if another sport is waiting on you. With one career it shows the live score as below. The collapsed box follows the sport last opened, or if that has no career, the first that does. The hover lists every career, and the badge counts decisions waiting. When a season ends a short message says so and goes by itself after 10 seconds (*Rugby season 3 finished: 2nd in League 3, promoted. Decision waiting.*), unless that sport is open in view. The decision is only ever made in the box; the badge, bell and pinned line stay until it is.
+With several careers the status bar shows each in turn for 5 seconds, paused ones included, as its sport, week and place (*🏉 Rugby: Wk 7/14 · 2nd in League 3*), with no live score or goal call-out; a bell appears if another sport is waiting on you. With one career it shows the live score as below. The collapsed box follows the sport last opened, or if that has no career, the first that does. The hover lists every career, and the badge counts decisions waiting. When a season ends a short message says so and goes by itself after 10 seconds (*Rugby season 3 finished: 2nd in League 3, promoted. Decision waiting.*), unless that sport is open in view. The decision is only ever made in the box; the badge, bell and pinned line stay until it is.
 
 While something is open, a sport waiting on you is also pinned to the top of the box (*Cricket: season over, decision waiting*), because a long page can push its row out of sight. Clicking it opens that sport.
 
@@ -397,11 +397,11 @@ A match against your rival is marked ⚔ in the status bar, and *Rival match* on
 
 ### Status bar
 
-`⚽ SCO 2–1 RSA 67'`, which you can click to open the sidebar box.
+`⚽ SCO 2–1 RSA 67' · Wk 7/38 · 3rd in League 2`, which you can click to open the sidebar box.
 
-- For about 4 seconds after a goal in your match: `⚽ GOAL! SCO 2–1 RSA 67'`.
+- For about 4 seconds after a goal in your match: `⚽ GOAL! SCO 2–1 RSA 67' · Wk 7/38 · 3rd in League 2`.
 - Hovering shows the essentials without opening the box: club, league and position, games played, expected finish, and the match in progress.
-- Before a career starts: `⚽ Start a career` (shown even with the score turned off, like the summer choice).
+- Before a career starts: `🏆 Start a Sports Simulator career` (shown even with the score turned off, like the summer choice).
 
 ### When the box is collapsed
 
