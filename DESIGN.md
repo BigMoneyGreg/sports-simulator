@@ -13,7 +13,7 @@
 
 ## 1. Vision
 
-Football management with almost nothing to manage. Your only decisions are:
+Sports management with almost nothing to manage: football first, with rugby and cricket alongside (§13b). This section describes football. Your only decisions are:
 
 1. **Which country you are, and which league it starts in:** any of FIFA's ~210 nations, in League 1 to 5 (its usual level by default), starting mid-table
 2. **How long a match lasts:** 30 seconds, 2 or 5 real minutes
@@ -525,6 +525,8 @@ Each milestone finishes in a working state.
 **Summer question (30 Oct 2026):** one question a summer in four styles (call-ups, assistant coach, formation, training camp), always attack or defence underneath; leavers matched to a 10–90% loss split as a second clue; Medium boost 5 → 7. 122 tests and all 30 balance targets pass.
 
 **Final review fixes (31 Oct 2026):** season length shown beside each match length; packaging always builds fresh; other windows follow the running one; both summer clues sit with the question, first when the box is narrow; darker answers in light themes; one standard game (no difficulty choice); a lopsided team declines and recovers over a few seasons (`leanSettling` 0.5). 124 tests and all 30 balance targets pass (two targets loosened with reasons: drift ±4, peak 220).
+
+**Rugby and cricket (31 Oct 2026):** built on the branch `rugby-and-cricket` (§13b): both sports, a career per sport, common names per country in every sport, closer leagues, no first-season walkover, ball-by-ball cricket, a tidier match report, line icons. 200 tests; football 30/30 and rugby and cricket 20/20 balance targets. Still to do: try every sport with fn+F5, including switching sport mid-match; decide when to merge into `main`; retake the README screenshots, which only show football.
 
 **Before publishing (M9):** done: GitHub repo renamed to `sports-simulator`; Marketplace publisher **bigdevgreg** created and set in package.json; cleaned history force-pushed and the backup branch deleted. Still to do: try the build (fn+F5, ideally with two windows open; the current save carries over); make the GitHub repo public (README screenshots load from it); `npx @vscode/vsce package` (0.1.0 has never been published, so no bump for the first upload) and upload the `.vsix` by hand at marketplace.visualstudio.com/manage (no Azure DevOps token needed). Updates: bump the version, package, upload with **Update**.
 
