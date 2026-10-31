@@ -601,7 +601,7 @@ describe.each(NEW_SPORTS)('%s in the game', (id) => {
     expect(during.match).not.toBeNull();
     expect(during.match!.score).toHaveLength(2);
     expect(during.header.durations).toEqual(SPORTS[id].present.durations);
-    expect(statusText(game)).toMatch(/^(🏉|🏏) /);
+    expect(statusText(game)).toMatch(/^(🏉|🏏) {2}/);
     expect(collapsedText(game)).toBeTruthy();
     while (phase() === 'live') clock.run();
     expect(phase()).toBe('fullTime');
@@ -826,8 +826,8 @@ describe('sports in the save', () => {
       expect(boxStatus(games, 'rugby', true).text).toMatch(/TRY!/);
       start(game('cricket'), 'SRI');
       clocks.get('cricket')!.run(3);
-      expect(boxStatus(games, 'rugby').text).toMatch(/^🏉 Rugby: Wk \d+\/14 · \d+(st|nd|rd|th) in League \d$/);
-      expect(boxStatus(games, 'cricket', true).text).toMatch(/^🏏 Cricket: Wk \d+\/\d+ · \d+(st|nd|rd|th) in League \d$/);
+      expect(boxStatus(games, 'rugby').text).toMatch(/^🏉  Rugby: Wk \d+\/14 · \d+(st|nd|rd|th) in League \d$/);
+      expect(boxStatus(games, 'cricket', true).text).toMatch(/^🏏  Cricket: Wk \d+\/\d+ · \d+(st|nd|rd|th) in League \d$/);
     });
 
     it('shows only the sports ticked in the settings, or all of them if none is', () => {
@@ -859,9 +859,9 @@ describe('sports in the save', () => {
       for (const id of ['football', 'rugby'] as const) clocks.get(id)!.run(3);
       expect([0, 4999, 5000, 10000, 15000].map((t) => cycledSport(games, 'football', t))).toEqual(['football', 'football', 'rugby', 'cricket', 'football']);
       const status = boxStatus(games, 'football', false, 'rugby');
-      expect(status.text).toMatch(/^🏉 Rugby: /);
+      expect(status.text).toMatch(/^🏉  Rugby: /);
       expect(status.description).toBe(boxStatus(games, 'football').description);
-      expect(boxStatus(games, 'football', false, 'cricket').text).toMatch(/^🏏 Cricket: ⏸ Wk /);
+      expect(boxStatus(games, 'football', false, 'cricket').text).toMatch(/^🏏  Cricket: ⏸ Wk /);
     });
 
     it('lists every career on hover', () => {

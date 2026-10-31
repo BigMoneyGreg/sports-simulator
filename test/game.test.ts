@@ -158,7 +158,7 @@ describe('game clock', () => {
     expect(v.cups.cup.status).toMatch(/^Still in · Round of 64 v .+ \((home|away)\)$/);
     expect(v.cups.cup.next).toBe('After matchday 6');
     expect(v.match!.clock).toMatch(/^\d+'$/);
-    expect(statusText(game)).toMatch(/^⚽ [A-Z0-9]{3} \d+–\d+ [A-Z0-9]{3} \d+' · Wk \d+\/\d+ · \d+(st|nd|rd|th) in League \d$/);
+    expect(statusText(game)).toMatch(/^⚽  [A-Z0-9]{3} \d+–\d+ [A-Z0-9]{3} \d+' · Wk \d+\/\d+ · \d+(st|nd|rd|th) in League \d$/);
   });
 
   it('resets back to setup', () => {
@@ -286,7 +286,7 @@ describe('outside the box', () => {
     }
     expect(game.phase).toBe('live'); // seed 21 has a goal
     expect(watch.check(game, now)).toBe(true);
-    expect(statusText(game, true)).toMatch(/^⚽ GOAL! SCO|^⚽ GOAL! [A-Z]{3} \d–\d SCO/);
+    expect(statusText(game, true)).toMatch(/^⚽  GOAL! SCO|^⚽  GOAL! [A-Z]{3} \d–\d SCO/);
     expect(watch.check(game, now + GoalWatch.MS + 1)).toBe(false);
   });
 

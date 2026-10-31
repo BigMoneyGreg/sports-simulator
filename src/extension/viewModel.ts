@@ -706,7 +706,7 @@ function scoreLine(game: Game, short = false): string | null {
   return `${line} ${short && present.shortClock ? present.shortClock(match) : present.clock(match)}`;
 }
 
-/** Emoji, as the status bar can't show the box's own icons and VS Code's own set has no sports. */
+/** Emoji, as the status bar can't show the box's own icons and VS Code's own set has no sports. Two spaces follow them: one sits too close. */
 const STATUS_ICONS: Record<SportId, string> = { football: '⚽', rugby: '🏉', cricket: '🏏' };
 
 export const SEASON_OVER = 'Season over: one decision waiting';
@@ -720,7 +720,7 @@ export function statusText(game: Game, goal = false): string | null {
   const score = scoreLine(game);
   if (!score) return null;
   const rival = game.shownMatch && isRivalFixture(career, game.shownMatch.fixture) ? '⚔ ' : '';
-  return `${STATUS_ICONS[game.sportId]} ${rival}${game.paused ? '⏸ ' : ''}${goal && !score.startsWith('FT') ? `${alert} ` : ''}${score} · ${standing(game)}`;
+  return `${STATUS_ICONS[game.sportId]}  ${rival}${game.paused ? '⏸ ' : ''}${goal && !score.startsWith('FT') ? `${alert} ` : ''}${score} · ${standing(game)}`;
 }
 
 /** Where the player's club stands in its league table before the matchday in progress. */
@@ -779,7 +779,7 @@ function standing(game: Game): string {
 function standingText(game: Game): string {
   const name = game.sport.present.terms.name;
   if (game.career!.pending) return `$(bell) ${name}: season over`;
-  return `${STATUS_ICONS[game.sportId]} ${name}: ${game.paused ? '⏸ ' : ''}${standing(game)}`;
+  return `${STATUS_ICONS[game.sportId]}  ${name}: ${game.paused ? '⏸ ' : ''}${standing(game)}`;
 }
 
 /** The sports ticked in the settings. Unticking every one would leave an empty box, so that counts as all of them. */
