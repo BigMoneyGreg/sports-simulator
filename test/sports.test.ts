@@ -80,6 +80,16 @@ describe('formats', () => {
     expect(zone(CRICKET, 1, 1)).toBe('champion');
   });
 
+  it.each(SPORT_IDS)('%s: a career starts in the league picked, whichever it is', (id) => {
+    const f = FORMATS[id];
+    for (let tier = 1; tier <= f.leagues; tier++) {
+      for (let seed = 1; seed <= 25; seed++) {
+        const c = newCareer({ rating: startRating(f, tier, new Rng(seed * 97)), difficulty: 'medium', seed }, SPORTS[id]);
+        expect(c.season.leagues.find((l) => l.clubIds.includes(c.playerClubId))!.tier, `league ${tier}, seed ${seed}`).toBe(tier);
+      }
+    }
+  });
+
   it.each([RUGBY, CRICKET])('starts careers inside the chosen league, whatever the league', (f) => {
     const rng = new Rng(3);
     for (let tier = 1; tier <= f.leagues; tier++) {

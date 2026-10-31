@@ -158,7 +158,7 @@ function careerRun(id: 'rugby' | 'cricket', sport: AnySport): void {
   check('The summer clue points the right way 70%+ of the time', clue.right / clue.n >= 0.7, `${((100 * clue.right) / clue.n).toFixed(0)}%, ranks level ${((100 * clue.tied) / clue.n).toFixed(0)}%`);
 
   console.log(`\n-- Season length --`);
-  // A match's real length: its clock, less any overs or minutes a chase doesn't need, plus the full-time pause.
+  // A match's full clock plus the full-time pause; a chase that ends early makes cricket's a little shorter.
   const matchMinutes = (d: (typeof sport.present.durations)[number]) => (tickMs(sport, d) * sport.module.ticks + fullTimePause(d)) / 60000;
   for (const d of sport.present.durations) console.log(`      ${d}: about ${(mean(games) * matchMinutes(d)).toFixed(0)} min (label "${sport.present.terms.seasonLabels[d]}")`);
   console.log(`      matches a season: mean ${mean(games).toFixed(1)}, ${Math.min(...games)}–${Math.max(...games)}`);

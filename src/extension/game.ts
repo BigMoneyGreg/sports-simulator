@@ -69,7 +69,6 @@ export function fullTimePause(duration: Duration): number {
 export interface LiveRound {
   fixtures: Fixture[];
   // Each sport's own match type: only its definition reads them.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   matches: any[];
   /** Index of the player's match in `fixtures`. */
   player: number;
@@ -104,7 +103,6 @@ export class Game {
   career: Career | null = null;
   live: LiveRound | null = null;
   /** The player's last finished match, shown during the full-time pause. */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   lastMatch: { match: any; fixture: Fixture } | null = null;
   paused = false;
   phase: Phase = 'idle';
@@ -316,7 +314,6 @@ export class Game {
   // -- helpers --------------------------------------------------------------
 
   /** The match to show: live, or the one that just finished. */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   get shownMatch(): { match: any; fixture: Fixture } | null {
     if (this.live) return { match: this.live.matches[this.live.player], fixture: this.live.fixtures[this.live.player] };
     return this.lastMatch;

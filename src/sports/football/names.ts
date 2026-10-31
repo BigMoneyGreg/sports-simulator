@@ -11,11 +11,9 @@ export function nation(code: string): Nation {
   return n;
 }
 
-export function nationIdentity(n: Nation): ClubIdentity {
+export function identity(n: Nation): ClubIdentity {
   return { name: n.name, short: n.code, colours: [...n.colours], ...(n.shortName ? { shortName: n.shortName } : {}) };
 }
-
-const identity = nationIdentity;
 
 /** The league a nation starts in by default: its place in the world order, or the bottom league. */
 export function naturalTier(code: string, leagueSize: number, leagues: number, order: string[] = WORLD_ORDER): number {
