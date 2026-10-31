@@ -30,6 +30,42 @@ describe('game clock', () => {
     expect(game.live!.matches.every((x) => x.minute === 10)).toBe(true);
   });
 
+  it('stands still while held, keeping the player\'s own pause, and carries on from the same minute', () => {
+    const { game } = setup();
+    game.start({ rating: 50, difficulty: 'medium', seed: 2 });
+    vi.advanceTimersByTime(minute * 20);
+    game.setHeld(true);
+    vi.advanceTimersByTime(minute * 50);
+    expect(game.shownMatch!.match.minute).toBe(20);
+    expect(game.snapshot()!.paused).toBe(false);
+    game.setHeld(false);
+    vi.advanceTimersByTime(minute * 5);
+    expect(game.shownMatch!.match.minute).toBe(25);
+
+    game.togglePause();
+    game.setHeld(true);
+    game.setHeld(false);
+    vi.advanceTimersByTime(minute * 5);
+    expect(game.shownMatch!.match.minute).toBe(25);
+    expect(game.paused).toBe(true);
+  });
+
+  it('a held career loaded from its save waits, and only starts in the window running the game', () => {
+    const { game } = setup();
+    game.start({ rating: 50, difficulty: 'medium', seed: 2 });
+    vi.advanceTimersByTime(minute * 20);
+    const saved = JSON.parse(JSON.stringify(game.snapshot()));
+    game.shutdown();
+    const { game: other } = setup();
+    other.setHeld(true, false);
+    other.load(saved);
+    vi.advanceTimersByTime(minute * 5);
+    expect(other.shownMatch!.match.minute).toBe(20);
+    other.setHeld(false, false);
+    vi.advanceTimersByTime(minute * 5);
+    expect(other.shownMatch!.match.minute).toBe(20);
+  });
+
   it('pauses and resumes from the exact minute', () => {
     const { game } = setup();
     game.start({ rating: 50, difficulty: 'medium', seed: 2 });

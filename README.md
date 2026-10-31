@@ -57,6 +57,8 @@ Player names are generated and fictional. Competitions are the game's own, not o
 
 | Setting | Default | What it does |
 |---|---|---|
+| `sportsSimulator.sports` | all on | Tick the sports you want. Hiding one with a career under way stops its clock and keeps the career, which carries on from the same moment when you show it again. |
+| `sportsSimulator.showHonours` | `true` | Show the Honours row and a notification for each honour earned. Honours and records still count while it's off. |
 | `sportsSimulator.matchDuration` | `2m` | Real time one match takes in a new career (see the table above); a career under way keeps its own, set from the ⏱ button. If your sport doesn't offer this length, the next longer one is used. Also on the ⏱ button. |
 | `sportsSimulator.fullTimeOverlay` | `true` | Show the full-time result over the box for a few seconds after your match. |
 | `sportsSimulator.statusBarScore` | `true` | Show your live score in the status bar. Click it to open the box. |

@@ -482,6 +482,8 @@ The game uses real nations, not clubs: country names, flags and colours are free
 - Match duration (30 seconds / 2 / 5 minutes): the length a new career starts from. Each career keeps its own, changed from the ⏱ button in the box
 - Full-time overlay on/off
 - Status bar score on/off
+- Which sports show (a tick for each; none ticked counts as all)
+- Honours row and its notifications on/off (honours still count)
 
 ---
 
@@ -641,6 +643,7 @@ In rough priority order:
 | Football first; other sports only after it's finished | Keeps version 1 small |
 | Rugby 6 × 8, 2 up 2 down, no play-offs; cricket T20 only, 5 × 6, 1 up 1 down; cups fitted to the team count | The user's choices after measuring (§13b). Favourites win more than in football because seasons are short |
 | Several sports at once, as a list with one open at a time | The user's design. Careers no longer stop on switching; minimised rows keep it glanceable, and the corner still shows one score rather than three |
+| Hiding a sport holds its clock, without touching the career or its own pause | If it played on hidden, a season could end with a decision waiting on a sport the player can't see. A hold isn't saved, so the setting alone decides it and un-hiding can't undo a pause the player chose |
 | Reset honours leaves running careers alone | Honours are a side record: wiping them shouldn't cost seasons of play, and End and Reset already deal with careers one at a time |
 | One End… button instead of separate End and Reset; the Reset command removed | Two ways to stop a career needed explaining; asking at the moment makes the difference clear. VS Code's pop-ups can't be red, so these questions live in the box |
 | Season-end message is one short line that goes by itself; no answering from it | A big pop-up with the decision in it was too much. See it, then go and act in the box |

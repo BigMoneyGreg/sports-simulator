@@ -768,6 +768,12 @@ export function collapsedText(game: Game): string | undefined {
   return score ? `${place} · ${score}` : place;
 }
 
+/** The sports ticked in the settings. Unticking every one would leave an empty box, so that counts as all of them. */
+export function enabledSports(setting: Partial<Record<SportId, boolean>> | undefined): SportId[] {
+  const on = SPORT_IDS.filter((id) => setting?.[id] !== false);
+  return on.length ? on : [...SPORT_IDS];
+}
+
 /** Each sport's row in the box's list. */
 export function sportRows(games: Game[]): SportRowView[] {
   return games.map((game) => {
@@ -782,7 +788,8 @@ export function sportRows(games: Game[]): SportRowView[] {
 
 /** The sport the corner follows: the one last opened, or if that has no career, the first that does. */
 export function statusGame(games: Game[], followed: SportId): Game {
-  const chosen = games.find((g) => g.sportId === followed)!;
+  // The one last opened may since have been hidden in the settings.
+  const chosen = games.find((g) => g.sportId === followed) ?? games[0];
   return chosen.career ? chosen : (games.find((g) => g.career) ?? chosen);
 }
 

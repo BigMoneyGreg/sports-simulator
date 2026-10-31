@@ -10,7 +10,7 @@ import { Ownership, POLL_MS } from './ownership';
 import { SidebarProvider } from './sidebar';
 import { StatusBar } from './statusBar';
 import { Storage, type LiveStatus } from './storage';
-import { boxStatus, buildHonours, buildView, careerSummary, GoalWatch, honoursLine, SEASON_OVER, seasonFinished, sportRows, statusGame } from './viewModel';
+import { boxStatus, buildHonours, buildView, careerSummary, enabledSports, GoalWatch, honoursLine, SEASON_OVER, seasonFinished, sportRows, statusGame } from './viewModel';
 
 let ownership: Ownership | undefined;
 
@@ -28,6 +28,9 @@ export function activate(context: vscode.ExtensionContext): void {
     return (DURATIONS as string[]).includes(value) ? (value as Duration) : '2m';
   };
 
+  const shownSports = () => enabledSports(config().get('sports'));
+  const showHonours = () => config().get('showHonours', true);
+
   const sidebar = new SidebarProvider(context.extensionUri, (message) => handle(message));
   storage.pauseWaitingCareers();
   /** The sport the corner follows: the one last opened, kept for next time. */
@@ -43,10 +46,10 @@ export function activate(context: vscode.ExtensionContext): void {
    */
   const outside = (): LiveStatus => {
     if (owner.owning) {
-      const shown = statusGame(all(), followed);
+      const shown = statusGame(listed(), followed);
       // Every sport's watch keeps up, so going back to one doesn't call out a goal from earlier.
       const fresh = all().map((g) => goals[g.sportId].check(g));
-      const live = { at: Date.now(), ...boxStatus(all(), followed, fresh[all().indexOf(shown)]) };
+      const live = { at: Date.now(), ...boxStatus(listed(), followed, fresh[all().indexOf(shown)]) };
       const key = JSON.stringify({ ...live, at: 0 });
       if (key !== lastLive) {
         lastLive = key;
@@ -56,20 +59,22 @@ export function activate(context: vscode.ExtensionContext): void {
     }
     const shared = storage.readLive();
     if (shared && Date.now() - shared.at < LIVE_FRESH_MS) return shared;
-    return { at: 0, ...boxStatus(all(), followed) };
+    return { at: 0, ...boxStatus(listed(), followed) };
   };
 
   /** `from`: the sport that changed. A minimised sport's tick only needs the rows, not the open sport's whole view again. */
   const refresh = (from?: SportId) => {
+    // What was open may just have been hidden in the settings.
+    if (open === 'honours' ? !showHonours() : open && !shownSports().includes(open)) open = statusGame(listed(), followed).sportId;
     if (sidebar.visible) {
       const full = !from || from === open;
       const view = full ? { view: openView() } : {};
-      sidebar.post({ type: 'view', rows: sportRows(all()), honours: honoursLine(all(), storage.archives().length, storage.feats().length), open, ...view });
+      sidebar.post({ type: 'view', rows: sportRows(listed()), honours: showHonours() ? honoursLine(all(), storage.archives().length, storage.feats().length) : null, open, ...view });
     }
     const live = outside();
-    const decisions = all().filter((g) => g.career?.pending).length;
+    const decisions = listed().filter((g) => g.career?.pending).length;
     // Starting a career and the summer choice show even with the score turned off: they're waiting on the player.
-    const waiting = !all().some((g) => g.career) || decisions > 0;
+    const waiting = !listed().some((g) => g.career) || decisions > 0;
     statusBar.update(config().get('statusBarScore', true) || waiting ? live.text : null, live.tooltip);
     sidebar.setInfo(live.description, decisions ? { value: decisions, tooltip: decisions === 1 ? SEASON_OVER : `${decisions} seasons over: decisions waiting` } : undefined);
   };
@@ -97,7 +102,8 @@ export function activate(context: vscode.ExtensionContext): void {
     const earned = newFeats(liveCareers(), storage.archives(), storage.feats(), new Date().toISOString(), label);
     if (!earned.length) return;
     storage.addFeats(earned);
-    for (const f of earned) toast(`Honour earned: ${FEAT_TITLES[f.id]}. ${f.detail}`);
+    // Hidden, they still count: turning the row back on shows them.
+    if (showHonours()) for (const f of earned) toast(`Honour earned: ${FEAT_TITLES[f.id]}. ${f.detail}`);
     refresh();
   }
 
@@ -137,6 +143,14 @@ export function activate(context: vscode.ExtensionContext): void {
   function all(): Game[] {
     return SPORT_IDS.map((id) => games[id]);
   }
+  /** The sports in the box. The others stay saved with their clocks stopped. */
+  function listed(): Game[] {
+    return shownSports().map((id) => games[id]);
+  }
+  function holdHidden(run: boolean): void {
+    for (const game of all()) game.setHeld(!shownSports().includes(game.sportId), run);
+  }
+  holdHidden(false);
   // Shown straight away; the clocks only run once this window owns the game.
   for (const game of all()) game.load(storage.load(game.sportId), false);
 
@@ -160,7 +174,7 @@ export function activate(context: vscode.ExtensionContext): void {
         refresh();
         return;
       case 'startCareer': {
-        if (!SPORT_IDS.includes(message.sport)) return;
+        if (!shownSports().includes(message.sport)) return;
         const game = games[message.sport];
         const sport = game.sport;
         if (!sport.nations().some((n) => n.short === message.team)) return;
@@ -223,7 +237,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   /** The sport the commands act on: the one open, or else the one the corner shows. */
   function currentGame(): Game {
-    return open && open !== 'honours' && games[open].career ? games[open] : statusGame(all(), followed);
+    return open && open !== 'honours' && games[open].career ? games[open] : statusGame(listed(), followed);
   }
 
   /** The box has already asked. Keeps the career in Past careers. */
@@ -275,7 +289,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.window.registerWebviewViewProvider(SidebarProvider.viewId, sidebar),
     vscode.commands.registerCommand('sportsSimulator.open', () => vscode.commands.executeCommand(`${SidebarProvider.viewId}.focus`)),
     vscode.commands.registerCommand('sportsSimulator.switchSport', async () => {
-      const items = sportRows(all()).map((r) => ({ id: r.id, label: r.name, description: r.club ? `${r.club} · ${r.line ?? ''}` : 'Start a career' }));
+      const items = sportRows(listed()).map((r) => ({ id: r.id, label: r.name, description: r.club ? `${r.club} · ${r.line ?? ''}` : 'Start a career' }));
       const picked = await vscode.window.showQuickPick(items, { placeHolder: 'Which sport? The others carry on.' });
       if (!picked) return;
       openPanel(picked.id);
@@ -289,6 +303,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.onDidChangeConfiguration((e) => {
       // The setting is the length new careers start from; a career under way keeps its own.
       if (e.affectsConfiguration('sportsSimulator.matchDuration')) for (const game of all()) if (!game.career) game.setDuration(duration());
+      if (e.affectsConfiguration('sportsSimulator.sports')) holdHidden(owner.owning);
       if (e.affectsConfiguration('sportsSimulator')) refresh();
     }),
   );

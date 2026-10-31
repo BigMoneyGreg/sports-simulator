@@ -111,6 +111,8 @@ export class Game {
   duration: Duration = '2m';
   /** The sport being played, or chosen for the next career. */
   sportId: SportId = 'football';
+  /** Hidden in the settings: the clock stands still, and `paused` stays as the player left it. Not saved. */
+  private held = false;
   private timer: unknown = null;
 
   constructor(
@@ -204,6 +206,14 @@ export class Game {
     if (!paused) this.run();
   }
 
+  /** With `run` false the clock isn't started (another window is running the game). */
+  setHeld(held: boolean, run = true): void {
+    if (this.held === held) return;
+    this.held = held;
+    this.stop();
+    if (!held && run) this.run();
+  }
+
   /** The summer answer: a call-up joins, most of the points go to that side, and the next season starts. */
   chooseFocus(focus: Focus): void {
     if (!this.career?.pending) return;
@@ -227,7 +237,7 @@ export class Game {
   // -- the loop -------------------------------------------------------------
 
   private run(): void {
-    if (!this.career || this.paused) return;
+    if (!this.career || this.paused || this.held) return;
     switch (this.phase) {
       case 'seasonOver':
         return;

@@ -244,7 +244,8 @@ new ResizeObserver(() => app.querySelectorAll<HTMLElement>('.row-line').forEach(
  */
 function renderRows(): void {
   const panels: PanelId[] = [...rows.map((r) => r.id), ...(honours ? (['honours'] as const) : [])];
-  if (app.querySelectorAll(':scope > .sport').length !== panels.length) {
+  // Sports can be hidden in the settings, so the same number of rows doesn't mean the same rows.
+  if (Array.from(app.querySelectorAll<HTMLElement>(':scope > .sport'), (s) => s.dataset.sport).join() !== panels.join()) {
     app.innerHTML = `<div id="pins"></div>${panels.map((id) => `<section class="sport" data-sport="${id}"><div class="row-slot"></div></section>`).join('')}`;
   }
   // A long open page can push the other rows out of sight, so a decision waiting stays pinned at the top.

@@ -8,7 +8,7 @@ import { totalRating } from '../src/core/ratings';
 import { Rng } from '../src/core/rng';
 import type { TeamSheet } from '../src/core/sport';
 import { fitDuration, Game, migrate, SAVE_VERSION, tickMs, type SavedGame, type Scheduler } from '../src/extension/game';
-import { boxStatus, buildView, collapsedText, GoalWatch, seasonFinished, sportRows, statusGame, statusText, summerQuestion } from '../src/extension/viewModel';
+import { boxStatus, buildView, collapsedText, enabledSports, GoalWatch, seasonFinished, sportRows, statusGame, statusText, summerQuestion } from '../src/extension/viewModel';
 import { SPORTS } from '../src/sports';
 import { CRICKET_ORDER, CRICKET_RIVALS } from '../src/sports/cricket/data';
 import { createMatch as createCricket, isFinished as cricketDone, outcome as cricketOutcome, step as cricketStep, TUNING as CRICKET_TUNING, type CricketMatch } from '../src/sports/cricket/match';
@@ -827,6 +827,25 @@ describe('sports in the save', () => {
       clocks.get('cricket')!.run(3);
       expect(boxStatus(games, 'rugby').text).toMatch(/^\$\(trophy\) Rugby: /);
       expect(boxStatus(games, 'cricket', true).text).toMatch(/^\$\(trophy\) Cricket: WICKET! /);
+    });
+
+    it('shows only the sports ticked in the settings, or all of them if none is', () => {
+      expect(enabledSports(undefined)).toEqual(['football', 'rugby', 'cricket']);
+      expect(enabledSports({ football: false, cricket: false })).toEqual(['rugby']);
+      expect(enabledSports({ football: false, rugby: false, cricket: false })).toEqual(['football', 'rugby', 'cricket']);
+    });
+
+    it('leaves a hidden sport out of the corner: no name, no bell, and it stops being followed', () => {
+      const { game, clocks } = setUp();
+      start(game('rugby'), 'WAL');
+      start(game('cricket'), 'SRI');
+      clocks.get('cricket')!.run(3);
+      const rugby = game('rugby');
+      while (rugby.phase !== 'seasonOver') clocks.get('rugby')!.run(1);
+      const status = boxStatus([game('cricket')], 'rugby');
+      expect(statusGame([game('cricket')], 'rugby')).toBe(game('cricket'));
+      expect(status.text).not.toMatch(/Cricket|bell/);
+      expect(status.tooltip).not.toMatch(/Wales/);
     });
 
     it('lists every career on hover', () => {

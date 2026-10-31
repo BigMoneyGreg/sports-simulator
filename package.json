@@ -68,6 +68,37 @@
     "configuration": {
       "title": "Sports Simulator",
       "properties": {
+        "sportsSimulator.sports": {
+          "type": "object",
+          "scope": "application",
+          "properties": {
+            "football": {
+              "type": "boolean",
+              "default": true
+            },
+            "rugby": {
+              "type": "boolean",
+              "default": true
+            },
+            "cricket": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          "additionalProperties": false,
+          "default": {
+            "football": true,
+            "rugby": true,
+            "cricket": true
+          },
+          "description": "The sports to show. Hiding one with a career under way stops its clock and keeps the career, which carries on from the same moment when the sport is shown again. With none ticked, all of them show."
+        },
+        "sportsSimulator.showHonours": {
+          "type": "boolean",
+          "scope": "application",
+          "default": true,
+          "description": "Show the Honours row in the box and a notification for each honour earned. Honours and records still count while this is off."
+        },
         "sportsSimulator.matchDuration": {
           "type": "string",
           "enum": [
