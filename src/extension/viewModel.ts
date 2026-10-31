@@ -712,7 +712,7 @@ const STATUS_ICON = '$(trophy)';
 export const SEASON_OVER = 'Season over: one decision waiting';
 
 /** Text for the status bar; `goal` while a goal in the player's match is fresh. */
-export function statusText(game: Game, goal = false, tag?: string): string | null {
+export function statusText(game: Game, goal = false): string | null {
   const career = game.career;
   const { alert } = game.sport.present.terms;
   if (!career) return `${STATUS_ICON} Start a career`;
@@ -720,7 +720,7 @@ export function statusText(game: Game, goal = false, tag?: string): string | nul
   const score = scoreLine(game);
   if (!score) return null;
   const rival = game.shownMatch && isRivalFixture(career, game.shownMatch.fixture) ? '⚔ ' : '';
-  return `${STATUS_ICON} ${tag ? `${tag}: ` : ''}${rival}${game.paused ? '⏸ ' : ''}${goal && !score.startsWith('FT') ? `${alert} ` : ''}${score}`;
+  return `${STATUS_ICON} ${rival}${game.paused ? '⏸ ' : ''}${goal && !score.startsWith('FT') ? `${alert} ` : ''}${score}`;
 }
 
 /** Where the player's club stands in its league table before the matchday in progress. */
@@ -768,6 +768,15 @@ export function collapsedText(game: Game): string | undefined {
   return score ? `${place} · ${score}` : place;
 }
 
+/** The status bar's line for one of several careers: "Rugby: Wk 7/14 · 2nd in League 3". */
+function standingText(game: Game): string {
+  const career = game.career!;
+  const name = game.sport.present.terms.name;
+  if (career.pending) return `$(bell) ${name}: season over`;
+  const { position, tier } = leaguePlace(career);
+  return `${STATUS_ICON} ${name}: ${game.paused ? '⏸ ' : ''}Wk ${Math.max(1, leagueWeek(game))}/${leagueRounds(career.season)} · ${ordinal(position)} in League ${tier}`;
+}
+
 /** The sports ticked in the settings. Unticking every one would leave an empty box, so that counts as all of them. */
 export function enabledSports(setting: Partial<Record<SportId, boolean>> | undefined): SportId[] {
   const on = SPORT_IDS.filter((id) => setting?.[id] !== false);
@@ -797,7 +806,7 @@ export const STATUS_CYCLE_MS = 5000;
 
 /** The sport the status bar shows now: with several careers it takes each in turn, and worked out from the time, every window agrees. */
 export function cycledSport(games: Game[], followed: SportId, now = Date.now()): SportId {
-  const stops = games.filter((g) => g.career && statusText(g));
+  const stops = games.filter((g) => g.career);
   return stops.length > 1 ? stops[Math.floor(now / STATUS_CYCLE_MS) % stops.length].sportId : followed;
 }
 
@@ -874,15 +883,13 @@ export function honoursLine(games: Game[], pastCareers: number, feats: number): 
   return games.some((g) => g.career && (g.career.history.length || g.career.pending)) ? 'Records and greatest teams' : null;
 }
 
-/** The status bar and collapsed box: the score of the sport `showing`, a bell if another is waiting on the player, and every career on hover. The collapsed box stays on the sport followed. */
+/** The status bar and collapsed box: the live score of a lone career, or where the sport `showing` stands among several, a bell if another is waiting on the player, and every career on hover. The collapsed box stays on the sport followed. */
 export function boxStatus(games: Game[], followed: SportId, goal = false, showing = followed): { text: string | null; tooltip: string; description?: string } {
   const game = statusGame(games, showing);
   const careers = games.filter((g) => g.career);
   const name = (g: Game) => g.sport.present.terms.name;
   const waitingElsewhere = careers.some((g) => g !== game && g.career!.pending);
-  // With several careers going, the score says which sport it's from.
-  let text = statusText(game, goal, careers.length > 1 ? name(game) : undefined);
-  if (careers.length > 1 && game.career?.pending) text = `$(bell) ${name(game)}: season over`;
+  let text = careers.length > 1 ? standingText(game) : statusText(game, goal);
   if (waitingElsewhere) text = text ? `${text} $(bell)` : `$(bell) ${SEASON_OVER}`;
   const tooltip = careers.length > 1 ? `${careers.map((g) => `${name(g)}: ${careerLines(g).join('\n\n')}`).join('\n\n---\n\n')}\n\nClick to open` : statusTooltip(game);
   return { text, tooltip, description: collapsedText(statusGame(games, followed)) };

@@ -124,7 +124,7 @@
         "sportsSimulator.statusBarScore": {
           "type": "boolean",
           "default": true,
-          "description": "Show your live score in the status bar."
+          "description": "Show your live score in the status bar. With several careers it shows each sport's week and league place in turn instead."
         }
       }
     }

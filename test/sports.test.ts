@@ -818,15 +818,16 @@ describe('sports in the save', () => {
       expect(statusGame(games, 'rugby')).toBe(game('rugby'));
     });
 
-    it('names the sport beside the score only once there are several careers', () => {
+    it('gives a lone career its live score, and several their sport, week and place', () => {
       const { games, game, clocks } = setUp();
       start(game('rugby'), 'WAL');
       clocks.get('rugby')!.run(3);
       expect(boxStatus(games, 'rugby').text).not.toMatch(/Rugby/);
+      expect(boxStatus(games, 'rugby', true).text).toMatch(/TRY!/);
       start(game('cricket'), 'SRI');
       clocks.get('cricket')!.run(3);
-      expect(boxStatus(games, 'rugby').text).toMatch(/^\$\(trophy\) Rugby: /);
-      expect(boxStatus(games, 'cricket', true).text).toMatch(/^\$\(trophy\) Cricket: WICKET! /);
+      expect(boxStatus(games, 'rugby').text).toMatch(/^\$\(trophy\) Rugby: Wk \d+\/14 · \d+(st|nd|rd|th) in League \d$/);
+      expect(boxStatus(games, 'cricket', true).text).toMatch(/^\$\(trophy\) Cricket: Wk \d+\/\d+ · \d+(st|nd|rd|th) in League \d$/);
     });
 
     it('shows only the sports ticked in the settings, or all of them if none is', () => {
@@ -860,7 +861,7 @@ describe('sports in the save', () => {
       const status = boxStatus(games, 'football', false, 'rugby');
       expect(status.text).toMatch(/^\$\(trophy\) Rugby: /);
       expect(status.description).toBe(boxStatus(games, 'football').description);
-      expect(boxStatus(games, 'football', false, 'cricket').text).toMatch(/^\$\(trophy\) Cricket: ⏸ /);
+      expect(boxStatus(games, 'football', false, 'cricket').text).toMatch(/^\$\(trophy\) Cricket: ⏸ Wk /);
     });
 
     it('lists every career on hover', () => {
