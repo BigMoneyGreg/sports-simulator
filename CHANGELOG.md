@@ -12,6 +12,7 @@
 - End a career to keep it in Past careers, or reset it to delete it completely, both from one button that explains the difference. **Reset honours** clears the Honours page. Both resets ask again in red
 - **Cricket:** the further down the order, the sooner a batter gets out and the slower they score, and matches show a real scorecard: how each batter got out, runs and balls, and the bowling figures
 - Each sport has its own coloured border, and the box is tighter and clearer throughout
+- Football and rugby match reports now put each team's events on its own side, like the scoreboard
 - Minimised sports show the league week and a thin line for how far through the season they are
 - The end-of-season message is now one short line that goes by itself
 - Matches against your rival are called out in the status bar, on the scoreboard and at full time, and the season report shows how you did against them

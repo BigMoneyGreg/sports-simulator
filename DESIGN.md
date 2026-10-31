@@ -358,7 +358,7 @@ All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned wi
 
 - **Header:** club name, league, position, form (last 5 results as W/D/L dots), ▶/⏸ button
 - **Team tab:** rating, this season's goals scored and conceded against the league average (the only clue to the drain), rival, trophies, records, history
-- **Live match:** scoreboard (crests, score, clock) and a match report like a real game summary: goals prominent, cards small and greyed, half-time and full-time markers, newest first. No running commentary
+- **Live match:** scoreboard (crests, score, clock) and a match report like a real game summary: the home side's events on the left and the away side's on the right, under their team codes and mirroring the scoreboard, with the time and running score in the middle; half-time and full-time markers, newest first. No running commentary. Cricket shows a scorecard instead
 - **Tabs:** Match · Table · Fixtures · Cups · Team (stats, trophies, history)
 - **Cups tab:** a two-line status naming your next tie and when it's played (*Still in · Round of 32 v Brazil (away)* / *After matchday 12*), your run once it's more than one tie, the latest round in full, earlier rounds and finished groups folded away, past winners
 - **Fixtures:** one short label per matchday (*MD 7*, *Cup 32*, *WC QF*, *PO SF1*), full name on hover; cup rows marked with an accent edge and listed as soon as they're drawn
@@ -370,7 +370,7 @@ All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned wi
 
 Each sport has its own colour (football teal, rugby orange, cricket purple, Honours yellow; not green or red, which mean good and bad news), in a border round its row and its open page.
 
-The box lists every sport, one row each. Only one opens fully at a time, beneath its row; clicking it again minimises it, and all can be minimised. A minimised row shows the least worth knowing: country, position, league week and score (*Rugby · Wales / 8th Wk 4/14 · SAM 14–18 WAL 54'*; cricket drops the *Ov*: *1st Wk 4/10 · SRI 144/3–51/2 USA 17.2*), *Not started*, or *Season over: decision waiting*, when the whole row also fills with a light version of its colour. A thin line along the bottom of a row shows how far through the league season it is, which still reads when a narrow box cuts the text off.
+The box lists every sport, one row each. Only one opens fully at a time, beneath its row; clicking it again minimises it, and all can be minimised. A minimised row shows the least worth knowing: country, position, league week and score (*Rugby · Wales / 8th Wk 4/14 · SAM 14–18 WAL 54'*; cricket drops the *Ov*: *1st Wk 4/10 · SRI 144/3–51/2 USA 17.2*), *Not started*, or *Season over: decision waiting*, when the whole row also fills with a light version of its colour. A thin line along the bottom of a row shows how far through the league season it is, which still reads when a narrow box cuts the text off. The text shrinks to fit, down to 9 pixels, because a cricket line needs more room than a football one.
 
 - **Start:** a row with no career has a Start button, which opens the setup form.
 - **End or reset:** the open row has one button, *End…*, which asks in the box what should happen. *End career* stops it and keeps it in Past careers, where it still counts for greatest teams and records. *Reset career* deletes it as if it was never played, and asks again in red. There's one button so the difference is explained at the moment it matters. Other sports aren't touched, and honours already earned stay.

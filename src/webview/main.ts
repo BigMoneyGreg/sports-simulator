@@ -214,10 +214,29 @@ function writeRow(section: HTMLElement, html: string, line: string): void {
   const lineEl = section.querySelector<HTMLElement>('.row-line')!;
   if (lineEl.textContent !== line) {
     lineEl.textContent = line;
-    // A narrow box cuts the line off; hovering still shows all of it.
+    // If it still can't fit, hovering shows all of it.
     lineEl.title = line;
+    fitLine(lineEl);
   }
 }
+
+/** The smallest a row's line goes to fit, in pixels: any smaller is hard to read, so it's cut off instead. */
+const MIN_LINE_PX = 9;
+
+/** Shrinks a row's line just enough to fit its width, as a cricket score needs more room than a football one. */
+function fitLine(el: HTMLElement): void {
+  el.style.fontSize = '';
+  if (!el.clientWidth || el.scrollWidth <= el.clientWidth) return;
+  let size = parseFloat(getComputedStyle(el).fontSize);
+  // Text doesn't quite scale evenly, so this steps down until it fits.
+  while (el.scrollWidth > el.clientWidth && size > MIN_LINE_PX) {
+    size = Math.max(MIN_LINE_PX, size - 0.25);
+    el.style.fontSize = `${size}px`;
+  }
+}
+
+// Dragging the box wider or narrower changes what fits.
+new ResizeObserver(() => app.querySelectorAll<HTMLElement>('.row-line').forEach(fitLine)).observe(app);
 
 /**
  * The rows stay in place and only their lines change: a button replaced between
@@ -481,14 +500,16 @@ function matchParts(v: GameView): string[] {
       : t.kind === 'minor'
         ? '<span class="dot-minor" aria-hidden="true">•</span>'
         : `<span class="card ${t.kind}" aria-label="${t.kind === 'red' ? 'Red' : 'Yellow'} card"></span>`;
-  // One line each: when, what, who, whose, and the score. Only the score stands out.
+  // Laid out like the scoreboard above it: the home side's events on the left, the away side's on the right, with when and the score between.
   const row = (t: TimelineView) => {
     if (t.kind === 'break') return `<li class="break"><span>${esc(t.clock)}</span><span>${esc(t.text)}</span></li>`;
     const team = t.side === 'home' ? m.home : m.away;
-    return `<li class="${t.kind}${team.isPlayer ? ' mine' : ''}"><span class="min">${esc(t.clock)}</span><span class="ev-icon">${icon(t)}</span><span class="who" title="${esc(t.text)}">${esc(t.text)}</span><span class="side-code">${esc(team.short)}</span><span class="running">${t.score ? esc(t.score) : ''}</span></li>`;
+    const event = `<span class="who" title="${esc(team.name)}: ${esc(t.text)}">${esc(t.text)}</span><span class="ev-icon">${icon(t)}</span>`;
+    return `<li class="${t.kind}${team.isPlayer ? ' mine' : ''}"><div class="ev home">${t.side === 'home' ? event : ''}</div><div class="ev-mid"><span class="min">${esc(t.clock)}</span>${t.score ? `<span class="running">${esc(t.score)}</span>` : ''}</div><div class="ev away">${t.side === 'away' ? event : ''}</div></li>`;
   };
+  const teams = `<div class="feed-teams"><span>${swatch(m.home)}${esc(m.home.short)}</span><span>${esc(m.away.short)}${swatch(m.away)}</span></div>`;
   if (m.scorecard) return [scoreboard(m, v.terms), ...m.scorecard.map(inningsHtml)];
-  return [scoreboard(m, v.terms), `<div class="card feed-card">${items.length ? `<ol class="report-feed">${[...items].reverse().map(row).join('')}</ol>` : `<p class="muted small center">${esc(v.terms.noEventsYet)}</p>`}</div>`];
+  return [scoreboard(m, v.terms), `<div class="card feed-card">${items.length ? `${teams}<ol class="report-feed">${[...items].reverse().map(row).join('')}</ol>` : `<p class="muted small center">${esc(v.terms.noEventsYet)}</p>`}</div>`];
 }
 
 /** One innings, the way a real scorecard sets it out. The one finished is folded away, and stays open or shut between updates. */

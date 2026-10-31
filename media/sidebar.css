@@ -527,11 +527,50 @@ input:focus-visible {
 
 .report-feed li {
   display: grid;
-  grid-template-columns: 32px 14px minmax(0, 1fr) auto minmax(34px, auto);
+  grid-template-columns: minmax(0, 1fr) 36px minmax(0, 1fr);
   align-items: center;
-  gap: 5px;
-  padding: 3px 0;
+  gap: 4px;
+  padding: 2px 0;
   font-size: 0.92em;
+}
+
+/* Each side's events, with the icon next to the middle, mirrored like the scoreboard. */
+.report-feed .ev {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.report-feed .ev.home {
+  justify-content: flex-end;
+}
+
+.report-feed .ev.away {
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+}
+
+.report-feed .ev-mid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.15;
+}
+
+.feed-teams {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.82em;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.feed-teams .swatch {
+  margin: 0 4px;
 }
 
 .report-feed li + li {
@@ -539,7 +578,6 @@ input:focus-visible {
 }
 
 .report-feed .min {
-  text-align: right;
   color: var(--muted);
   font-size: 0.85em;
   font-variant-numeric: tabular-nums;
@@ -555,12 +593,6 @@ input:focus-visible {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.report-feed .side-code {
-  color: var(--muted);
-  font-size: 0.85em;
-  letter-spacing: 0.03em;
 }
 
 /* Your own side's events read a little stronger; the only bold is the score after a big moment. */
@@ -1198,12 +1230,8 @@ body.vscode-light .focus.defence strong {
   }
 
   .report-feed li {
-    grid-template-columns: 26px 12px minmax(0, 1fr) minmax(28px, auto);
+    grid-template-columns: minmax(0, 1fr) 32px minmax(0, 1fr);
     gap: 3px;
-  }
-
-  .report-feed .side-code {
-    display: none;
   }
 
   .fixtures li {
