@@ -384,7 +384,9 @@ export type ToHost =
   | { type: 'endCareer'; sport: SportId }
   /** Deletes it, as if it was never played. */
   | { type: 'resetCareer'; sport: SportId }
-  | { type: 'resetHonours' };
+  | { type: 'resetHonours' }
+  /** Asks which sports, and whether Honours, show in the box. */
+  | { type: 'chooseSports' };
 
 /**
  * Every sport's row, and the full view of what's open; without `view`, only a

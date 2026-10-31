@@ -222,6 +222,9 @@ export function activate(context: vscode.ExtensionContext): void {
       case 'resetHonours':
         resetHonours();
         return;
+      case 'chooseSports':
+        void vscode.commands.executeCommand('sportsSimulator.chooseSports');
+        return;
       case 'chooseFocus': {
         const { focus } = message;
         owner.whenOwner(() => games[message.sport].chooseFocus(focus));
@@ -305,6 +308,19 @@ export function activate(context: vscode.ExtensionContext): void {
       if (!picked) return;
       openPanel(picked.id);
       void vscode.commands.executeCommand('sportsSimulator.open');
+    }),
+    vscode.commands.registerCommand('sportsSimulator.chooseSports', async () => {
+      const shown = shownSports();
+      const sports = sportRows(all()).map((r) => ({ id: r.id as PanelId, label: r.name, description: r.club ? `${r.club}: waits where it is while hidden` : undefined, picked: shown.includes(r.id) }));
+      const picked = await vscode.window.showQuickPick([...sports, { id: 'honours' as PanelId, label: 'Honours', description: 'Still counts while hidden', picked: showHonours() }], { canPickMany: true, placeHolder: 'What should show in the box?' });
+      if (!picked) return;
+      const on = new Set(picked.map((p) => p.id));
+      if (!SPORT_IDS.some((id) => on.has(id))) {
+        void vscode.window.showInformationMessage('Sports Simulator needs at least one sport, so nothing was changed.');
+        return;
+      }
+      await config().update('sports', Object.fromEntries(SPORT_IDS.map((id) => [id, on.has(id)])), vscode.ConfigurationTarget.Global);
+      await config().update('showHonours', on.has('honours'), vscode.ConfigurationTarget.Global);
     }),
     vscode.commands.registerCommand('sportsSimulator.togglePause', () => owner.whenOwner(() => currentGame().togglePause())),
     // The window you're working in runs the game; the others stand by.

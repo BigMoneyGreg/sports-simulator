@@ -246,7 +246,7 @@ function renderRows(): void {
   const panels: PanelId[] = [...rows.map((r) => r.id), ...(honours ? (['honours'] as const) : [])];
   // Sports can be hidden in the settings, so the same number of rows doesn't mean the same rows.
   if (Array.from(app.querySelectorAll<HTMLElement>(':scope > .sport'), (s) => s.dataset.sport).join() !== panels.join()) {
-    app.innerHTML = `<div id="pins"></div>${panels.map((id) => `<section class="sport" data-sport="${id}"><div class="row-slot"></div></section>`).join('')}`;
+    app.innerHTML = `<div id="pins"></div>${panels.map((id) => `<section class="sport" data-sport="${id}"><div class="row-slot"></div></section>`).join('')}<p class="small choose-sports"><button type="button" class="link" data-choose-sports>Choose sports…</button></p>`;
   }
   // A long open page can push the other rows out of sight, so a decision waiting stays pinned at the top.
   const pins = document.getElementById('pins')!;
@@ -833,6 +833,8 @@ app.addEventListener('click', (e) => {
   if (button.dataset.open) {
     // Only one opens at a time; clicking the open one minimises it.
     send({ type: 'openPanel', panel: button.dataset.open === open ? null : (button.dataset.open as PanelId) });
+  } else if ('chooseSports' in button.dataset) {
+    send({ type: 'chooseSports' });
   } else if ('askCareer' in button.dataset) {
     ask = ask?.kind === 'career' ? null : { kind: 'career', step: 'choose' };
     render();

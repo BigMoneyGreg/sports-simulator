@@ -33,6 +33,8 @@ International football, rugby and cricket sims that live in a small box in your 
 
 Play one sport or all three at once. The box lists them: start or end each one whenever you like, and open one to see it in full while the others show one line and carry on. Pause any of them from its row. Each career keeps its own match length.
 
+Only want one? Press **Choose sports…** under the list and untick the rest; a hidden career waits where it was until you tick it again.
+
 The **Honours** row keeps what lasts: your greatest teams and all-time records, past careers, and honours for doing well in more than one sport.
 
 To stop a career, press **End…** on its row. **End career** keeps it in Past careers; **Reset career** deletes it as if it was never played. **Reset honours**, at the bottom of the Honours page, deletes your honours and past careers. Both resets ask again in red, because they can't be undone.
@@ -57,7 +59,7 @@ Player names are generated and fictional. Competitions are the game's own, not o
 
 | Setting | Default | What it does |
 |---|---|---|
-| `sportsSimulator.sports` | all on | Tick the sports you want. Hiding one with a career under way stops its clock and keeps the career, which carries on from the same moment when you show it again. |
+| `sportsSimulator.sports` | all on | The sports to show, also set from **Choose sports…** in the box. Hiding one with a career under way stops its clock and keeps the career, which carries on from the same moment when you show it again. |
 | `sportsSimulator.showHonours` | `true` | Show the Honours row and a notification for each honour earned. Honours and records still count while it's off. |
 | `sportsSimulator.matchDuration` | `2m` | Real time one match takes in a new career (see the table above); a career under way keeps its own, set from the ⏱ button. If your sport doesn't offer this length, the next longer one is used. Also on the ⏱ button. |
 | `sportsSimulator.fullTimeOverlay` | `true` | Show the full-time result over the box for a few seconds after your match. |

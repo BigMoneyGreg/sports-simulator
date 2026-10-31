@@ -11,7 +11,7 @@
 - **Honours:** past careers, greatest teams, all-time records for each sport, and honours for success across sports
 - With several careers, the status bar shows each one's week and league place in turn, for 5 seconds each
 - The status bar uses each sport's own emoji, and shows the week and league place beside your live score
-- Only want one sport? Tick the ones you want in the settings, and turn the Honours row off too if you like. A hidden career waits where it was
+- Only want one sport? Press **Choose sports…** in the box and untick the rest, Honours too if you like. A hidden career waits where it was
 - End a career to keep it in Past careers, or reset it to delete it completely, both from one button that explains the difference. **Reset honours** clears the Honours page. Both resets ask again in red
 - **Cricket:** the further down the order, the sooner a batter gets out and the slower they score, and matches show a real scorecard: how each batter got out, runs and balls, and the bowling figures
 - Each sport has its own coloured border, and the box is tighter and clearer throughout

@@ -61,6 +61,10 @@
         "title": "Sports Simulator: Open"
       },
       {
+        "command": "sportsSimulator.chooseSports",
+        "title": "Sports Simulator: Choose Sports"
+      },
+      {
         "command": "sportsSimulator.switchSport",
         "title": "Sports Simulator: Switch Sport"
       }

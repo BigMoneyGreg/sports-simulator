@@ -482,7 +482,7 @@ The game uses real nations, not clubs: country names, flags and colours are free
 - Match duration (30 seconds / 2 / 5 minutes): the length a new career starts from. Each career keeps its own, changed from the ⏱ button in the box
 - Full-time overlay on/off
 - Status bar score on/off
-- Which sports show (a tick for each; none ticked counts as all)
+- Which sports show (a tick for each; none ticked counts as all). Also from **Choose sports…** under the list in the box, which asks in a tick-list that won't accept no sports at all
 - Honours row and its notifications on/off (honours still count)
 
 ---

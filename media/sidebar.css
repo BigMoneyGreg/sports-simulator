@@ -1384,6 +1384,10 @@ body.vscode-light .focus.defence strong {
   --sport: var(--vscode-charts-yellow, #d4a72c);
 }
 
+.choose-sports {
+  margin: 2px 0 0 4px;
+}
+
 .sport {
   margin-bottom: 5px;
   border: 1px solid color-mix(in srgb, var(--sport) 60%, transparent);

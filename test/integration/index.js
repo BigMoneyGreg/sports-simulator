@@ -8,7 +8,7 @@ exports.run = async function run() {
   await ext.activate();
   assert.ok(ext.isActive, 'extension active');
   const commands = await vscode.commands.getCommands(true);
-  for (const c of ['sportsSimulator.open', 'sportsSimulator.togglePause', 'sportsSimulator.switchSport']) {
+  for (const c of ['sportsSimulator.open', 'sportsSimulator.togglePause', 'sportsSimulator.switchSport', 'sportsSimulator.chooseSports']) {
     assert.ok(commands.includes(c), `command ${c} registered`);
   }
   await vscode.commands.executeCommand('sportsSimulator.view.focus');
@@ -20,6 +20,17 @@ exports.run = async function run() {
   await config().update('showHonours', false, vscode.ConfigurationTarget.Global);
   assert.strictEqual(config().get('sports').football, false);
   await new Promise((r) => setTimeout(r, 500));
+  await config().update('sports', undefined, vscode.ConfigurationTarget.Global);
+  await config().update('showHonours', undefined, vscode.ConfigurationTarget.Global);
+  // The picker: untick the first item (football) and accept.
+  const choosing = vscode.commands.executeCommand('sportsSimulator.chooseSports');
+  await new Promise((r) => setTimeout(r, 800));
+  await vscode.commands.executeCommand('quickInput.next');
+  await vscode.commands.executeCommand('workbench.action.quickPickManyToggle');
+  await vscode.commands.executeCommand('workbench.action.acceptSelectedQuickOpenItem');
+  await choosing;
+  assert.deepStrictEqual(config().inspect('sports').globalValue, { football: false, rugby: true, cricket: true });
+  assert.strictEqual(config().inspect('showHonours').globalValue, true);
   await config().update('sports', undefined, vscode.ConfigurationTarget.Global);
   await config().update('showHonours', undefined, vscode.ConfigurationTarget.Global);
   if (global.__sportsSimulatorTestHook) await global.__sportsSimulatorTestHook(vscode, assert);
