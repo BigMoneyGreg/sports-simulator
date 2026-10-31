@@ -377,7 +377,7 @@ describe('cricket', () => {
     game.selectSport('cricket');
     game.start({ rating: 55, difficulty: 'medium', seed: 31, team: 'SRI' });
     clock.run(10);
-    expect(collapsedText(game)).toMatch(/^\d+\w\w W1\/\d+ · [A-Z]{3} v \d+\/\d [A-Z]{3} \d+\.\d$|^\d+\w\w W1\/\d+ · [A-Z]{3} \d+\/\d v [A-Z]{3} \d+\.\d$/);
+    expect(collapsedText(game)).toMatch(/^\d+\w\w Wk 1\/\d+ · [A-Z]{3} v \d+\/\d [A-Z]{3} \d+\.\d$|^\d+\w\w Wk 1\/\d+ · [A-Z]{3} \d+\/\d v [A-Z]{3} \d+\.\d$/);
     expect(statusText(game)).toMatch(/Ov \d+\.\d$/);
     while (game.live?.matches[game.live.player].period !== 'second') clock.run(1);
     clock.run(3);
@@ -785,7 +785,7 @@ describe('sports in the save', () => {
       clocks.get('rugby')!.run(3);
       const [football, rugby, cricket] = sportRows(games);
       expect(football).toMatchObject({ id: 'football', name: 'Football', club: 'Scotland', paused: true, waiting: false });
-      expect(rugby.line).toMatch(/^\d+(st|nd|rd|th) W\d+\/14 · /);
+      expect(rugby.line).toMatch(/^\d+(st|nd|rd|th) Wk \d+\/14 · /);
       expect(rugby.progress).toBe(0);
       expect(cricket).toEqual({ id: 'cricket', name: 'Cricket', paused: false, waiting: false });
     });

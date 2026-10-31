@@ -758,12 +758,12 @@ function leagueWeek(game: Game): number {
   return live && live.fixtures[live.player].kind === 'league' ? played + 1 : played;
 }
 
-/** Shown beside the box's title while it's collapsed, and on a minimised row: "3rd W7/38 · SCO 1–1 RSA 59'". */
+/** Shown beside the box's title while it's collapsed, and on a minimised row: "3rd Wk 7/38 · SCO 1–1 RSA 59'". */
 export function collapsedText(game: Game): string | undefined {
   const career = game.career;
   if (!career) return undefined;
   if (career.pending) return 'Season over';
-  const place = `${ordinal(leaguePlace(career).position)} W${Math.max(1, leagueWeek(game))}/${leagueRounds(career.season)}`;
+  const place = `${ordinal(leaguePlace(career).position)} Wk ${Math.max(1, leagueWeek(game))}/${leagueRounds(career.season)}`;
   const score = scoreLine(game, true);
   return score ? `${place} · ${score}` : place;
 }
