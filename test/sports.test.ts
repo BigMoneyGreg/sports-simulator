@@ -8,7 +8,7 @@ import { totalRating } from '../src/core/ratings';
 import { Rng } from '../src/core/rng';
 import type { TeamSheet } from '../src/core/sport';
 import { fitDuration, Game, migrate, SAVE_VERSION, tickMs, type SavedGame, type Scheduler } from '../src/extension/game';
-import { boxStatus, buildView, collapsedText, enabledSports, GoalWatch, seasonFinished, sportRows, statusGame, statusText, summerQuestion } from '../src/extension/viewModel';
+import { boxStatus, buildView, collapsedText, cycledSport, enabledSports, GoalWatch, seasonFinished, sportRows, statusGame, statusText, summerQuestion } from '../src/extension/viewModel';
 import { SPORTS } from '../src/sports';
 import { CRICKET_ORDER, CRICKET_RIVALS } from '../src/sports/cricket/data';
 import { createMatch as createCricket, isFinished as cricketDone, outcome as cricketOutcome, step as cricketStep, TUNING as CRICKET_TUNING, type CricketMatch } from '../src/sports/cricket/match';
@@ -846,6 +846,21 @@ describe('sports in the save', () => {
       expect(statusGame([game('cricket')], 'rugby')).toBe(game('cricket'));
       expect(status.text).not.toMatch(/Cricket|bell/);
       expect(status.tooltip).not.toMatch(/Wales/);
+    });
+
+    it('takes the status bar through every career, three seconds each, leaving the collapsed box where it was', () => {
+      const { games, game, clocks } = setUp();
+      start(game('football'), 'SCO');
+      expect(cycledSport(games, 'rugby', 0)).toBe('rugby');
+      start(game('rugby'), 'WAL');
+      start(game('cricket'), 'SRI');
+      game('cricket').togglePause();
+      for (const id of ['football', 'rugby'] as const) clocks.get(id)!.run(3);
+      expect([0, 2999, 3000, 6000, 9000].map((t) => cycledSport(games, 'football', t))).toEqual(['football', 'football', 'rugby', 'cricket', 'football']);
+      const status = boxStatus(games, 'football', false, 'rugby');
+      expect(status.text).toMatch(/^\$\(trophy\) Rugby: /);
+      expect(status.description).toBe(boxStatus(games, 'football').description);
+      expect(boxStatus(games, 'football', false, 'cricket').text).toMatch(/^\$\(trophy\) Cricket: ⏸ /);
     });
 
     it('lists every career on hover', () => {

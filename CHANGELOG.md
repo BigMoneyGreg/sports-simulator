@@ -9,6 +9,7 @@
 - Each sport has its own career, cups, summer questions and records
 - Play several sports at once: the box lists them, one open in full and the others minimised to one line. Start, pause or end each on its own, and each keeps its own match length
 - **Honours:** past careers, greatest teams, all-time records for each sport, and honours for success across sports
+- With several careers, the status bar shows each in turn for 3 seconds
 - Only want one sport? Tick the ones you want in the settings, and turn the Honours row off too if you like. A hidden career waits where it was
 - End a career to keep it in Past careers, or reset it to delete it completely, both from one button that explains the difference. **Reset honours** clears the Honours page. Both resets ask again in red
 - **Cricket:** the further down the order, the sooner a batter gets out and the slower they score, and matches show a real scorecard: how each batter got out, runs and balls, and the bowling figures

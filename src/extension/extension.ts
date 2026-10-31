@@ -10,7 +10,7 @@ import { Ownership, POLL_MS } from './ownership';
 import { SidebarProvider } from './sidebar';
 import { StatusBar } from './statusBar';
 import { Storage, type LiveStatus } from './storage';
-import { boxStatus, buildHonours, buildView, careerSummary, enabledSports, GoalWatch, honoursLine, SEASON_OVER, seasonFinished, sportRows, statusGame } from './viewModel';
+import { boxStatus, buildHonours, buildView, careerSummary, cycledSport, enabledSports, GoalWatch, honoursLine, SEASON_OVER, seasonFinished, sportRows, STATUS_CYCLE_MS, statusGame } from './viewModel';
 
 let ownership: Ownership | undefined;
 
@@ -46,10 +46,11 @@ export function activate(context: vscode.ExtensionContext): void {
    */
   const outside = (): LiveStatus => {
     if (owner.owning) {
-      const shown = statusGame(listed(), followed);
+      const showing = cycledSport(listed(), followed);
+      const shown = statusGame(listed(), showing);
       // Every sport's watch keeps up, so going back to one doesn't call out a goal from earlier.
       const fresh = all().map((g) => goals[g.sportId].check(g));
-      const live = { at: Date.now(), ...boxStatus(listed(), followed, fresh[all().indexOf(shown)]) };
+      const live = { at: Date.now(), ...boxStatus(listed(), followed, fresh[all().indexOf(shown)], showing) };
       const key = JSON.stringify({ ...live, at: 0 });
       if (key !== lastLive) {
         lastLive = key;
@@ -59,7 +60,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }
     const shared = storage.readLive();
     if (shared && Date.now() - shared.at < LIVE_FRESH_MS) return shared;
-    return { at: 0, ...boxStatus(listed(), followed) };
+    return { at: 0, ...boxStatus(listed(), followed, false, cycledSport(listed(), followed)) };
   };
 
   /** `from`: the sport that changed. A minimised sport's tick only needs the rows, not the open sport's whole view again. */
@@ -71,6 +72,10 @@ export function activate(context: vscode.ExtensionContext): void {
       const view = full ? { view: openView() } : {};
       sidebar.post({ type: 'view', rows: sportRows(listed()), honours: showHonours() ? honoursLine(all(), storage.archives().length, storage.feats().length) : null, open, ...view });
     }
+    updateOutside();
+  };
+
+  const updateOutside = () => {
     const live = outside();
     const decisions = listed().filter((g) => g.career?.pending).length;
     // Starting a career and the summer choice show even with the score turned off: they're waiting on the player.
@@ -237,7 +242,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   /** The sport the commands act on: the one open, or else the one the corner shows. */
   function currentGame(): Game {
-    return open && open !== 'honours' && games[open].career ? games[open] : statusGame(listed(), followed);
+    return open && open !== 'honours' && games[open].career ? games[open] : statusGame(listed(), cycledSport(listed(), followed));
   }
 
   /** The box has already asked. Keeps the career in Past careers. */
@@ -283,9 +288,15 @@ export function activate(context: vscode.ExtensionContext): void {
     refresh();
   }, POLL_MS);
 
+  // Keeps the status bar moving when every clock is paused. The other windows follow from their poll.
+  const cycle = setInterval(() => {
+    if (owner.owning) updateOutside();
+  }, STATUS_CYCLE_MS);
+
   context.subscriptions.push(
     statusBar,
     { dispose: () => clearInterval(poll) },
+    { dispose: () => clearInterval(cycle) },
     vscode.window.registerWebviewViewProvider(SidebarProvider.viewId, sidebar),
     vscode.commands.registerCommand('sportsSimulator.open', () => vscode.commands.executeCommand(`${SidebarProvider.viewId}.focus`)),
     vscode.commands.registerCommand('sportsSimulator.switchSport', async () => {

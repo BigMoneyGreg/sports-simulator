@@ -793,6 +793,14 @@ export function statusGame(games: Game[], followed: SportId): Game {
   return chosen.career ? chosen : (games.find((g) => g.career) ?? chosen);
 }
 
+export const STATUS_CYCLE_MS = 3000;
+
+/** The sport the status bar shows now: with several careers it takes each in turn, and worked out from the time, every window agrees. */
+export function cycledSport(games: Game[], followed: SportId, now = Date.now()): SportId {
+  const stops = games.filter((g) => g.career && statusText(g));
+  return stops.length > 1 ? stops[Math.floor(now / STATUS_CYCLE_MS) % stops.length].sportId : followed;
+}
+
 /** The short message when a season ends: the result, and that a decision is waiting. */
 export function seasonFinished(game: Game, end: SeasonEnd): string {
   const place = end.position === 1 ? `champions of League ${end.tier}` : `${ordinal(end.position)} in League ${end.tier}`;
@@ -866,9 +874,9 @@ export function honoursLine(games: Game[], pastCareers: number, feats: number): 
   return games.some((g) => g.career && (g.career.history.length || g.career.pending)) ? 'Records and greatest teams' : null;
 }
 
-/** The status bar and collapsed box: one sport's score, a bell if another is waiting on the player, and every career on hover. */
-export function boxStatus(games: Game[], followed: SportId, goal = false): { text: string | null; tooltip: string; description?: string } {
-  const game = statusGame(games, followed);
+/** The status bar and collapsed box: the score of the sport `showing`, a bell if another is waiting on the player, and every career on hover. The collapsed box stays on the sport followed. */
+export function boxStatus(games: Game[], followed: SportId, goal = false, showing = followed): { text: string | null; tooltip: string; description?: string } {
+  const game = statusGame(games, showing);
   const careers = games.filter((g) => g.career);
   const name = (g: Game) => g.sport.present.terms.name;
   const waitingElsewhere = careers.some((g) => g !== game && g.career!.pending);
@@ -877,7 +885,7 @@ export function boxStatus(games: Game[], followed: SportId, goal = false): { tex
   if (careers.length > 1 && game.career?.pending) text = `$(bell) ${name(game)}: season over`;
   if (waitingElsewhere) text = text ? `${text} $(bell)` : `$(bell) ${SEASON_OVER}`;
   const tooltip = careers.length > 1 ? `${careers.map((g) => `${name(g)}: ${careerLines(g).join('\n\n')}`).join('\n\n---\n\n')}\n\nClick to open` : statusTooltip(game);
-  return { text, tooltip, description: collapsedText(game) };
+  return { text, tooltip, description: collapsedText(statusGame(games, followed)) };
 }
 
 /** Spots a goal in the player's match between updates, so the status bar can call it out for a few seconds. */
