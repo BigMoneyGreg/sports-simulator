@@ -289,7 +289,8 @@ function topRun(): void {
   console.log('\n== Player club starting at 99 (reader, medium) ==');
   let titles = 0;
   let seasons = 0;
-  for (let seed = 1; seed <= SEEDS; seed++) {
+  // About a quarter of careers win all 10, so a handful can go unbeaten by luck: this needs more careers than the rest.
+  for (let seed = 1; seed <= (quick ? SEEDS : 16); seed++) {
     const career = newCareer({ rating: 99, difficulty: 'medium', seed: 500 + seed }, footballSport);
     const rng = new Rng(seed);
     for (let s = 0; s < 10; s++) {
