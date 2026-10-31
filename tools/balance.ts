@@ -4,21 +4,19 @@
  * the season pays.
  *
  *   npm run balance            full run (a few minutes)
- *   npm run balance -- --quick fewer seeds and seasons
  *   npm run balance -- --only=world,climb
  */
 import { FOOTBALL } from '../src/core/format';
 import { allocatePoints, focusAllocation, newCareer, nextRound, playRound, endSeason, type Career, type Focus, type RoundResult } from '../src/core/career';
 import { rating, type Stat } from '../src/core/club';
 import { band, goalRanks, sortTable } from '../src/core/league';
-import { totalRating, type Difficulty } from '../src/core/ratings';
+import { totalRating } from '../src/core/ratings';
 import { Rng } from '../src/core/rng';
 import { footballSport } from '../src/sports/football';
 
-const quick = process.argv.includes('--quick');
-const SEEDS = quick ? 2 : 4;
-const LONG_SEASONS = quick ? 40 : 120;
-const MAX_CLIMB = quick ? 45 : 70;
+const SEEDS = 4;
+const LONG_SEASONS = 120;
+const MAX_CLIMB = 70;
 
 // ---------------------------------------------------------------------------
 // Player strategies
@@ -144,7 +142,7 @@ function worldRun(): void {
   const leagueAverages: number[][] = Array.from({ length: FOOTBALL.leagues }, () => []);
 
   for (let seed = 1; seed <= SEEDS; seed++) {
-    const career = newCareer({ rating: 50, difficulty: 'medium', seed }, footballSport);
+    const career = newCareer({ rating: 50, seed }, footballSport);
     const rng = new Rng(seed * 7919);
     const at99 = new Map<number, number>();
     let promotedLast: number[] = [];
@@ -222,7 +220,7 @@ function worldRun(): void {
 function strategyRun(): void {
   console.log('\n== Reading the season: places over expectation per season (medium) ==');
   const starts = [5, 25, 50, 70, 88];
-  const seasons = quick ? 6 : 12;
+  const seasons = 12;
   const avg: Record<StrategyName, number> = { reader: 0, coinFlip: 0, careless: 0 };
   for (const name of Object.keys(STRATEGIES) as StrategyName[]) {
     const perf: number[] = [];
@@ -230,7 +228,7 @@ function strategyRun(): void {
     for (const start of starts) {
       const here: number[] = [];
       for (let seed = 1; seed <= SEEDS; seed++) {
-        const career = newCareer({ rating: start, difficulty: 'medium', seed: seed * 31 + start }, footballSport);
+        const career = newCareer({ rating: start, seed: seed * 31 + start }, footballSport);
         const rng = new Rng(seed);
         for (let s = 0; s < seasons; s++) {
           playSeasonWithStats(career);
@@ -253,8 +251,8 @@ function strategyRun(): void {
 // ---------------------------------------------------------------------------
 // 3. Climb from 0 to 99
 
-function seasonsTo99(difficulty: Difficulty, strategy: StrategyName, seed: number): number | null {
-  const career = newCareer({ rating: 0, difficulty, seed }, footballSport);
+function seasonsTo99(strategy: StrategyName, seed: number): number | null {
+  const career = newCareer({ rating: 0, seed }, footballSport);
   const rng = new Rng(seed);
   for (let s = 1; s <= MAX_CLIMB; s++) {
     playSeasonWithStats(career);
@@ -267,19 +265,14 @@ function seasonsTo99(difficulty: Difficulty, strategy: StrategyName, seed: numbe
 function climbRun(): void {
   console.log(`\n== Climb from 0 to 99 (cap ${MAX_CLIMB} seasons) ==`);
   // A reader's climb, in seasons; a guesser should take far longer or never make it.
-  const readerTargets: Record<Difficulty, [number, number]> = { easy: [6, 12], medium: [8, 14], hard: [15, 70] };
+  const [lo, hi] = [8, 14];
   const average = (runs: (number | null)[]) => mean(runs.map((r) => r ?? MAX_CLIMB));
-  for (const difficulty of ['easy', 'medium', 'hard'] as Difficulty[]) {
-    const reading = Array.from({ length: SEEDS }, (_, i) => seasonsTo99(difficulty, 'reader', 1000 + i));
-    const guessing = Array.from({ length: SEEDS }, (_, i) => seasonsTo99(difficulty, 'coinFlip', 1000 + i));
-    const show = (runs: (number | null)[]) => runs.map((r) => r ?? `>${MAX_CLIMB}`).join(', ');
-    const [lo, hi] = readerTargets[difficulty];
-    // Estimates are rough: accept within 40% of the range.
-    check(`${difficulty} / reader: seasons 0→99`, average(reading) >= lo * 0.6 && average(reading) <= hi * 1.4, `${show(reading)} (target ~${lo}–${hi})`);
-    check(`${difficulty} / guesser: far slower than a reader`, average(guessing) >= 2 * average(reading) || guessing.every((r) => r === null), show(guessing));
-  }
-  const careless = Array.from({ length: SEEDS }, (_, i) => seasonsTo99('hard', 'careless', 2000 + i));
-  check('Careless on hard never climbs 0→99', careless.every((r) => r === null), careless.map((r) => r ?? 'never').join(', '));
+  const reading = Array.from({ length: SEEDS }, (_, i) => seasonsTo99('reader', 1000 + i));
+  const guessing = Array.from({ length: SEEDS }, (_, i) => seasonsTo99('coinFlip', 1000 + i));
+  const show = (runs: (number | null)[]) => runs.map((r) => r ?? `>${MAX_CLIMB}`).join(', ');
+  // Estimates are rough: accept within 40% of the range.
+  check('Reader: seasons 0→99', average(reading) >= lo * 0.6 && average(reading) <= hi * 1.4, `${show(reading)} (target ~${lo}–${hi})`);
+  check('Guesser: far slower than a reader', average(guessing) >= 2 * average(reading) || guessing.every((r) => r === null), show(guessing));
 }
 
 // ---------------------------------------------------------------------------
@@ -290,8 +283,8 @@ function topRun(): void {
   let titles = 0;
   let seasons = 0;
   // About a quarter of careers win all 10, so a handful can go unbeaten by luck: this needs more careers than the rest.
-  for (let seed = 1; seed <= (quick ? SEEDS : 16); seed++) {
-    const career = newCareer({ rating: 99, difficulty: 'medium', seed: 500 + seed }, footballSport);
+  for (let seed = 1; seed <= 16; seed++) {
+    const career = newCareer({ rating: 99, seed: 500 + seed }, footballSport);
     const rng = new Rng(seed);
     for (let s = 0; s < 10; s++) {
       playSeasonWithStats(career);
@@ -307,16 +300,16 @@ function topRun(): void {
 // 5. Beyond 99: how far each kind of player climbs
 
 function peakRun(): void {
-  const seasons = quick ? 25 : 40;
+  const seasons = 40;
   // Peaks swing a lot with luck, so this section runs more careers than the rest.
-  const careers = quick ? 3 : 8;
+  const careers = 8;
   console.log(`\n== Beyond 99: from 95 over ${seasons} seasons (medium) ==`);
   const peaks: Record<StrategyName, number[]> = { reader: [], coinFlip: [], careless: [] };
   let unbeaten = 0;
   let readerSeasonsAbove120 = 0;
   for (const name of Object.keys(STRATEGIES) as StrategyName[]) {
     for (let seed = 1; seed <= careers; seed++) {
-      const career = newCareer({ rating: 95, difficulty: 'medium', seed: 900 + seed }, footballSport);
+      const career = newCareer({ rating: 95, seed: 900 + seed }, footballSport);
       const rng = new Rng(seed);
       let peak = 0;
       for (let s = 0; s < seasons; s++) {

@@ -103,14 +103,14 @@ describe('ratings', () => {
   });
 
   it('gives the reigning League 1 champion the smaller boost, and the full one once the title is lost', () => {
-    const c = newCareer({ rating: 99, difficulty: 'medium', seed: 3, team: 'BRA' }, footballSport);
+    const c = newCareer({ rating: 99, seed: 3, team: 'BRA' }, footballSport);
     const boosts: [string | null, number][] = [];
     for (let season = 0; season < 8; season++) {
       playSeason(c, footballSport);
       boosts.push([c.history.at(-1)?.outcome ?? null, c.pending!.boost]);
       allocatePoints(c, evenSplit(c));
     }
-    for (const [before, boost] of boosts) expect(boost).toBe(before === 'champion' ? RATING_TUNING.championBoost.medium : RATING_TUNING.difficultyBoost.medium);
+    for (const [before, boost] of boosts) expect(boost).toBe(before === 'champion' ? RATING_TUNING.championBoost : RATING_TUNING.playerBoost);
     expect(boosts.some(([before]) => before === 'champion')).toBe(true);
   });
 
@@ -148,8 +148,7 @@ describe('ratings', () => {
 });
 
 describe('career', () => {
-  const start = (rating = 50, seed = 1, difficulty: 'easy' | 'medium' | 'hard' = 'medium') =>
-    newCareer({ rating, difficulty, seed }, footballSport);
+  const start = (rating = 50, seed = 1) => newCareer({ rating, seed }, footballSport);
 
   it('uses every rating from 0 to 99 exactly once at the start', () => {
     const c = start(85);
@@ -176,9 +175,9 @@ describe('career', () => {
   });
 
   it('accepts an uneven split that averages the rating, rejects one that does not', () => {
-    const c = newCareer({ rating: 50, difficulty: 'hard', seed: 1, split: { attack: 60, defence: 40 } }, footballSport);
+    const c = newCareer({ rating: 50, seed: 1, split: { attack: 60, defence: 40 } }, footballSport);
     expect(c.clubs[0].attack).toBe(60);
-    expect(() => newCareer({ rating: 50, difficulty: 'hard', seed: 1, split: { attack: 60, defence: 50 } }, footballSport)).toThrow();
+    expect(() => newCareer({ rating: 50, seed: 1, split: { attack: 60, defence: 50 } }, footballSport)).toThrow();
   });
 
   it('plays 38 league rounds with six cup rounds between them, then three play-off rounds, then waits', () => {
@@ -229,7 +228,7 @@ describe('career', () => {
   });
 
   it('keeps the AI total fixed across many seasons, whatever the player gains or loses', () => {
-    const c = start(30, 7, 'easy');
+    const c = start(30, 7);
     for (let season = 0; season < 6; season++) {
       playSeason(c, footballSport);
       // 10 a summer, more once the player is high up.
@@ -250,7 +249,7 @@ describe('career', () => {
   });
 
   it('gives the player points that match the gain rule', () => {
-    const c = start(50, 3, 'hard');
+    const c = start(50, 3);
     const before = rating(c.clubs[0]);
     const end = playSeason(c, footballSport);
     const expectedGain = 10 + end.performance + end.bonus + end.boost;
@@ -355,7 +354,7 @@ describe('summer focus', () => {
   });
 
   it('applies the focus and starts the next season', () => {
-    const c = newCareer({ rating: 40, difficulty: 'medium', seed: 12 }, footballSport);
+    const c = newCareer({ rating: 40, seed: 12 }, footballSport);
     playSeason(c, footballSport);
     const before = { ...c.clubs[0] };
     const points = c.pending!.points;
@@ -369,7 +368,7 @@ describe('summer focus', () => {
 describe('league picker', () => {
   it('starts the player mid-table in whichever league they choose', () => {
     for (const tier of [1, 2, 3, 4, 5]) {
-      const c = newCareer({ rating: band(FOOTBALL, tier).min + 10, difficulty: 'medium', seed: tier }, footballSport);
+      const c = newCareer({ rating: band(FOOTBALL, tier).min + 10, seed: tier }, footballSport);
       expect(c.season.leagues[tier - 1].clubIds).toContain(c.playerClubId);
       expect(c.season.expected[c.playerClubId]).toBe(10);
     }
@@ -399,7 +398,7 @@ describe('AI clubs', () => {
   it('are randomly attacking or defensive, leaning by the style skew either way', () => {
     const styles = { attacking: 0, defensive: 0, balanced: 0 };
     for (let seed = 1; seed <= 20; seed++) {
-      const c = newCareer({ rating: 50, difficulty: 'medium', seed }, footballSport);
+      const c = newCareer({ rating: 50, seed }, footballSport);
       for (const club of c.clubs.filter((x) => !x.isPlayer)) {
         styles[club.style]++;
         expect(Math.abs(club.attack - club.defence)).toBeCloseTo(2 * STYLE_TUNING.skew);
@@ -418,7 +417,7 @@ describe('AI managers', () => {
     let changed = 0;
     let total = 0;
     for (let seed = 1; seed <= 10; seed++) {
-      const c = newCareer({ rating: 50, difficulty: 'medium', seed }, footballSport);
+      const c = newCareer({ rating: 50, seed }, footballSport);
       const before = c.clubs.map((club) => club.style);
       playSeason(c, footballSport);
       c.clubs.forEach((club, i) => {

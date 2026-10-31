@@ -31,7 +31,7 @@ describe('one game across several windows', () => {
     const { open } = world();
     const a = open('a', false);
     expect(a.owner.owning).toBe(true);
-    a.owner.whenOwner(() => a.game.start({ rating: 50, difficulty: 'medium', seed: 1 }));
+    a.owner.whenOwner(() => a.game.start({ rating: 50, seed: 1 }));
     vi.advanceTimersByTime(minute * 10);
     expect(a.game.shownMatch!.match.minute).toBe(10);
   });
@@ -39,7 +39,7 @@ describe('one game across several windows', () => {
   it('a second, unfocused window only shows the game', () => {
     const { open } = world();
     const a = open('a', true);
-    a.game.start({ rating: 50, difficulty: 'medium', seed: 2 });
+    a.game.start({ rating: 50, seed: 2 });
     const b = open('b', false);
     expect(b.owner.owning).toBe(false);
     vi.advanceTimersByTime(minute * 10);
@@ -50,7 +50,7 @@ describe('one game across several windows', () => {
   it('hands the game over on focus: the old window saves and stops, the new one carries on from that minute', () => {
     const { open, disk } = world();
     const a = open('a', true);
-    a.game.start({ rating: 50, difficulty: 'medium', seed: 3 });
+    a.game.start({ rating: 50, seed: 3 });
     const b = open('b', false);
     vi.advanceTimersByTime(minute * 30);
 
@@ -72,7 +72,7 @@ describe('one game across several windows', () => {
     const { open, disk } = world();
     const a = open('a', true);
     a.game.duration = '30s';
-    a.game.start({ rating: 50, difficulty: 'medium', seed: 4 });
+    a.game.start({ rating: 50, seed: 4 });
     const b = open('b', false);
     vi.advanceTimersByTime(60 * 60 * 1000);
     expect(a.game.phase).toBe('seasonOver');
@@ -89,7 +89,7 @@ describe('one game across several windows', () => {
   it('takes over after a timeout when the old owner closed without letting go', () => {
     const { open, disk } = world();
     const a = open('a', true);
-    a.game.start({ rating: 50, difficulty: 'medium', seed: 5 });
+    a.game.start({ rating: 50, seed: 5 });
     vi.advanceTimersByTime(minute * 5);
     // Window A crashes: its clock and poll stop, and the lock still names it.
     a.game.shutdown();
@@ -105,7 +105,7 @@ describe('one game across several windows', () => {
   it('closing the running window frees the game for the next one at once', () => {
     const { open, disk } = world();
     const a = open('a', true);
-    a.game.start({ rating: 50, difficulty: 'medium', seed: 6 });
+    a.game.start({ rating: 50, seed: 6 });
     vi.advanceTimersByTime(minute * 7);
     a.owner.release();
     clearInterval(a.poll);
@@ -118,7 +118,7 @@ describe('one game across several windows', () => {
   it('when a third window claims during a handover, the last one focused wins', () => {
     const { open } = world();
     const a = open('a', true);
-    a.game.start({ rating: 50, difficulty: 'medium', seed: 7 });
+    a.game.start({ rating: 50, seed: 7 });
     const b = open('b', false);
     const c = open('c', false);
     const done = vi.fn();

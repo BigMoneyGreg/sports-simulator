@@ -7,7 +7,7 @@ import { band, emptyTable, goalRanks, recordResult, sortTable, startRating, zone
 import { totalRating } from '../src/core/ratings';
 import { Rng } from '../src/core/rng';
 import type { TeamSheet } from '../src/core/sport';
-import { fitDuration, Game, migrate, SAVE_VERSION, tickMs, type SavedGame, type Scheduler } from '../src/extension/game';
+import { fitDuration, Game, tickMs, type SavedGame, type Scheduler } from '../src/extension/game';
 import { boxStatus, buildView, collapsedText, cycledSport, enabledSports, GoalWatch, seasonFinished, sportRows, statusGame, statusText, summerQuestion } from '../src/extension/viewModel';
 import { SPORTS } from '../src/sports';
 import { CRICKET_ORDER, CRICKET_RIVALS } from '../src/sports/cricket/data';
@@ -83,7 +83,7 @@ describe('formats', () => {
     const f = FORMATS[id];
     for (let tier = 1; tier <= f.leagues; tier++) {
       for (let seed = 1; seed <= 25; seed++) {
-        const c = newCareer({ rating: startRating(f, tier, new Rng(seed * 97)), difficulty: 'medium', seed }, SPORTS[id]);
+        const c = newCareer({ rating: startRating(f, tier, new Rng(seed * 97)), seed }, SPORTS[id]);
         expect(c.season.leagues.find((l) => l.clubIds.includes(c.playerClubId))!.tier, `league ${tier}, seed ${seed}`).toBe(tier);
       }
     }
@@ -131,11 +131,11 @@ describe('world data', () => {
   });
 
   it.each(NEW_SPORTS)('%s: every world gets a rival, and the real one where it has one', (id) => {
-    const c = newCareer({ rating: 50, difficulty: 'medium', seed: 1, team: 'ENG' }, SPORTS[id]);
+    const c = newCareer({ rating: 50, seed: 1, team: 'ENG' }, SPORTS[id]);
     expect(c.rival).not.toBeNull();
     expect(c.clubs[c.rival!].short).toBe(id === 'rugby' ? 'FRA' : 'AUS');
     for (const code of SPORTS[id].nations().map((n) => n.short)) {
-      const career = newCareer({ rating: 50, difficulty: 'medium', seed: 2, team: code }, SPORTS[id]);
+      const career = newCareer({ rating: 50, seed: 2, team: code }, SPORTS[id]);
       expect(career.rival, code).not.toBeNull();
     }
   });
@@ -143,13 +143,13 @@ describe('world data', () => {
 
 describe('first seasons', () => {
   it.each(NEW_SPORTS)('%s: a new career starts carrying the same shape penalty as an AI side', (id) => {
-    const c = newCareer({ rating: 50, difficulty: 'medium', seed: 3 }, SPORTS[id]);
+    const c = newCareer({ rating: 50, seed: 3 }, SPORTS[id]);
     expect(c.clubs[0].attack).toBe(c.clubs[0].defence);
     expect(c.clubs[0].settledLean).toBe(14);
   });
 
   it('leaves football as it was', () => {
-    expect(newCareer({ rating: 50, difficulty: 'medium', seed: 3 }, SPORTS.football).clubs[0].settledLean).toBeUndefined();
+    expect(newCareer({ rating: 50, seed: 3 }, SPORTS.football).clubs[0].settledLean).toBeUndefined();
   });
 });
 
@@ -365,7 +365,7 @@ describe('cricket', () => {
     const clock = manual();
     const game = new Game({ save: () => {}, changed: () => {} }, clock.scheduler);
     game.selectSport('cricket');
-    game.start({ rating: 55, difficulty: 'medium', seed: 31, team: 'SRI' });
+    game.start({ rating: 55, seed: 31, team: 'SRI' });
     while (game.phase !== 'fullTime') clock.run(1);
     const view = buildView(game);
     expect(view.screen === 'game' && view.match!.round).toBeUndefined();
@@ -375,7 +375,7 @@ describe('cricket', () => {
     const clock = manual();
     const game = new Game({ save: () => {}, changed: () => {} }, clock.scheduler);
     game.selectSport('cricket');
-    game.start({ rating: 55, difficulty: 'medium', seed: 31, team: 'SRI' });
+    game.start({ rating: 55, seed: 31, team: 'SRI' });
     clock.run(10);
     expect(collapsedText(game)).toMatch(/^\d+\w\w Wk 1\/\d+ · [A-Z]{3} v \d+\/\d [A-Z]{3} \d+\.\d$|^\d+\w\w Wk 1\/\d+ · [A-Z]{3} \d+\/\d v [A-Z]{3} \d+\.\d$/);
     expect(statusText(game)).toMatch(/Ov \d+\.\d · Wk /);
@@ -487,7 +487,7 @@ describe.each(NEW_SPORTS)('%s careers', (id) => {
   }
 
   it('spreads the world across 0–99, not just 0 to the team count', () => {
-    const c = newCareer({ rating: 50, difficulty: 'medium', seed: 4 }, sport);
+    const c = newCareer({ rating: 50, seed: 4 }, sport);
     const ai = c.clubs.filter((x) => !x.isPlayer).map(rating);
     expect(c.clubs).toHaveLength(teamCount(f));
     expect(Math.max(...ai)).toBeGreaterThan(90);
@@ -497,7 +497,7 @@ describe.each(NEW_SPORTS)('%s careers', (id) => {
   });
 
   it('keeps every league whole and every team in exactly one, season after season', () => {
-    const c = newCareer({ rating: 40, difficulty: 'medium', seed: 5 }, sport);
+    const c = newCareer({ rating: 40, seed: 5 }, sport);
     playYears(c, 9, (career) => {
       const end = career.pending!;
       for (const league of end.nextLeagues) expect(league).toHaveLength(f.leagueSize);
@@ -508,7 +508,7 @@ describe.each(NEW_SPORTS)('%s careers', (id) => {
   });
 
   it('has no play-offs, and finishes both cups', () => {
-    const c = newCareer({ rating: 40, difficulty: 'medium', seed: 6 }, sport);
+    const c = newCareer({ rating: 40, seed: 6 }, sport);
     let championships = 0;
     playYears(c, 8, (career) => {
       const s = career.season;
@@ -527,14 +527,14 @@ describe.each(NEW_SPORTS)('%s careers', (id) => {
   });
 
   it('keeps the AI total fixed, whatever the player gains', () => {
-    const c = newCareer({ rating: 40, difficulty: 'medium', seed: 7 }, sport);
+    const c = newCareer({ rating: 40, seed: 7 }, sport);
     const before = c.totalRating;
     playYears(c, 6);
     expect(totalRating(c.clubs.filter((x) => !x.isPlayer))).toBeCloseTo(before, 6);
   });
 
   it('draws leavers from each side, and asks a question with one answer for each', () => {
-    const c = newCareer({ rating: 40, difficulty: 'medium', seed: 8, team: 'ENG' }, sport);
+    const c = newCareer({ rating: 40, seed: 8, team: 'ENG' }, sport);
     const seen = new Set<string>();
     playYears(c, 8, (career) => {
       const q = summerQuestion(career);
@@ -557,7 +557,7 @@ describe.each(NEW_SPORTS)('%s careers', (id) => {
   });
 
   it('fields a full side in every fixture', () => {
-    const c = newCareer({ rating: 40, difficulty: 'medium', seed: 9 }, sport);
+    const c = newCareer({ rating: 40, seed: 9 }, sport);
     const f0 = nextRound(c)![0];
     expect(teamSheet(c, f0.home, sport).lineup.length).toBe(id === 'rugby' ? 15 : 11);
   });
@@ -586,7 +586,7 @@ describe.each(NEW_SPORTS)('%s in the game', (id) => {
     const game = new Game({ save: (g) => saves.push(g && JSON.parse(JSON.stringify(g))), changed: () => {} }, clock.scheduler);
     game.selectSport(id);
     game.setDuration(SPORTS[id].present.durations[0]);
-    game.start({ rating: 55, difficulty: 'medium', seed: 21, team: 'ENG' });
+    game.start({ rating: 55, seed: 21, team: 'ENG' });
     return { game, clock, saves };
   }
   const live = (game: Game) => buildView(game) as GameView;
@@ -687,20 +687,11 @@ describe('match lengths', () => {
 });
 
 describe('sports in the save', () => {
-  it('turns an old football save into this version', () => {
-    const c = newCareer({ rating: 50, difficulty: 'medium', seed: 1 }, SPORTS.football);
-    const { sport: _s, ...old } = c;
-    const saved = { version: 7, career: { ...old, version: 7 }, live: null, paused: false } as unknown as SavedGame;
-    const upgraded = migrate(saved)!;
-    expect(upgraded.version).toBe(SAVE_VERSION);
-    expect(upgraded.career.sport).toBe('football');
-  });
-
   it('calls out a match against the rival, and reports the season against it', () => {
     const clock = manual();
     const game = new Game({ save: () => {}, changed: () => {} }, clock.scheduler);
     game.selectSport('rugby');
-    game.start({ rating: 55, difficulty: 'medium', seed: 31, team: 'WAL' });
+    game.start({ rating: 55, seed: 31, team: 'WAL' });
     const career = game.career!;
     // Next door in the league, so they meet this season.
     const league = career.season.leagues.find((l) => l.clubIds.includes(career.playerClubId))!;
@@ -728,7 +719,7 @@ describe('sports in the save', () => {
     const clock = manual();
     const game = new Game({ save: (g) => void (g && saves.push(JSON.parse(JSON.stringify(g)))), changed: () => {} }, clock.scheduler);
     game.selectSport('rugby');
-    game.start({ rating: 55, difficulty: 'medium', seed: 31, team: 'WAL' });
+    game.start({ rating: 55, seed: 31, team: 'WAL' });
     game.setDuration('5m');
     const saved = saves[saves.length - 1];
     expect(saved.duration).toBe('5m');
@@ -758,7 +749,7 @@ describe('sports in the save', () => {
       const game = (id: SportId) => games.find((g) => g.sportId === id)!;
       return { games, game, clocks, saved };
     };
-    const start = (g: Game, team: string, seed = 5) => g.start({ rating: 55, difficulty: 'medium', seed, team });
+    const start = (g: Game, team: string, seed = 5) => g.start({ rating: 55, seed, team });
 
     it('runs each career on its own clock, and pausing or ending one leaves the others alone', () => {
       const { game, clocks } = setUp();
@@ -880,7 +871,7 @@ describe('sports in the save', () => {
     const clock = manual();
     const game = new Game({ save: () => {}, changed: () => {} }, clock.scheduler);
     game.selectSport('rugby');
-    game.start({ rating: 55, difficulty: 'medium', seed: 31, team: 'WAL' });
+    game.start({ rating: 55, seed: 31, team: 'WAL' });
     clock.run(15);
     const rugbySave = JSON.parse(JSON.stringify(game.snapshot())) as SavedGame;
     game.shutdown();
@@ -901,7 +892,7 @@ describe('sports in the save', () => {
 
 it('gives focusAllocation the same rules in every sport', () => {
   for (const id of SPORT_IDS) {
-    const c = newCareer({ rating: 40, difficulty: 'medium', seed: 12 }, SPORTS[id]);
+    const c = newCareer({ rating: 40, seed: 12 }, SPORTS[id]);
     while (nextRound(c)) playRound(c, SPORTS[id]);
     endSeason(c, SPORTS[id]);
     const points = c.pending!.points;

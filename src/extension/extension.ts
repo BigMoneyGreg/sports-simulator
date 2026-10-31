@@ -32,7 +32,6 @@ export function activate(context: vscode.ExtensionContext): void {
   const showHonours = () => config().get('showHonours', true);
 
   const sidebar = new SidebarProvider(context.extensionUri, (message) => handle(message));
-  storage.pauseWaitingCareers();
   /** The sport the corner follows: the one last opened, kept for next time. */
   let followed = storage.activeSport();
   /** The one thing fully open in the box, if any. Each window has its own. */
@@ -195,8 +194,7 @@ export function activate(context: vscode.ExtensionContext): void {
           const tier = Math.min(sport.format.leagues, Math.max(1, Math.round(league)));
           // Somewhere in the league, weighted towards mid-table, attack and defence level: the summers shape it from there.
           const rating = startRating(sport.format, tier, new Rng(seed ^ 0x9e3779b9));
-          // One standard game: every career gets the tuning measured as 'medium'.
-          game.start({ rating, difficulty: 'medium', team, seed });
+          game.start({ rating, team, seed });
         });
         return;
       }

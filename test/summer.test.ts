@@ -9,7 +9,7 @@ import { RATING_TUNING } from '../src/core/ratings';
 
 /** Plays summers, answering each with `pick`, and hands every summer to `look` before it's answered. */
 function summers(seed: number, count: number, look: (c: Career) => void, pick: (c: Career) => Focus = () => 'attack'): Career {
-  const c = newCareer({ rating: 50, difficulty: 'medium', seed }, footballSport);
+  const c = newCareer({ rating: 50, seed }, footballSport);
   for (let i = 0; i < count; i++) {
     playSeason(c, footballSport);
     look(c);
@@ -104,7 +104,7 @@ describe('the summer question', () => {
 
   it('lists leavers with what they play, retiring long servants and dropping the rest', () => {
     const game = new Game({ save: () => {}, changed: () => {} });
-    game.start({ rating: 50, difficulty: 'medium', seed: 8, team: 'SCO' });
+    game.start({ rating: 50, seed: 8, team: 'SCO' });
     playSeason(game.career!, footballSport);
     const v = buildView(game);
     if (v.screen !== 'game' || !v.seasonEnd) throw new Error('expected the summer screen');
@@ -113,7 +113,7 @@ describe('the summer question', () => {
   });
 
   it('still asks a question for a save from before questions existed', () => {
-    const c = newCareer({ rating: 50, difficulty: 'medium', seed: 9 }, footballSport);
+    const c = newCareer({ rating: 50, seed: 9 }, footballSport);
     playSeason(c, footballSport);
     delete c.pending!.question;
     expect(summerQuestion(c).options.map((o) => o.title)).toEqual(['Three up front', 'A back five']);
@@ -123,7 +123,7 @@ describe('the summer question', () => {
 
   it('settles into a new shape over a few summers, and the penalty follows the settled shape', () => {
     expect(RATING_TUNING.leanSettling).toBe(0.5);
-    const c = newCareer({ rating: 50, difficulty: 'medium', seed: 11 }, footballSport);
+    const c = newCareer({ rating: 50, seed: 11 }, footballSport);
     const lean = () => c.clubs[c.playerClubId].attack - c.clubs[c.playerClubId].defence;
     playSeason(c, footballSport);
     chooseFocus(c, 'attack');

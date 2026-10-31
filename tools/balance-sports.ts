@@ -3,7 +3,7 @@
  * match realism, season length, how much reading the season pays and how the
  * AI world behaves, played through the real engines.
  *
- *   npx tsx tools/balance-sports.ts [rugby|cricket] [--quick]
+ *   npx tsx tools/balance-sports.ts [rugby|cricket]
  */
 import { allocatePoints, endSeason, focusAllocation, newCareer, nextRound, playRound, type Career, type Focus } from '../src/core/career';
 import { rating } from '../src/core/club';
@@ -13,9 +13,8 @@ import { Rng } from '../src/core/rng';
 import { tickMs, fullTimePause } from '../src/extension/game';
 import { SPORTS, type AnySport } from '../src/sports';
 
-const quick = process.argv.includes('--quick');
-const CAREERS = quick ? 6 : 16;
-const SEASONS = quick ? 15 : 30;
+const CAREERS = 16;
+const SEASONS = 30;
 
 const mean = (xs: number[]) => (xs.length ? xs.reduce((t, x) => t + x, 0) / xs.length : NaN);
 const median = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
@@ -49,7 +48,7 @@ function worldRun(id: 'rugby' | 'cricket', sport: AnySport): void {
   let cupsDone = 0;
   const seed0 = 40;
   for (let seed = 0; seed < CAREERS; seed++) {
-    const c = newCareer({ rating: 2, difficulty: 'medium', seed: seed0 + seed }, sport);
+    const c = newCareer({ rating: 2, seed: seed0 + seed }, sport);
     const rng = new Rng(seed);
     champion = new Map();
     let last: number[] = [];
@@ -137,9 +136,9 @@ function firstSeasonRun(sport: AnySport): void {
   const places: number[] = [];
   let titles = 0;
   let unbeaten = 0;
-  const careers = quick ? 60 : 200;
+  const careers = 200;
   for (let seed = 1; seed <= careers; seed++) {
-    const c = newCareer({ rating: startRating(f, 1, new Rng(seed * 97)), difficulty: 'medium', seed }, sport);
+    const c = newCareer({ rating: startRating(f, 1, new Rng(seed * 97)), seed }, sport);
     while (nextRound(c)) playRound(c, sport);
     const end = endSeason(c, sport);
     places.push(end.expected - end.position);
@@ -156,7 +155,7 @@ function careerRun(id: 'rugby' | 'cricket', sport: AnySport): void {
   const clue = { n: 0, tied: 0, right: 0 };
   const games: number[] = [];
   const run = (start: number, strategy: 'reader' | 'guesser', seed: number) => {
-    const c = newCareer({ rating: start, difficulty: 'medium', seed }, sport);
+    const c = newCareer({ rating: start, seed }, sport);
     const rng = new Rng(seed * 13);
     const o = { top: SEASONS, title: SEASONS, titles: 0, relegated: 0, last: [] as number[] };
     for (let s = 1; s <= SEASONS; s++) {

@@ -2,7 +2,6 @@
 // injected, so the whole loop runs under fake timers in tests.
 
 import {
-  allocatePoints,
   chooseFocus,
   type Focus,
   completeRound,
@@ -19,7 +18,6 @@ import {
 } from '../core/career';
 import type { Fixture } from '../core/league';
 import { Rng } from '../core/rng';
-import type { Stat } from '../core/club';
 import type { SportId } from '../core/format';
 import { SPORTS, type AnySport } from '../sports';
 import type { Duration } from '../shared/view';
@@ -31,10 +29,7 @@ export const SAVE_VERSION = 8;
  * version n + 1. Whenever SAVE_VERSION goes up, add one here, so players'
  * careers carry over.
  */
-export const MIGRATIONS: Record<number, (saved: SavedGame) => SavedGame> = {
-  // Before rugby and cricket, every career was football.
-  7: (s) => ({ ...s, career: { ...s.career, sport: 'football', version: 8 } }),
-};
+export const MIGRATIONS: Record<number, (saved: SavedGame) => SavedGame> = {};
 
 /** The save brought up to SAVE_VERSION, or null if it can't be (too old, or from a newer version). */
 export function migrate(saved: SavedGame, migrations = MIGRATIONS): SavedGame | null {
@@ -218,12 +213,6 @@ export class Game {
   chooseFocus(focus: Focus): void {
     if (!this.career?.pending) return;
     chooseFocus(this.career, focus);
-    this.nextSeason();
-  }
-
-  allocate(allocation: Record<Stat, number>): void {
-    if (!this.career?.pending) return;
-    allocatePoints(this.career, allocation);
     this.nextSeason();
   }
 

@@ -26,7 +26,7 @@ describe('records', () => {
   });
 
   it('builds up over a real career and survives the new season', () => {
-    const c = newCareer({ rating: 50, difficulty: 'medium', seed: 2 }, footballSport);
+    const c = newCareer({ rating: 50, seed: 2 }, footballSport);
     const scored = () => c.season.playerMatches.reduce((t, x) => t + x.goals.filter((g) => g.for && !g.ownGoal).length, 0);
     playSeason(c, footballSport);
     expect(fullHistory(c)).toHaveLength(1);
@@ -44,7 +44,7 @@ describe('rival', () => {
   const rivalCode = (c: ReturnType<typeof newCareer>) => c.clubs[c.rival!].short;
 
   it('is the nation’s real rival, whichever league each is in, for the whole career', () => {
-    const c = newCareer({ rating: 10, difficulty: 'medium', seed: 3, team: 'ARG' }, footballSport);
+    const c = newCareer({ rating: 10, seed: 3, team: 'ARG' }, footballSport);
     expect(rivalCode(c)).toBe('BRA');
     playSeason(c, footballSport);
     allocatePoints(c, fillAllocation(c.clubs[0], c.pending!.points, { attack: 1, defence: 1 }));
@@ -53,14 +53,14 @@ describe('rival', () => {
 
   it('can be one-way: Scotland and Wales have England, England has Germany', () => {
     for (const [team, rival] of [['SCO', 'ENG'], ['WAL', 'ENG'], ['ENG', 'GER']]) {
-      expect(rivalCode(newCareer({ rating: 50, difficulty: 'medium', seed: 1, team }, footballSport))).toBe(rival);
+      expect(rivalCode(newCareer({ rating: 50, seed: 1, team }, footballSport))).toBe(rival);
     }
   });
 
   it('falls back to the nearest neighbour in the world when the real rival is not in it', () => {
-    expect(rivalCode(newCareer({ rating: 5, difficulty: 'medium', seed: 2, team: 'FIJ' }, footballSport))).toBe('NZL');
-    expect(rivalCode(newCareer({ rating: 5, difficulty: 'medium', seed: 2, team: 'ETH' }, footballSport))).toBe('EGY');
-    expect(rivalCode(newCareer({ rating: 5, difficulty: 'medium', seed: 2, team: 'LIE' }, footballSport))).toBe('SUI');
+    expect(rivalCode(newCareer({ rating: 5, seed: 2, team: 'FIJ' }, footballSport))).toBe('NZL');
+    expect(rivalCode(newCareer({ rating: 5, seed: 2, team: 'ETH' }, footballSport))).toBe('EGY');
+    expect(rivalCode(newCareer({ rating: 5, seed: 2, team: 'LIE' }, footballSport))).toBe('SUI');
   });
 });
 
@@ -76,7 +76,7 @@ describe('record against the rival', () => {
 
   it('shows on the Team tab with where the rival is', () => {
     const game = new Game({ save: () => {}, changed: () => {} });
-    game.start({ rating: 50, difficulty: 'medium', seed: 2, team: 'SCO' });
+    game.start({ rating: 50, seed: 2, team: 'SCO' });
     const v = buildView(game);
     if (v.screen !== 'game') throw new Error('expected game view');
     expect(v.club.rival).toMatchObject({ name: 'England', record: 'Not played yet' });
@@ -98,7 +98,7 @@ describe('full-time overlay', () => {
 
   it('appears for the player match only during the full-time pause, and can be turned off', () => {
     const game = new Game({ save: () => {}, changed: () => {} });
-    game.start({ rating: 50, difficulty: 'medium', seed: 4 });
+    game.start({ rating: 50, seed: 4 });
     const fullTime = () => {
       const v = buildView(game);
       return v.screen === 'game' ? v.fullTime : null;
@@ -118,7 +118,7 @@ describe('full-time overlay', () => {
 describe('squads over time', () => {
   it('replaces 2–4 players a summer at every club, same positions and shirts, and the summer screen says who', () => {
     const game = new Game({ save: () => {}, changed: () => {} });
-    game.start({ rating: 50, difficulty: 'medium', seed: 8, team: 'SCO' });
+    game.start({ rating: 50, seed: 8, team: 'SCO' });
     const c = game.career!;
     playSeason(c, footballSport);
     const before = c.clubs.map((club) => club.squad.map((p) => p.id));
@@ -139,7 +139,7 @@ describe('squads over time', () => {
   });
 
   it('keeps a leaver’s goals in the all-time records', () => {
-    const c = newCareer({ rating: 60, difficulty: 'medium', seed: 9, team: 'SCO' }, footballSport);
+    const c = newCareer({ rating: 60, seed: 9, team: 'SCO' }, footballSport);
     for (let s = 0; s < 4; s++) {
       playSeason(c, footballSport);
       allocatePoints(c, fillAllocation(c.clubs[0], c.pending!.points, { attack: 1, defence: 1 }));
@@ -151,7 +151,7 @@ describe('squads over time', () => {
 
 describe('suspensions', () => {
   it('bans a sent-off player from their club’s next match only', () => {
-    const c = newCareer({ rating: 50, difficulty: 'medium', seed: 10, team: 'SCO' }, footballSport);
+    const c = newCareer({ rating: 50, seed: 10, team: 'SCO' }, footballSport);
     let checked = 0;
     for (let round = 0; round < 38 && checked < 3; round++) {
       const results = playRound(c, footballSport);

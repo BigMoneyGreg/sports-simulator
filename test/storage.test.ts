@@ -34,16 +34,6 @@ describe('storage', () => {
     expect(readdirSync(dir)).toEqual([]);
   });
 
-  it('carries a save over from global state, then clears it there', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'ss-storage-'));
-    const m = memento({ 'sportsSimulator.career': JSON.stringify(save(2)) });
-    const s = new Storage(dir, m);
-    expect(s.load()).toEqual(save(2));
-    s.save(save(3));
-    expect(m.values['sportsSimulator.career']).toBeUndefined();
-    expect(s.load()).toEqual(save(3));
-  });
-
   it('backs up a save it can\'t read, under its version, and clears it', () => {
     const dir = mkdtempSync(join(tmpdir(), 'ss-storage-'));
     const s = new Storage(dir, memento());
@@ -94,14 +84,6 @@ describe('storage', () => {
     expect(s.load('rugby')).toEqual(save(2));
   });
 
-  it('never gives another sport football\'s old global-state save', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'ss-storage-'));
-    const s = new Storage(dir, memento({ 'sportsSimulator.career': JSON.stringify(save(9)) }));
-    s.setActiveSport('rugby');
-    expect(s.load()).toBeNull();
-    expect(s.load('football')).toEqual(save(9));
-  });
-
   it('saves each sport to its own file, whichever is active', () => {
     const dir = mkdtempSync(join(tmpdir(), 'ss-storage-'));
     const s = new Storage(dir, memento());
@@ -118,35 +100,6 @@ describe('storage', () => {
     s.backup({ ...save(3), version: 5 }, 'football');
     expect(s.load('football')).toBeNull();
     expect(readdirSync(dir)).toContain('career.v5.json');
-  });
-
-  it('keeps football\'s old global-state save when another sport saves first', () => {
-    const m = memento({ 'sportsSimulator.career': JSON.stringify(save(9)) });
-    const s = new Storage(mkdtempSync(join(tmpdir(), 'ss-storage-')), m);
-    s.save(save(1), 'rugby');
-    expect(s.load('football')).toEqual(save(9));
-  });
-
-  it('pauses careers left waiting once, and leaves the one being played running', () => {
-    const s = new Storage(mkdtempSync(join(tmpdir(), 'ss-storage-')), memento());
-    s.save(save(1), 'football');
-    s.save(save(2), 'rugby');
-    s.pauseWaitingCareers();
-    expect(s.load('football')!.paused).toBe(false);
-    expect(s.load('rugby')!.paused).toBe(true);
-    // Started again by the player, it stays running from then on.
-    s.save(save(2), 'rugby');
-    s.pauseWaitingCareers();
-    expect(s.load('rugby')!.paused).toBe(false);
-  });
-
-  it('reads past careers back, treating ones from before other sports as football, and keeps honours', () => {
-    const s = new Storage(mkdtempSync(join(tmpdir(), 'ss-storage-')), memento({ 'sportsSimulator.archive': [{ club: 'Scotland', seasons: 3 }] }));
-    expect(s.archives()).toEqual([{ club: 'Scotland', seasons: 3, sport: 'football', history: [] }]);
-    expect(s.feats()).toEqual([]);
-    s.addFeats([{ id: 'twoWorld', at: 'now', detail: 'x' }]);
-    s.addFeats([{ id: 'threeWorld', at: 'now', detail: 'y' }]);
-    expect(s.feats().map((f) => f.id)).toEqual(['twoWorld', 'threeWorld']);
   });
 
   it('resets honours and past careers, noting where running careers count from', () => {

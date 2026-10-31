@@ -10,7 +10,7 @@ import {
   type RoundKind,
   type TableRow,
 } from './league';
-import { applyDecline, bandPull, expectedPositions, normalise, positionBonus, RATING_TUNING, seasonGain, totalRating, type Difficulty } from './ratings';
+import { applyDecline, bandPull, expectedPositions, normalise, positionBonus, RATING_TUNING, seasonGain, totalRating } from './ratings';
 import { CHAMPIONSHIP_EVERY, cupFixtures, cupRun, cupStages, drawChampionship, drawCup, recordCupResult, type Cup, type CupId } from './cups';
 import { emptyRecords, recordMatch, recordSeasonGoals, type Records } from './records';
 import { Rng } from './rng';
@@ -55,7 +55,6 @@ export interface SportDefinition<M = unknown> {
 
 export interface CareerOptions {
   rating: number;
-  difficulty: Difficulty;
   /** Defaults to an even split. Must average to `rating`. */
   split?: Record<Stat, number>;
   /** The player's team; random if left out. */
@@ -213,7 +212,6 @@ export interface Career {
   version: number;
   sport: SportId;
   rng: number;
-  difficulty: Difficulty;
   playerClubId: number;
   /** Sum of the AI clubs' ratings; fixed for the whole career. The player sits outside it. */
   totalRating: number;
@@ -275,7 +273,6 @@ export function newCareer(options: CareerOptions, sport: SportDefinition): Caree
     version: CAREER_VERSION,
     sport: format.id,
     rng: 0,
-    difficulty: options.difficulty,
     playerClubId: PLAYER_CLUB_ID,
     totalRating: totalRating(clubs.filter((c) => !c.isPlayer)),
     clubs,
@@ -594,7 +591,7 @@ export function endSeason(career: Career, sport: SportDefinition): SeasonEnd {
   const tier = tierOf[me.id];
   const pos = position[me.id];
   const reigning = career.history[career.history.length - 1]?.outcome === 'champion';
-  const boost = (reigning ? RATING_TUNING.championBoost : RATING_TUNING.difficultyBoost)[career.difficulty];
+  const boost = reigning ? RATING_TUNING.championBoost : RATING_TUNING.playerBoost;
   const gain = seasonGain(format, tier, s.expected[me.id], pos, rating(me), boost, true);
   const before = rating(me);
   const declineByStat = applyDecline(me, RATING_TUNING.decline, rng);

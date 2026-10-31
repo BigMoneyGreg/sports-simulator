@@ -74,7 +74,7 @@ npm install
 npm run build          # bundles dist/extension.js and dist/webview.js
 npm test               # unit tests (Vitest)
 npm run test:integration   # launches your installed VS Code with a throwaway profile
-npm run balance        # headless balance check against DESIGN.md §5 and §7 (add --quick)
+npm run balance        # headless balance check against DESIGN.md §5 and §7
 npm run balance:sports # the same for rugby and cricket
 npm run preview        # renders the webview with sample states in dist/preview/
 ```

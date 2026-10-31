@@ -3,7 +3,6 @@ import { band } from './league';
 import { MAX_STAT, MIN_STAT, rating, shiftRating, STATS, type Club, type Stat } from './club';
 import type { Rng } from './rng';
 
-export type Difficulty = 'easy' | 'medium' | 'hard';
 
 /** Starting values from DESIGN.md §7; tuned by tools/balance.ts. */
 export const RATING_TUNING = {
@@ -12,9 +11,10 @@ export const RATING_TUNING = {
   /** The share of the decline that hits attack is drawn from this range; defence takes the rest. */
   declineSplit: [0.1, 0.9] as [number, number],
   averageGain: 10,
-  difficultyBoost: { easy: 10, medium: 7, hard: 0 } as Record<Difficulty, number>,
+  /** The hidden rise the player's club gets each season. */
+  playerBoost: 7,
   /** The smaller boost while the player is reigning League 1 champion; back to the full one once they lose the title. */
-  championBoost: { easy: 4, medium: 2, hard: 0 } as Record<Difficulty, number>,
+  championBoost: 2,
   /** Standard deviation of the AI-only random variation, in rating points. */
   aiNoise: 1.5,
   /** AI only: net rises are scaled down linearly from this rating to plateauFloor at 99. */
@@ -65,7 +65,7 @@ export function plateau(value: number): number {
 /**
  * Rating regained at the end of a season (on top of the flat decline):
  * average gain + performance against expectation + top/bottom bonus + extra
- * (AI noise or the player's difficulty boost). An AI club's net rise is
+ * (AI noise or the player's boost). An AI club's net rise is
  * flattened near 99; the player's isn't, but their boost shrinks while they
  * hold the title.
  */

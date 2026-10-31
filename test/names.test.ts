@@ -70,7 +70,7 @@ describe('the starting world', () => {
   it('keeps each pot within its ratings, shuffled from career to career', () => {
     const tops = new Set<string>();
     for (let seed = 1; seed <= 20; seed++) {
-      const c = newCareer({ rating: 50, difficulty: 'medium', seed, team: 'KEN' }, footballSport);
+      const c = newCareer({ rating: 50, seed, team: 'KEN' }, footballSport);
       const byName = new Map(c.clubs.map((x) => [x.short, x]));
       for (const code of WORLD_ORDER.slice(0, 8)) expect(rating(byName.get(code)!)).toBeGreaterThanOrEqual(91);
       for (const code of WORLD_ORDER.slice(0, 16)) expect(tierOf(c, byName.get(code)!.id)).toBe(1);
@@ -83,14 +83,14 @@ describe('the starting world', () => {
   it('lets a swing pot start on either side of the league line', () => {
     const tiers = new Set<number>();
     for (let seed = 1; seed <= 20; seed++) {
-      const c = newCareer({ rating: 50, difficulty: 'medium', seed, team: 'KEN' }, footballSport);
+      const c = newCareer({ rating: 50, seed, team: 'KEN' }, footballSport);
       tiers.add(tierOf(c, c.clubs.find((x) => x.short === WORLD_ORDER[18])!.id));
     }
     expect([...tiers].sort()).toEqual([1, 2]);
   });
 
   it('puts the player in the league of their rating and uses every rating once', () => {
-    const c = newCareer({ rating: 10, difficulty: 'medium', seed: 3, team: 'ENG' }, footballSport);
+    const c = newCareer({ rating: 10, seed: 3, team: 'ENG' }, footballSport);
     expect(c.clubs[0].name).toBe('England');
     expect(tierOf(c, 0)).toBe(5);
     expect(rating(c.clubs[0])).toBeGreaterThanOrEqual(band(FOOTBALL, 5).min);
@@ -99,7 +99,7 @@ describe('the starting world', () => {
   });
 
   it('makes room for a nation from outside the world', () => {
-    const c = newCareer({ rating: 5, difficulty: 'medium', seed: 3, team: 'FIJ' }, footballSport);
+    const c = newCareer({ rating: 5, seed: 3, team: 'FIJ' }, footballSport);
     expect(c.clubs[0].short).toBe('FIJ');
     expect(c.clubs.map((x) => x.short)).not.toContain(WORLD_ORDER[99]);
   });
@@ -116,7 +116,7 @@ describe('player names', () => {
   });
 
   it('gives every squad distinct surnames from its own country while the pool lasts', () => {
-    const c = newCareer({ rating: 50, difficulty: 'medium', seed: 1, team: 'JPN' }, footballSport);
+    const c = newCareer({ rating: 50, seed: 1, team: 'JPN' }, footballSport);
     for (const club of c.clubs) {
       expect(club.squad).toHaveLength(18);
       const available = new Set(namesOf(club.short).last).size;

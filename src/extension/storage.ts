@@ -6,11 +6,7 @@ import type { Feat } from '../core/honours';
 import type { SavedGame } from './game';
 import type { Lock, LockStore } from './ownership';
 
-/** Where saves lived before they moved to a file; read once to carry old careers over. */
-const LEGACY_KEY = 'sportsSimulator.career';
 const ARCHIVE_KEY = 'sportsSimulator.archive';
-/** Set once careers that were waiting from before sports ran together have been paused. */
-const WAITING_PAUSED_KEY = 'sportsSimulator.waitingPaused';
 const FEATS_KEY = 'sportsSimulator.feats';
 const HONOURS_FROM_KEY = 'sportsSimulator.honoursFrom';
 
@@ -73,7 +69,7 @@ export class Storage implements LockStore {
   }
 
   load(sport: SportId = this.activeSport()): SavedGame | null {
-    const raw = readFile(this.savePath(sport)) ?? (sport === 'football' ? this.memento.get<string>(LEGACY_KEY) : undefined);
+    const raw = readFile(this.savePath(sport));
     if (!raw) return null;
     try {
       return JSON.parse(raw) as SavedGame;
@@ -82,9 +78,9 @@ export class Storage implements LockStore {
     }
   }
 
-  /** Ended careers, oldest first. Careers archived before there were other sports have no sport: they're football. */
+  /** Ended careers, oldest first. */
   archives(): ArchivedCareer[] {
-    return this.memento.get<ArchivedCareer[]>(ARCHIVE_KEY, []).map((c) => ({ ...c, sport: c.sport ?? 'football', history: c.history ?? [] }));
+    return this.memento.get<ArchivedCareer[]>(ARCHIVE_KEY, []);
   }
 
   feats(): Feat[] {
@@ -122,22 +118,6 @@ export class Storage implements LockStore {
   save(game: SavedGame | null, sport: SportId = this.activeSport()): void {
     if (game) writeFile(this.savePath(sport), JSON.stringify(game));
     else fs.rmSync(this.savePath(sport), { force: true });
-    // Only football's own save replaces its old copy: another sport saving first must not lose it.
-    if (sport === 'football' && this.memento.get(LEGACY_KEY) !== undefined) void this.memento.update(LEGACY_KEY, undefined);
-  }
-
-  /**
-   * Careers used to stop when the player switched sport. Now they all run, so
-   * the ones left waiting are paused once, to start again when the player says.
-   */
-  pauseWaitingCareers(): void {
-    if (this.memento.get(WAITING_PAUSED_KEY)) return;
-    void this.memento.update(WAITING_PAUSED_KEY, true);
-    const active = this.activeSport();
-    for (const sport of SPORT_IDS) {
-      const saved = sport === active ? null : this.load(sport);
-      if (saved && !saved.paused) this.save({ ...saved, paused: true }, sport);
-    }
   }
 
   /** Moves a save this version can't read out of the way, whole, as `career.v<version>.json`. */

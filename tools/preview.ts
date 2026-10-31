@@ -10,7 +10,6 @@
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { fillAllocation } from '../src/core/career';
 import { Game, type Scheduler } from '../src/extension/game';
 import { buildHonours, buildView, careerSummary, honoursLine, sportRows } from '../src/extension/viewModel';
 import type { SportRowView, View } from '../src/shared/view';
@@ -41,7 +40,7 @@ const sampleRows: Partial<Record<string, SportRowView>> = {};
 const later: Partial<Record<string, Game>> = {};
 views.setup = { view: buildView(game) };
 
-game.start({ rating: 55, difficulty: 'medium', seed: 11, team: 'SCO' });
+game.start({ rating: 55, seed: 11, team: 'SCO' });
 // Play a few matchdays, then stop mid-match.
 for (let md = 0; md < 6; md++) {
   while (phase() === 'live') run();
@@ -64,15 +63,13 @@ views.seasonOver = { view: buildView(game), tab: 'match' };
 
 // A few seasons in, for the club tab's history and records.
 for (let season = 0; season < 3; season++) {
-  const c = game.career!;
-  game.allocate(fillAllocation(c.clubs[c.playerClubId], c.pending!.points, { attack: 1, defence: 1 }));
+  game.chooseFocus(season % 2 ? 'attack' : 'defence');
   while (phase() !== 'seasonOver') run();
 }
 // Season 4 ends with the World Championship.
 views.championship = { view: buildView(game), tab: 'cups', cup: 'championship' };
 {
-  const c = game.career!;
-  game.allocate(fillAllocation(c.clubs[c.playerClubId], c.pending!.points, { attack: 1, defence: 1 }));
+  game.chooseFocus('attack');
   for (let md = 0; md < 3; md++) {
     while (phase() === 'live') run();
     run();
@@ -88,7 +85,7 @@ for (const [sport, team, seed] of [['rugby', 'WAL', 7], ['cricket', 'SRI', 7]] a
   g.load(null);
   views[`${sport}_setup`] = { view: buildView(g) };
   if (sport === 'rugby') sampleRows.rugbyNone = sportRows([g])[0];
-  g.start({ rating: 55, difficulty: 'medium', seed, team });
+  g.start({ rating: 55, seed, team });
   for (let md = 0; md < 4; md++) {
     while (at() === 'live') run();
     run();

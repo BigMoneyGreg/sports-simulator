@@ -88,7 +88,7 @@ describe('World Championship', () => {
 
 describe('cups in a career', () => {
   it('holds the World Championship every fourth summer, for Leagues 1 and 2', () => {
-    const c = newCareer({ rating: 50, difficulty: 'medium', seed: 8, team: 'NOR' }, footballSport);
+    const c = newCareer({ rating: 50, seed: 8, team: 'NOR' }, footballSport);
     for (let season = 1; season <= 4; season++) {
       expect(c.season.calendar.some((s) => s.kind === 'championship')).toBe(season === 4);
       if (season < 4) nextSeason(c);
@@ -102,7 +102,7 @@ describe('cups in a career', () => {
   });
 
   it('enters the top 64 of this season’s final standings into next season’s cup', () => {
-    const c = newCareer({ rating: 50, difficulty: 'medium', seed: 9, team: 'NOR' }, footballSport);
+    const c = newCareer({ rating: 50, seed: 9, team: 'NOR' }, footballSport);
     playSeason(c, footballSport);
     const standing = c.pending!.standing;
     nextSeason(c);
@@ -110,21 +110,21 @@ describe('cups in a career', () => {
   });
 
   it('leaves ratings alone: only the league decides the summer', () => {
-    const c = newCareer({ rating: 50, difficulty: 'medium', seed: 10, team: 'NOR' }, footballSport);
+    const c = newCareer({ rating: 50, seed: 10, team: 'NOR' }, footballSport);
     const before = c.clubs.map(rating);
     while (nextRound(c)) playRound(c, footballSport);
     expect(c.clubs.map(rating)).toEqual(before);
   });
 
   it('records how far the player went', () => {
-    const c = newCareer({ rating: 95, difficulty: 'medium', seed: 11, team: 'BRA' }, footballSport);
+    const c = newCareer({ rating: 95, seed: 11, team: 'BRA' }, footballSport);
     nextSeason(c);
     expect(c.history[0].cup).toMatch(/^(Winners|Final|Semi-final|Quarter-final|Round of (16|32|64))$/);
   });
 });
 
 describe('how a tie reads', () => {
-  const c = newCareer({ rating: 50, difficulty: 'medium', seed: 12, team: 'NOR' }, footballSport);
+  const c = newCareer({ rating: 50, seed: 12, team: 'NOR' }, footballSport);
   const [eng, bra] = ['ENG', 'BRA'].map((code) => c.clubs.find((x) => x.short === code)!.id);
 
   it('names the shootout winner, with the shootout score from their side', () => {
