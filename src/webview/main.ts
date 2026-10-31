@@ -2,7 +2,6 @@ import {
   DURATION_LABELS,
   SEASON_LABELS,
   type CupView,
-  type Difficulty,
   type Duration,
   type FixtureView,
   type Focus,
@@ -49,7 +48,6 @@ const setup = {
   team: '',
   search: '',
   league: 3,
-  difficulty: 'medium' as Difficulty,
   duration: '2m' as Duration,
   /** Defaults are taken from the host once; option clicks must not reset them. */
   initialised: false,
@@ -137,7 +135,7 @@ function renderSetup(v: SetupView): void {
   app.innerHTML = `
   <div class="setup card">
     <h2>New career</h2>
-    <p class="muted">Pick your country and where it starts. Every match plays on its own; each summer you answer one question that shapes your team.</p>
+    <p class="muted">Pick your country and where it starts. Every match plays on its own; each summer you make one decision that shapes your team.</p>
 
     <div class="field">Country
       ${chosen ? `<div class="chosen">${swatch(chosen, 'crest big')}<strong>${esc(chosen.name)}</strong></div>` : ''}
@@ -146,16 +144,6 @@ function renderSetup(v: SetupView): void {
     </div>
 
     <div class="field">League ${seg('league', leagueOptions, String(setup.league), !chosen)}</div>
-
-    <div class="field">Difficulty ${seg(
-      'difficulty',
-      [
-        ['easy', 'Easy', 'A helpful boost each season'],
-        ['medium', 'Medium', 'A subtle boost each season'],
-        ['hard', 'Hard', 'No extra season boost'],
-      ],
-      setup.difficulty,
-    )}</div>
 
     <div class="field">Match length ${seg('duration', v.durations.map((d): Option => [d, DURATION_LABELS[d], SEASON_LABELS[d]]), setup.duration)}</div>
 
@@ -528,7 +516,7 @@ function clubHtml(v: GameView): string {
   const r = c.records;
   const g = c.goals;
   return `<div class="clubcard card" data-accent="${esc(c.colours[0])}">
-    <div class="club">${swatch(c, 'crest')}<div><div class="name">${esc(c.name)}</div><div class="muted small">${esc(c.short)} · League ${c.tier} · Season ${c.season} · ${esc(c.difficulty[0].toUpperCase() + c.difficulty.slice(1))}</div></div></div>
+    <div class="club">${swatch(c, 'crest')}<div><div class="name">${esc(c.name)}</div><div class="muted small">${esc(c.short)} · League ${c.tier} · Season ${c.season}</div></div></div>
     <p class="expect">Expected to finish <strong>${ordinal(c.expected)}</strong> this season</p>
     <dl class="report">
       <dt>Scored</dt><dd>${g.scored} · ${ordinal(g.scoredRank)} <span class="muted">(league avg ${g.average})</span></dd>
@@ -631,7 +619,7 @@ app.addEventListener('click', (e) => {
   } else if (button.id === 'pause') {
     send({ type: 'togglePause' });
   } else if (button.id === 'start' && setup.team) {
-    send({ type: 'startCareer', team: setup.team, league: setup.league, difficulty: setup.difficulty, duration: setup.duration });
+    send({ type: 'startCareer', team: setup.team, league: setup.league, duration: setup.duration });
   } else if (button.dataset.team && view?.screen === 'setup') {
     setup.team = button.dataset.team;
     setup.league = view.setup.nations.find((n) => n.code === setup.team)!.tier;
@@ -640,7 +628,6 @@ app.addEventListener('click', (e) => {
     const group = button.closest('.seg')!.getAttribute('data-name')!;
     const value = button.dataset.value!;
     if (group === 'league') setup.league = Number(value);
-    if (group === 'difficulty') setup.difficulty = value as Difficulty;
     if (group === 'duration') setup.duration = value as Duration;
     if (view?.screen === 'setup') renderSetup(view.setup);
   }

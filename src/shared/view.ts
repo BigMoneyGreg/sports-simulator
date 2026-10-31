@@ -6,7 +6,6 @@ export const DURATIONS: Duration[] = ['30s', '2m', '5m'];
 export const DURATION_LABELS: Record<Duration, string> = { '30s': '30 sec', '2m': '2 min', '5m': '5 min' };
 /** Roughly how long a whole season takes at each match length (measured: about 40 matches with full-time pauses). */
 export const SEASON_LABELS: Record<Duration, string> = { '30s': 'Season 25 min', '2m': 'Season 1½ hr', '5m': 'Season 3¾ hr' };
-export type Difficulty = 'easy' | 'medium' | 'hard';
 export type Focus = 'attack' | 'defence';
 export type Zone = 'champion' | 'promotion' | 'playoff' | 'relegation' | null;
 
@@ -137,7 +136,6 @@ export interface ClubView {
   /** Ranks: 1 = most scored, fewest conceded. */
   goals: { scored: number; conceded: number; scoredRank: number; concededRank: number; average: number; played: number };
   tier: number;
-  difficulty: Difficulty;
   season: number;
   expected: number;
   /** The rival, where it is now ("League 1, 3rd") and the record against it ("Played 6 · W3 D1 L2"). */
@@ -300,7 +298,7 @@ export type View = { screen: 'setup'; setup: SetupView } | GameView;
 
 export type ToHost =
   | { type: 'ready' }
-  | { type: 'startCareer'; team: string; league: number; difficulty: Difficulty; duration: Duration }
+  | { type: 'startCareer'; team: string; league: number; duration: Duration }
   | { type: 'togglePause' }
   | { type: 'setDuration'; duration: Duration }
   | { type: 'chooseFocus'; focus: Focus }

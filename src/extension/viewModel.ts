@@ -63,7 +63,6 @@ export function buildView(game: Game, options: ViewOptions = { fullTimeOverlay: 
       ...badge(career, me.id),
       goals: seasonGoals(season.leagues[tier - 1].table, me.id),
       tier,
-      difficulty: career.difficulty,
       season: season.number,
       expected: season.expected[me.id],
       rival: rivalView(career, tables),

@@ -38,7 +38,6 @@ Everything else runs by itself: fixtures, matches, commentary, tables, scorers, 
 ```
 New career
   └─ choose a country, and the league it starts in (1–5) → somewhere around mid-table
-  └─ choose difficulty (easy / medium / hard)
   └─ choose match duration; every team starts balanced
         │
         ▼
@@ -69,7 +68,6 @@ Next season … (won league 1? → carry on, or start a new career)
 | Option | Values | Notes |
 |---|---|---|
 | League | 1–5 (buttons) | Where you start. Your rating is random within the league, weighted to mid-table: 50% chance of 40–60% of the way up the league's band, 25% of 20–40%, 25% of 60–80% (never the very top or bottom). Not shown; you find out from the table |
-| Difficulty | Easy / Medium / Hard | *A helpful boost each season* · *A subtle boost each season* · *No extra season boost*: Easy +10, Medium +7, Hard 0 (§7) |
 | Match duration | 30 sec · 2 min · 5 min | Length of one 90-minute match; can be changed any time from the ⏱ button in the box. Default 2 min |
 | Country | Type to search; matches appear as you type | Sets the league picker to its usual level (marked *Usual*); any league can be picked, but only once a country is chosen. Preselected from VS Code's display language when it points to one country (German → Germany; plain English doesn't). See §10 |
 
@@ -283,15 +281,9 @@ The same style is never asked two summers running. A call-up joins the squad in 
 
 So reading the summer keeps you close to expectation, while guessing costs over 6 places a season and ignoring it sinks you. The wider split made Medium harder to climb (0→99 took 12–39 seasons), so Medium's boost went from 5 to 7; 0→99 is now 8–19 seasons for a reader and the reader's peak beyond 99 averages 161, against 132 for a guesser.
 
-### Difficulty: a hidden boost 🟢 NOW
+### Season boost (one standard game) 🟢 NOW
 
-Each season your club gets an extra boost. It's **new rating, not taken from the AI** (see *Two economies* below):
-
-| Difficulty | Your boost per season | While reigning League 1 champion |
-|---|---|---|
-| Easy | +10 | +4 |
-| Medium | +7 | +2 |
-| Hard | 0 | 0 |
+Each season your club gets a hidden boost of **+7** (**+2** while reigning League 1 champion). It's **new rating, not taken from the AI** (see *Two economies* below). There's no difficulty choice: every career plays the same game, tuned and measured as the balance tool's *medium*. The engine still accepts *easy* (+10 / +4) and *hard* (0 / 0) so the balance tool can measure them, and careers started before the choice was removed keep theirs.
 
 The smaller boost applies for the season after you win League 1; lose the title and it's back to the full one. Winning when you're expected to scores 0, so at the top the champion's boost is the only way up.
 
@@ -587,6 +579,7 @@ In rough priority order:
 | Pause when VS Code closes | You never miss matches; no catch-up simulation |
 | Status bar goal call-out, rich hover, collapsed-box score and a badge for the summer choice | Most of the time the box is closed: these keep the game noticeable at a glance without a single extra notification |
 | One summer question in four styles (call-ups, assistant coach, formation, training camp), always attack v defence underneath; leavers matched to the loss; loss split 10–90%; Medium boost 7 | Named people give a sense of power without more decisions. More levers (fitness, mentality, home/away…) were rejected: their clues come from half-seasons and would mostly be luck. Leavers alone were no clue at the old 25–75% split; at 10–90% they make the top readable (66% → 76% right). Medium needed +2 to keep its climb on target |
+| No difficulty choice: one standard game (the old Medium) | Extra options for the sake of it. Medium's tuning is the one measured hardest, and Easy's bigger boost pushed teams so high that the steep penalty above 99 made careers collapse |
 | Saves are upgraded, never silently dropped | History is the reward: once the game is public, one update that wiped careers would lose players for good |
 | One window runs the game; focusing another hands it over | Each window used to run its own clock on the shared save, so two windows played different matches and overwrote each other (a summer choice could be lost). Many people keep several windows open all day |
 | Fictional club names only, checked against real club lists | Avoid trademark issues; renaming handled locally later |

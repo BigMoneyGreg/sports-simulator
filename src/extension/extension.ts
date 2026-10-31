@@ -127,14 +127,15 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       case 'startCareer': {
         if (!isNation(message.team)) return;
-        const { team, difficulty, league } = message;
+        const { team, league } = message;
         setDuration(message.duration);
         owner.whenOwner(() => {
           const seed = (Date.now() ^ (Math.random() * 2 ** 31)) >>> 0;
           const tier = Math.min(5, Math.max(1, Math.round(league)));
           // Somewhere in the league, weighted towards mid-table, attack and defence level: the summers shape it from there.
           const rating = startRating(tier, new Rng(seed ^ 0x9e3779b9));
-          game.start({ rating, difficulty, team, seed });
+          // One standard game: every career gets the tuning measured as 'medium'.
+          game.start({ rating, difficulty: 'medium', team, seed });
         });
         return;
       }
