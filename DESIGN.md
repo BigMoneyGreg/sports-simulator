@@ -368,7 +368,7 @@ All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned wi
 
 ### The list of sports
 
-Each sport has its own colour (football blue, rugby orange, cricket purple, Honours yellow; not green or red, which mean good and bad news), in a border round its row and its open page.
+Each sport has its own colour (football teal, rugby orange, cricket purple, Honours yellow; not green or red, which mean good and bad news), in a border round its row and its open page.
 
 The box lists every sport, one row each. Only one opens fully at a time, beneath its row; clicking it again minimises it, and all can be minimised. A minimised row shows the least worth knowing: country, position, league week and score (*Rugby · Wales / 8th · Week 4/14 · SAM 14–18 WAL 54'*), *Not started*, or *Season over: decision waiting*. A thin line along the bottom of a row shows how far through the league season it is, which still reads when a narrow box cuts the text off.
 
