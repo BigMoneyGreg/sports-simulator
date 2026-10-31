@@ -116,6 +116,44 @@ describe('storage', () => {
     expect(load).not.toHaveBeenCalled();
   });
 
+  it('saves each sport to its own file, whichever is active', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ss-storage-'));
+    const s = new Storage(dir, memento());
+    s.save(save(1), 'football');
+    s.save(save(2), 'rugby');
+    s.setActiveSport('cricket');
+    s.save(save(3), 'football');
+    expect(s.load('football')).toEqual(save(3));
+    expect(s.load('rugby')).toEqual(save(2));
+    expect(s.load('cricket')).toBeNull();
+    s.save(null, 'rugby');
+    expect(s.load('rugby')).toBeNull();
+    expect(s.load('football')).toEqual(save(3));
+    s.backup({ ...save(3), version: 5 }, 'football');
+    expect(s.load('football')).toBeNull();
+    expect(readdirSync(dir)).toContain('career.v5.json');
+  });
+
+  it('keeps football\'s old global-state save when another sport saves first', () => {
+    const m = memento({ 'sportsSimulator.career': JSON.stringify(save(9)) });
+    const s = new Storage(mkdtempSync(join(tmpdir(), 'ss-storage-')), m);
+    s.save(save(1), 'rugby');
+    expect(s.load('football')).toEqual(save(9));
+  });
+
+  it('pauses careers left waiting once, and leaves the one being played running', () => {
+    const s = new Storage(mkdtempSync(join(tmpdir(), 'ss-storage-')), memento());
+    s.save(save(1), 'football');
+    s.save(save(2), 'rugby');
+    s.pauseWaitingCareers();
+    expect(s.load('football')!.paused).toBe(false);
+    expect(s.load('rugby')!.paused).toBe(true);
+    // Started again by the player, it stays running from then on.
+    s.save(save(2), 'rugby');
+    s.pauseWaitingCareers();
+    expect(s.load('rugby')!.paused).toBe(false);
+  });
+
   it('falls back to football if the sport file is damaged', () => {
     const dir = mkdtempSync(join(tmpdir(), 'ss-storage-'));
     writeFileSync(join(dir, 'sport.json'), 'nonsense');

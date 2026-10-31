@@ -8,6 +8,8 @@ import type { Lock, LockStore } from './ownership';
 /** Where saves lived before they moved to a file; read once to carry old careers over. */
 const LEGACY_KEY = 'sportsSimulator.career';
 const ARCHIVE_KEY = 'sportsSimulator.archive';
+/** Set once careers that were waiting from before sports ran together have been paused. */
+const WAITING_PAUSED_KEY = 'sportsSimulator.waitingPaused';
 
 /** What the status bar and the collapsed box show, as worked out by the window running the game. */
 export interface LiveStatus {
@@ -52,7 +54,7 @@ export class Storage implements LockStore {
     this.livePath = path.join(dir, 'live.json');
   }
 
-  /** The sport being played; every window plays the same one. */
+  /** The sport the status bar follows: the one last opened in the box. */
   activeSport(): SportId {
     const sport = readFile(this.sportPath)?.trim() as SportId | undefined;
     return sport && SPORT_IDS.includes(sport) ? sport : 'football';
@@ -99,17 +101,31 @@ export class Storage implements LockStore {
   }
 
   /** Serialised straight away, so later changes to the live objects can't leak into the save. */
-  save(game: SavedGame | null): void {
-    if (game) writeFile(this.savePath(), JSON.stringify(game));
-    else fs.rmSync(this.savePath(), { force: true });
-    if (this.memento.get(LEGACY_KEY) !== undefined) void this.memento.update(LEGACY_KEY, undefined);
+  save(game: SavedGame | null, sport: SportId = this.activeSport()): void {
+    if (game) writeFile(this.savePath(sport), JSON.stringify(game));
+    else fs.rmSync(this.savePath(sport), { force: true });
+    // Only football's own save replaces its old copy: another sport saving first must not lose it.
+    if (sport === 'football' && this.memento.get(LEGACY_KEY) !== undefined) void this.memento.update(LEGACY_KEY, undefined);
+  }
+
+  /**
+   * Careers used to stop when the player switched sport. Now they all run, so
+   * the ones left waiting are paused once, to start again when the player says.
+   */
+  pauseWaitingCareers(): void {
+    if (this.memento.get(WAITING_PAUSED_KEY)) return;
+    void this.memento.update(WAITING_PAUSED_KEY, true);
+    const active = this.activeSport();
+    for (const sport of SPORT_IDS) {
+      const saved = sport === active ? null : this.load(sport);
+      if (saved && !saved.paused) this.save({ ...saved, paused: true }, sport);
+    }
   }
 
   /** Moves a save this version can't read out of the way, whole, as `career.v<version>.json`. */
-  backup(game: SavedGame): void {
-    const sport = this.activeSport();
+  backup(game: SavedGame, sport: SportId = this.activeSport()): void {
     writeFile(path.join(this.dir, sport === 'football' ? `career.v${game.version}.json` : `career.${sport}.v${game.version}.json`), JSON.stringify(game));
-    this.save(null);
+    this.save(null, sport);
   }
 
   /** When the save last changed on disk (0 if there's none), so other windows can follow it. */

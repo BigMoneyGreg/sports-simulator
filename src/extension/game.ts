@@ -80,6 +80,8 @@ export interface SavedGame {
   career: Career;
   live: LiveRound | null;
   paused: boolean;
+  /** This career's match length; older saves go without and take the default. */
+  duration?: Duration;
 }
 
 export interface Scheduler {
@@ -144,7 +146,7 @@ export class Game {
     }
     this.career = saved.career;
     this.sportId = saved.career.sport;
-    this.duration = fitDuration(this.sport, this.duration);
+    this.duration = fitDuration(this.sport, saved.duration ?? this.duration);
     this.live = saved.live;
     this.paused = saved.paused;
     this.phase = this.career.pending ? 'seasonOver' : this.live ? 'live' : 'idle';
@@ -179,7 +181,9 @@ export class Game {
   }
 
   setDuration(duration: Duration): void {
+    const before = this.duration;
     this.duration = fitDuration(this.sport, duration);
+    if (this.career && this.duration !== before) this.save();
     // Only a running clock is rescheduled: a window that's just showing the game must not start one.
     if (this.phase === 'live' && this.timer !== null) {
       this.stop();
@@ -321,7 +325,7 @@ export class Game {
 
   snapshot(): SavedGame | null {
     if (!this.career) return null;
-    return { version: SAVE_VERSION, career: this.career, live: this.live, paused: this.paused };
+    return { version: SAVE_VERSION, career: this.career, live: this.live, paused: this.paused, duration: this.duration };
   }
 
   private save(): void {

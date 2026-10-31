@@ -608,6 +608,27 @@ describe('sports in the save', () => {
     expect(upgraded.career.sport).toBe('football');
   });
 
+  it('keeps each career\'s match length in its save', () => {
+    const saves: SavedGame[] = [];
+    const clock = manual();
+    const game = new Game({ save: (g) => void (g && saves.push(JSON.parse(JSON.stringify(g)))), changed: () => {} }, clock.scheduler);
+    game.selectSport('rugby');
+    game.start({ rating: 55, difficulty: 'medium', seed: 31, team: 'WAL' });
+    game.setDuration('5m');
+    const saved = saves[saves.length - 1];
+    expect(saved.duration).toBe('5m');
+    const again = new Game({ save: () => {}, changed: () => {} }, clock.scheduler);
+    again.setDuration('2m');
+    again.load(saved, false);
+    expect(again.duration).toBe('5m');
+    // An older save has none, and takes the default.
+    const { duration: _, ...older } = saved;
+    again.setDuration('2m');
+    again.load(null, false);
+    again.load(older, false);
+    expect(again.duration).toBe('2m');
+  });
+
   it('keeps a career in its own sport after switching away and back', () => {
     const clock = manual();
     const game = new Game({ save: () => {}, changed: () => {} }, clock.scheduler);
