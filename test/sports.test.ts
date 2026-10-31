@@ -772,7 +772,8 @@ describe('sports in the save', () => {
       clocks.get('rugby')!.run(3);
       const [football, rugby, cricket] = sportRows(games);
       expect(football).toMatchObject({ id: 'football', name: 'Football', club: 'Scotland', paused: true, waiting: false });
-      expect(rugby.line).toMatch(/^\d+(st|nd|rd|th) · /);
+      expect(rugby.line).toMatch(/^\d+(st|nd|rd|th) · Week \d+\/14 · /);
+      expect(rugby.progress).toBe(0);
       expect(cricket).toEqual({ id: 'cricket', name: 'Cricket', paused: false, waiting: false });
     });
 
@@ -782,7 +783,7 @@ describe('sports in the save', () => {
       start(game('cricket'), 'SRI');
       const rugby = game('rugby');
       while (rugby.phase !== 'seasonOver') clocks.get('rugby')!.run(1);
-      expect(sportRows(games)[1]).toMatchObject({ waiting: true, line: 'Season over' });
+      expect(sportRows(games)[1]).toMatchObject({ waiting: true, line: 'Season over', progress: 1 });
       expect(game('cricket').phase).not.toBe('seasonOver');
       clocks.get('cricket')!.run(3);
       expect(game('cricket').phase).toBe('live');

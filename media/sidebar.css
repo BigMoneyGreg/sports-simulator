@@ -1364,10 +1364,36 @@ body.vscode-light .focus.defence strong {
 }
 
 .sport-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
   padding-right: 5px;
+}
+
+/* How far through the league season: a thin line along the bottom of the row. */
+.row-progress {
+  position: absolute;
+  right: 5px;
+  bottom: 0;
+  left: 6px;
+  height: 2px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--sport) 18%, transparent);
+}
+
+.row-progress span {
+  display: block;
+  height: 100%;
+  border-radius: 1px;
+  background: var(--sport);
+  transition: width 0.4s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-progress span {
+    transition: none;
+  }
 }
 
 .row-main {

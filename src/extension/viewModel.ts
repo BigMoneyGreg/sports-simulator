@@ -747,12 +747,19 @@ function careerLines(game: Game): string[] {
   return lines;
 }
 
-/** Shown beside the box's title while it's collapsed: "3rd · SCO 1–1 RSA 59'". */
+/** The league week being played, or the last one played while a cup match or a break is on. */
+function leagueWeek(game: Game): number {
+  const played = leaguePlace(game.career!).played;
+  const live = game.live;
+  return live && live.fixtures[live.player].kind === 'league' ? played + 1 : played;
+}
+
+/** Shown beside the box's title while it's collapsed, and on a minimised row: "3rd · Week 7/38 · SCO 1–1 RSA 59'". */
 export function collapsedText(game: Game): string | undefined {
   const career = game.career;
   if (!career) return undefined;
   if (career.pending) return 'Season over';
-  const place = ordinal(leaguePlace(career).position);
+  const place = `${ordinal(leaguePlace(career).position)} · Week ${Math.max(1, leagueWeek(game))}/${leagueRounds(career.season)}`;
   const score = scoreLine(game);
   return score ? `${place} · ${score}` : place;
 }
@@ -764,7 +771,8 @@ export function sportRows(games: Game[]): SportRowView[] {
     const row = { id: game.sportId, name: game.sport.present.terms.name, paused: game.paused, waiting: !!career?.pending };
     if (!career) return { ...row, paused: false };
     const line = collapsedText(game);
-    return { ...row, club: career.clubs[career.playerClubId].name, line: game.paused && !career.pending ? `Paused · ${line}` : line };
+    const progress = career.pending ? 1 : leaguePlace(career).played / leagueRounds(career.season);
+    return { ...row, club: career.clubs[career.playerClubId].name, line: game.paused && !career.pending ? `Paused · ${line}` : line, progress };
   });
 }
 

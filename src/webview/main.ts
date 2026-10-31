@@ -205,14 +205,18 @@ function rowHtml(r: SportRowView, isOpen: boolean): string {
     <button type="button" class="row-main" data-open="${r.id}" aria-expanded="${isOpen}">
       <span class="chevron" aria-hidden="true"></span>${sportIcon(r.id)}
       <span class="row-text"><span class="row-name">${esc(r.name)}${r.club ? `<span class="muted"> · ${esc(r.club)}</span>` : ''}</span><span class="row-line muted small"></span></span>
-    </button>${control}
+    </button>${control}${r.club ? '<span class="row-progress" aria-hidden="true"><span></span></span>' : ''}
   </div>`;
 }
 
 function writeRow(section: HTMLElement, html: string, line: string): void {
   patch(section.querySelector<HTMLElement>('.row-slot')!, [html]);
   const lineEl = section.querySelector<HTMLElement>('.row-line')!;
-  if (lineEl.textContent !== line) lineEl.textContent = line;
+  if (lineEl.textContent !== line) {
+    lineEl.textContent = line;
+    // A narrow box cuts the line off; hovering still shows all of it.
+    lineEl.title = line;
+  }
 }
 
 /**
@@ -233,6 +237,9 @@ function renderRows(): void {
     const section = app.querySelector<HTMLElement>(`:scope > [data-sport="${r.id}"]`)!;
     const isOpen = open === r.id;
     writeRow(section, rowHtml(r, isOpen), isOpen ? '' : r.waiting ? 'Season over: decision waiting' : r.club ? (r.line ?? '') : 'Not started');
+    // Inline styles are blocked by the CSP, so the width goes through the CSSOM.
+    const bar = section.querySelector<HTMLElement>('.row-progress span');
+    if (bar) bar.style.width = `${(r.progress ?? 0) * 100}%`;
     if (isOpen && panel.parentElement !== section) section.append(askBox, panel);
   }
   if (honours) {
