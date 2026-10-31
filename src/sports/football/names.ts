@@ -1,6 +1,8 @@
 import type { ClubIdentity } from '../../core/career';
 import type { Rng } from '../../core/rng';
-import { NAME_POOLS, type NamePoolKey } from './data/names';
+import { COUNTRY_NAMES } from './data/commonNames';
+import { NAME_POOLS, pool, type NamePool } from './data/names';
+import { FAMOUS_PLAYERS } from '../famous';
 import { EXTRA_LOCATIONS, EXTRA_NATIONS, LOCATIONS, NATIONS, RIVALS, WORLD_ORDER, type Nation } from './data/nations';
 
 const BY_CODE = new Map([...NATIONS, ...EXTRA_NATIONS].map((n) => [n.code, n]));
@@ -64,17 +66,38 @@ export function sportWorld(order: string[], rivals: Record<string, string>, leag
   };
 }
 
-/** A name generator for one squad: surnames only repeat once the pool runs out, as with Kims and Nguyens. */
-export function playerNamer(code: string, squad: { name: string }[] = [], avoid: ReadonlySet<string> = new Set(), poolKey?: NamePoolKey): (rng: Rng) => string {
-  const pools = [poolKey ?? nation(code).names].flat().map((k) => NAME_POOLS[k]);
+const POOLS = new Map<string, NamePool>();
+
+/** The names a nation's players are drawn from: its own common names, or its region's if it has no list. */
+export function namesOf(code: string): NamePool {
+  let names = POOLS.get(code);
+  if (!names) {
+    const regional = NAME_POOLS[nation(code).names];
+    const own = COUNTRY_NAMES[code];
+    names = own ? pool(own[1] ?? regional.first.join(' '), own[0]) : regional;
+    POOLS.set(code, names);
+  }
+  return names;
+}
+
+/**
+ * A name generator for one squad: surnames only repeat once the list runs out,
+ * as with Kims and Nguyens. Nobody in a squad shares a whole name, and a real
+ * star's name is never drawn: common names can still make one by chance.
+ */
+export function playerNamer(code: string, squad: { name: string }[] = []): (rng: Rng) => string {
+  const names = namesOf(code);
   const used = new Set(squad.map((p) => surname(p.name)));
+  const taken = new Set(squad.map((p) => p.name));
   return (rng) => {
-    const pool = pools.length > 1 && rng.next() < 0.25 ? pools[1] : pools[0];
-    const fresh = pool.last.filter((s) => !used.has(s));
-    const surname = rng.pick(fresh.length ? fresh : pool.last);
-    used.add(surname);
-    let full = `${rng.pick(pool.first)} ${surname}`;
-    while (avoid.has(full)) full = `${rng.pick(pool.first)} ${surname}`;
+    const fresh = names.last.filter((s) => !used.has(s));
+    const last = rng.pick(fresh.length ? fresh : names.last);
+    used.add(last);
+    let full = `${rng.pick(names.first)} ${last}`;
+    for (let tries = 0; tries < 50 && (FAMOUS_PLAYERS.has(full) || taken.has(full)); tries++) full = `${rng.pick(names.first)} ${last}`;
+    // A squad bigger than a short list could run out of whole names; a star's never gets through.
+    while (FAMOUS_PLAYERS.has(full)) full = `${rng.pick(names.first)} ${rng.pick(names.last)}`;
+    taken.add(full);
     return full;
   };
 }

@@ -14,7 +14,6 @@ import { CRICKET_ORDER, CRICKET_RIVALS } from '../src/sports/cricket/data';
 import { createMatch as createCricket, isFinished as cricketDone, outcome as cricketOutcome, step as cricketStep, TUNING as CRICKET_TUNING, type CricketMatch } from '../src/sports/cricket/match';
 import { FAMOUS_PLAYERS } from '../src/sports/famous';
 import { nation } from '../src/sports/football/names';
-import { NAME_POOLS } from '../src/sports/football/data/names';
 import { RUGBY_ORDER, RUGBY_RIVALS } from '../src/sports/rugby/data';
 import { createMatch as createRugby, isFinished as rugbyDone, leaguePoints, outcome as rugbyOutcome, step as rugbyStep, type RugbyMatch } from '../src/sports/rugby/match';
 import type { GameView } from '../src/shared/view';
@@ -152,15 +151,6 @@ describe('fictional players', () => {
         for (const p of sport.generateSquad(rng, 0, identity)) expect(FAMOUS_PLAYERS.has(p.name), p.name).toBe(false);
       }
     }
-  });
-});
-
-describe('cricket names', () => {
-  it('gives South Asian sides their own pools, without touching football', () => {
-    const squad = (sportId: 'football' | 'cricket') => SPORTS[sportId].generateSquad(new Rng(3), 0, { name: 'Sri Lanka', short: 'SRI', colours: [] });
-    const surnames = squad('cricket').map((p) => p.name.split(' ').pop()!);
-    for (const s of surnames) expect(NAME_POOLS.sriLankan.last, s).toContain(s);
-    expect(squad('football').some((p) => !NAME_POOLS.sriLankan.last.includes(p.name.split(' ').pop()!))).toBe(true);
   });
 });
 

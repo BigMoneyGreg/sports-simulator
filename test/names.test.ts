@@ -4,10 +4,14 @@ import { newCareer } from '../src/core/career';
 import { band } from '../src/core/league';
 import { rating } from '../src/core/club';
 import { Rng } from '../src/core/rng';
+import { SPORT_IDS } from '../src/core/format';
+import { SPORTS } from '../src/sports';
+import { FAMOUS_PLAYERS } from '../src/sports/famous';
+import { COUNTRY_NAMES } from '../src/sports/football/data/commonNames';
 import { NAME_POOLS } from '../src/sports/football/data/names';
 import { LOCATIONS, NATIONS, RIVALS, WORLD_ORDER } from '../src/sports/football/data/nations';
 import { footballSport } from '../src/sports/football';
-import { naturalTier, playerNamer, shortName, surname } from '../src/sports/football/names';
+import { namesOf, nation, naturalTier, playerNamer, shortName, surname } from '../src/sports/football/names';
 
 describe('nations', () => {
   it('has unique codes and names, with two or three flag colours each', () => {
@@ -115,17 +119,60 @@ describe('player names', () => {
     const c = newCareer({ rating: 50, difficulty: 'medium', seed: 1, team: 'JPN' }, footballSport);
     for (const club of c.clubs) {
       expect(club.squad).toHaveLength(18);
-      const available = new Set([NATIONS.find((n) => n.code === club.short)!.names].flat().flatMap((k) => NAME_POOLS[k].last)).size;
+      const available = new Set(namesOf(club.short).last).size;
       expect(new Set(club.squad.map((p) => surname(p.name))).size, club.name).toBeGreaterThanOrEqual(Math.min(18, available) - 1);
     }
-    for (const p of c.clubs[0].squad) expect(NAME_POOLS.japanese.last).toContain(surname(p.name));
+    for (const p of c.clubs[0].squad) expect(namesOf('JPN').last).toContain(surname(p.name));
   });
 
-  it('mixes in the second pool for nations that have one', () => {
-    const name = playerNamer('FRA');
-    const rng = new Rng(2);
-    const surnames = Array.from({ length: 200 }, () => surname(name(rng)));
-    expect(surnames.some((s) => NAME_POOLS.westafricanFr.last.includes(s))).toBe(true);
-    expect(surnames.some((s) => NAME_POOLS.french.last.includes(s))).toBe(true);
+  it('draws every name from the country\'s own list, with no other country\'s names mixed in', () => {
+    const rng = new Rng(4);
+    for (const code of ['ENG', 'FRA', 'NGA', 'SRI']) {
+      const name = playerNamer(code);
+      const own = namesOf(code).last;
+      for (let i = 0; i < 200; i++) expect(own, code).toContain(surname(name(rng)));
+    }
+    expect(namesOf('ENG').last).not.toContain('Eze');
+  });
+
+  it('gives every nation in every world its own list of common names', () => {
+    for (const id of SPORT_IDS) {
+      for (const n of SPORTS[id].nations().filter((x) => id !== 'football' || WORLD_ORDER.includes(x.short))) {
+        const own = COUNTRY_NAMES[n.short];
+        expect(own, `${id} ${n.name}`).toBeDefined();
+        expect(own[0].split(' ').length, n.name).toBeGreaterThanOrEqual(12);
+      }
+    }
+  });
+
+  it('has no list for a nation that does not exist, and no name twice on a list', () => {
+    for (const [code, [last, first]] of Object.entries(COUNTRY_NAMES)) {
+      expect(nation(code).code).toBe(code);
+      for (const list of [last, first ?? ''].filter(Boolean).map((x) => x.split(' '))) expect(new Set(list).size, code).toBe(list.length);
+    }
+  });
+
+  it('keeps surnames of two words whole', () => {
+    expect(namesOf('NED').last).toContain('De Jong');
+    expect(surname('Jan De Jong')).toBe('De Jong');
+  });
+
+  it('never gives two players in a squad the same whole name', () => {
+    for (const id of SPORT_IDS) {
+      const sport = SPORTS[id];
+      const rng = new Rng(9);
+      for (const n of sport.nations().slice(0, 30)) {
+        const squad = sport.generateSquad(rng, 0, { name: n.name, short: n.short, colours: n.colours });
+        expect(new Set(squad.map((p) => p.name)).size, n.name).toBe(squad.length);
+      }
+    }
+  });
+
+  it('never names a real star in any sport, even from a nation they could come from', () => {
+    const rng = new Rng(11);
+    for (const code of ['COL', 'URU', 'GER', 'ENG', 'POR', 'BRA', 'IND', 'NZL']) {
+      const name = playerNamer(code);
+      for (let i = 0; i < 3000; i++) expect(FAMOUS_PLAYERS.has(name(rng))).toBe(false);
+    }
   });
 });

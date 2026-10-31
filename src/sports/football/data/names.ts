@@ -1,12 +1,12 @@
-// Everyday first names and surnames by region, for generated players. Common
-// names only; combinations are random, so no squad copies a real one.
+// Common first names and surnames by region, for a nation outside every sport's
+// world, which has no list of its own in commonNames.ts.
 
 export interface NamePool {
   first: string[];
   last: string[];
 }
 
-const pool = (first: string, last: string): NamePool => ({ first: first.split(' '), last: last.split(' ') });
+export const pool = (first: string, last: string): NamePool => ({ first: first.split(' '), last: last.split(' ').map((s) => s.replaceAll('_', ' ')) });
 
 export const NAME_POOLS = {
   anglo: pool(
@@ -94,12 +94,12 @@ export const NAME_POOLS = {
     'Papadopoulos Papadakis Georgiou Nikolaou Konstantinou Ioannou Vasiliou Christodoulou Pappas Karagiannis Makris Antoniou Dimitriou Michailidis Athanasiou Theodorou Stavrou Kyriakou',
   ),
   albanian: pool(
-    'Arber Ardit Besart Blerim Dardan Endrit Erion Florent Granit Ilir Kujtim Leotrim Liridon Mergim Arlind Klevis',
-    'Krasniqi Gashi Berisha Hoxha Shala Morina Kelmendi Rexhepi Bajrami Hasani Aliu Ismaili Dervishi Kastrati Zeqiri Shehu Basha Leka',
+    'Arben Besnik Ilir Erion Agim Fatos Burim Driton Arton Valon',
+    'Krasniqi Gashi Berisha Morina Shala Bytyqi Hasani Kastrati Kryeziu Hoti Hoxha Shehu',
   ),
   caucasus: pool(
-    'Giorgi Davit Levan Luka Nika Irakli Zurab Lasha Aram Narek Hayk Tigran Gor Armen Vahe Sargis',
-    'Beridze Kapanadze Gelashvili Maisuradze Lomidze Chikovani Tsiklauri Kvaratsadze Hovhannisyan Sargsyan Grigoryan Harutyunyan Petrosyan Ghazaryan Avetisyan Karapetyan',
+    'Giorgi Davit Levan Luka Armen Aram Tigran Karen Hayk Narek',
+    'Beridze Kapanadze Gelashvili Maisuradze Grigoryan Harutyunyan Sargsyan Hovhannisyan Petrosyan Karapetyan',
   ),
   turkish: pool(
     'Mehmet Mustafa Ahmet Emre Yusuf Kerem Can Arda Baris Serkan Ozan Kaan Onur Ugur Orkun Rauf Elvin Tural Ramil',
@@ -116,20 +116,20 @@ export const NAME_POOLS = {
   ),
   persian: pool('Ali Reza Mohammad Mehdi Amir Hossein Saeed Milad Sina Arash Kaveh Omid Farhad Ahmad Navid Shahab', 'Ahmadi Hosseini Rezaei Mohammadi Jafari Rahimi Mousavi Hashemi Ghorbani Sadeghi Rostami Farahani Kazemi Akbari Nazari Shirazi Habibi'),
   westafricanEn: pool(
-    'Chinedu Emeka Tunde Ifeanyi Samuel Victor Kelechi Uche Kwame Kofi Kwabena Yaw Emmanuel Daniel Ebrima Mohamed Alhaji Musa Ibrahim Joseph',
-    'Okafor Okonkwo Adeyemi Eze Nwosu Adebayo Balogun Obi Mensah Boateng Owusu Asante Appiah Osei Agyeman Kamara Sesay Jallow Ceesay Bangura Conteh Ndiaye',
+    'Emmanuel Samuel David Daniel Joseph John Michael Ibrahim Musa Mohamed Peter Paul',
+    'Kamara Sesay Jallow Ceesay Bangura Conteh Johnson Williams Koroma Mensah Musa Ibrahim Bah Jammeh Touray',
   ),
   westafricanFr: pool(
-    'Moussa Ibrahima Mamadou Cheikh Ousmane Abdoulaye Lamine Boubacar Souleymane Seydou Idrissa Yacouba Serge Didier Junior Christian Arnaud Fabrice Landry Patrick',
-    'Diallo Traore Kone Camara Diop Ndiaye Sow Cisse Toure Keita Coulibaly Sanogo Kouame Kouassi Yao Bamba Ekotto Nkoulou Mbemba Kabongo Ilunga Mutombo',
+    'Mamadou Moussa Ibrahima Abdoulaye Ousmane Amadou Jean Pierre Paul Joseph Emmanuel Christian',
+    'Diallo Traore Kone Camara Diop Ndiaye Sow Cisse Toure Keita Coulibaly Kouame Yao Bamba Sylla',
   ),
   eastafrican: pool(
-    'Michael Brian Kevin Dennis Collins Joseph Ivan Emmanuel Abel Dawit Yonas Bereket Ahmed Abdi Juma Baraka Hamisi',
-    'Otieno Odhiambo Wanyama Kamau Mwangi Ochieng Mugisha Okello Ssekandi Tesfaye Bekele Girma Haile Mohamud Warsame Mrisho Mwakyusa Juma',
+    'John Joseph Peter David James Michael Daniel Samuel Abel Dawit Ahmed Abdi Juma',
+    'Tesfaye Bekele Girma Haile Kebede Ali Ahmed Mohamed Hassan Juma Mwangi Mugisha Niyonzima Habimana Nkurunziza',
   ),
   southernAfrican: pool(
-    'Thabo Sipho Themba Lebo Bongani Kagiso Tendai Tatenda Kudakwashe Mwila Chanda Mwape Gift Blessing Prince Lucky Clement',
-    'Mokoena Nkosi Dlamini Ndlovu Khumalo Mahlangu Zulu Mthembu Moyo Ncube Sibanda Banda Phiri Mwale Tembo Chirwa Mulenga Chanda',
+    'Thabo Sipho Themba Joseph Moses Patrick Emmanuel John Peter Gift Blessing Lucky',
+    'Dlamini Nkosi Moyo Ncube Banda Phiri Mwale Tembo Chirwa Molefe Mokoena Khumalo Sibanda Mbewe Kgosi',
   ),
   japanese: pool(
     'Haruto Sota Yuto Riku Kaito Ren Hiroki Takumi Daiki Kenta Shota Ryo Yuki Kazuki Naoki Tatsuya Kosuke Shun',
@@ -146,31 +146,14 @@ export const NAME_POOLS = {
     'Rahul Arjun Vikram Sunil Anirudh Rohit Sandeep Amit Imran Bilal Usman Hamza Tanvir Rakib Saman Kasun Bikash Suraj',
     'Singh Kumar Sharma Patel Gupta Das Nair Reddy Bhutia Khan Ahmed Hussain Malik Rahman Hossain Perera Fernando Silva Thapa Gurung',
   ),
-  indian: pool(
-    'Aarav Arjun Vikram Rahul Rohan Karan Nikhil Ankit Aditya Siddharth Varun Ajay Manish Deepak Sanjay Ravi Harsh Yash Pranav Akash',
-    'Sharma Verma Patel Singh Kumar Reddy Nair Iyer Desai Joshi Menon Rao Gupta Chauhan Mishra Pillai Yadav Kulkarni Bhat Saxena',
-  ),
-  pakistani: pool(
-    'Usman Bilal Hamza Faisal Tariq Asad Salman Junaid Zubair Omar Danish Kamran Yasir Saad Ahmed Adnan Waleed Rizwan',
-    'Khan Ahmed Malik Hussain Iqbal Butt Sheikh Qureshi Shah Mirza Akhtar Javed Aslam Rana Mahmood Siddiqui Anwar Raza',
-  ),
-  bangladeshi: pool(
-    'Tanvir Rakib Sabbir Nasir Mahmud Imrul Rubel Soumya Taskin Anamul Arafat Sohan Jubair Mominul Nazmul Rafiq',
-    'Rahman Hossain Islam Ahmed Das Chowdhury Sarkar Miah Uddin Alam Haque Karim Mollah Talukder Biswas Sikder',
-  ),
-  sriLankan: pool(
-    'Saman Nuwan Kasun Chamara Dilshan Lahiru Dimuth Tharindu Chaminda Sachith Ruwan Asela Isuru Niroshan Prasad Sanath',
-    'Perera Fernando Silva Mendis Jayasuriya Dissanayake Bandara Gunawardena Wickramasinghe Rathnayake Herath Kumara Rajapaksa Weerasinghe Karunaratne',
-  ),
-  nepali: pool(
-    'Bikash Rohit Suraj Dipesh Prakash Santosh Binod Anil Sagar Sandeep Kiran Roshan Gyanendra Karan',
-    'Gurung Thapa Shrestha Rai Magar Tamang Sharma Bhandari Karki Adhikari Poudel Lama KC Basnet',
-  ),
   caribbean: pool(
     'Andre Kemar Damion Shamar Ricardo Marlon Javain Romario Kevin Tyrese Jermaine Dwayne Shaquille Akeem Nathaniel Kareem',
     'Campbell Brown Williams Thompson Clarke Francis Joseph Grant Bailey Morgan Charles Lewis Hylton Sinclair Gordon Ferguson Baptiste Roberts Phillips',
   ),
-  pacific: pool('Sione Tevita Viliami Iosefa Ratu Jone Semi Mosese Josefa Pita Tomasi Ioane Samuela Lui Kenneth Moses', 'Tuilagi Fifita Vainikolo Taufa Naivalu Tuivasa Ravuvu Waqa Leota Aumua Faleolo Kaufusi Toala Kepa Mapu Kila'),
+  pacific: pool(
+    'John Peter Paul Joseph Michael David Moses Samuel Simon James Tomasi Pita',
+    'Kila Tau Vari Tamate Mataio Teariki Tangaroa Kalsakau Natapei Fono Ruru Maru Sogavare Lui',
+  ),
 };
 
 export type NamePoolKey = keyof typeof NAME_POOLS;
