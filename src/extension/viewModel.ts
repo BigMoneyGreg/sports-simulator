@@ -1,31 +1,28 @@
 import { currentSlot, FOCUSES, formatOf, leagueRounds, type Career, type Focus, type Playoff, type SeasonRecord, type Slot } from '../core/career';
-import { SPORT_IDS, type SportId } from '../core/format';
+import type { SportId } from '../core/format';
 import { CHAMPIONSHIP_EVERY, CUP_NAMES, cupFixtures, cupRun, cupStages, stageLabel, stillIn, type Cup, type CupId, type CupTie } from '../core/cups';
 import { emptyRecords, topScorers } from '../core/records';
 import { difference, goalRanks, recordResult, runRateAgainst, runRateFor, sortTable, zone, type Fixture, type TableRow } from '../core/league';
 import { SPORTS, sportOf, type AnySport } from '../sports';
 import { shortName, surname } from '../sports/football/names';
 import { ordinal } from '../shared/format';
-import type { SportOption, CupRunView, CupsView, CupTieView, CupView, NationOption, CabinetView, QuestionView, ClubView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, TableView, TeamBadge, View } from '../shared/view';
+import type { SportRowView, CupRunView, CupsView, CupTieView, CupView, NationOption, CabinetView, QuestionView, ClubView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, TableView, TeamBadge, View } from '../shared/view';
 import { fullTimePause } from './game';
 import type { Game } from './game';
 
 export interface ViewOptions {
   fullTimeOverlay: boolean;
-  /** The sports with a career waiting, and which country it's with. */
-  careers?: Partial<Record<SportId, string>>;
   /** VS Code's display language, to suggest a country at setup. */
   language?: string;
 }
 
 export function buildView(game: Game, options: ViewOptions = { fullTimeOverlay: true }): View {
   const career = game.career;
-  const sports = sportOptions(options.careers);
   if (!career) {
     const { terms, durations } = game.sport.present;
     return {
       screen: 'setup',
-      setup: { sport: game.sportId, sports, terms, leagues: game.sport.format.leagues, nations: nationOptions(game.sportId), suggested: suggestNation(options.language), duration: game.duration, durations },
+      setup: { sport: game.sportId, terms, leagues: game.sport.format.leagues, nations: nationOptions(game.sportId), suggested: suggestNation(options.language), duration: game.duration, durations },
     };
   }
   const sport = sportOf(career);
@@ -38,7 +35,6 @@ export function buildView(game: Game, options: ViewOptions = { fullTimeOverlay: 
   const view: GameView = {
     screen: 'game',
     sport: career.sport,
-    sports,
     terms: sport.present.terms,
     header: {
       club: badge(career, me.id),
@@ -105,7 +101,7 @@ function buildFullTime(game: Game): FullTimeView | null {
     note,
     scorers,
     ms: fullTimePause(game.duration),
-    key: `${career.season.number}-${career.season.round}`,
+    key: `${career.sport}-${career.season.number}-${career.season.round}`,
   };
 }
 
@@ -399,10 +395,6 @@ function nationOptions(sport: SportId): NationOption[] {
     .nations()
     .map((n) => ({ code: n.short, name: n.name, colours: n.colours, tier: n.tier }))
     .sort((a, b) => a.name.localeCompare(b.name)));
-}
-
-function sportOptions(careers: ViewOptions['careers'] = {}): SportOption[] {
-  return SPORT_IDS.map((id) => ({ id, name: SPORTS[id].present.terms.name, ...(careers[id] ? { career: careers[id] } : {}) }));
 }
 
 /** VS Code display languages that point clearly to one country (plain English doesn't). */
@@ -734,8 +726,12 @@ function leaguePlace(career: Career): { tier: number; position: number; played: 
 
 /** The status bar's hover: the essentials of the box without opening it (Markdown). */
 export function statusTooltip(game: Game): string {
-  const career = game.career;
-  if (!career) return 'Sports Simulator: pick your country and start a career.';
+  if (!game.career) return 'Sports Simulator: pick your country and start a career.';
+  return [...careerLines(game), 'Click to open'].join('\n\n');
+}
+
+function careerLines(game: Game): string[] {
+  const career = game.career!;
   const me = career.clubs[career.playerClubId];
   const place = leaguePlace(career);
   const lines = [`**${me.name}** · League ${place.tier}, ${ordinal(place.position)} · ${place.played}/${leagueRounds(career.season)} played`];
@@ -745,8 +741,7 @@ export function statusTooltip(game: Game): string {
     const shown = game.shownMatch;
     if (shown) lines.push(`${competition(shown.fixture, career)}: ${scoreLine(game)}${game.paused ? ' (paused)' : ''}`);
   }
-  lines.push('Click to open');
-  return lines.join('\n\n');
+  return lines;
 }
 
 /** Shown beside the box's title while it's collapsed: "3rd · SCO 1–1 RSA 59'". */
@@ -757,6 +752,34 @@ export function collapsedText(game: Game): string | undefined {
   const place = ordinal(leaguePlace(career).position);
   const score = scoreLine(game);
   return score ? `${place} · ${score}` : place;
+}
+
+/** Each sport's row in the box's list. */
+export function sportRows(games: Game[]): SportRowView[] {
+  return games.map((game) => {
+    const career = game.career;
+    const row = { id: game.sportId, name: game.sport.present.terms.name, paused: game.paused, waiting: !!career?.pending };
+    return career ? { ...row, club: career.clubs[career.playerClubId].name, line: collapsedText(game) } : { ...row, paused: false };
+  });
+}
+
+/** The sport the corner follows: the one last opened, or if that has no career, the first that does. */
+export function statusGame(games: Game[], followed: SportId): Game {
+  const chosen = games.find((g) => g.sportId === followed)!;
+  return chosen.career ? chosen : (games.find((g) => g.career) ?? chosen);
+}
+
+/** The status bar and collapsed box: one sport's score, a bell if another is waiting on the player, and every career on hover. */
+export function boxStatus(games: Game[], followed: SportId, goal = false): { text: string | null; tooltip: string; description?: string } {
+  const game = statusGame(games, followed);
+  const careers = games.filter((g) => g.career);
+  const name = (g: Game) => g.sport.present.terms.name;
+  const waitingElsewhere = careers.some((g) => g !== game && g.career!.pending);
+  let text = statusText(game, goal);
+  if (careers.length > 1 && game.career?.pending) text = `$(bell) ${name(game)}: season over`;
+  if (waitingElsewhere) text = text ? `${text} $(bell)` : `$(bell) ${SEASON_OVER}`;
+  const tooltip = careers.length > 1 ? `${careers.map((g) => `${name(g)}: ${careerLines(g).join('\n\n')}`).join('\n\n---\n\n')}\n\nClick to open` : statusTooltip(game);
+  return { text, tooltip, description: collapsedText(game) };
 }
 
 /** Spots a goal in the player's match between updates, so the status bar can call it out for a few seconds. */

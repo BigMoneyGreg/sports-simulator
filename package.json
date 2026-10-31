@@ -87,7 +87,7 @@
             "5 minutes (a season takes about 3¾ hours in football, 1½ hours in rugby, 1 hour in cricket)"
           ],
           "default": "2m",
-          "description": "Real time one match takes. If your sport doesn't offer this length, the next longer one is used."
+          "description": "Real time one match takes in a new career; a career under way keeps its own, set from the ⏱ button. If the sport doesn't offer this length, the next longer one is used."
         },
         "sportsSimulator.fullTimeOverlay": {
           "type": "boolean",

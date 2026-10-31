@@ -39,8 +39,6 @@ export class Storage implements LockStore {
   private readonly dir: string;
   private readonly sportPath: string;
   private readonly lockPath: string;
-  /** Each save's country, kept until its file changes: the box asks on every refresh. */
-  private readonly careerNames = new Map<SportId, { at: number; name?: string }>();
   private readonly livePath: string;
 
   constructor(
@@ -67,22 +65,6 @@ export class Storage implements LockStore {
   /** Football keeps the file name it has always had. */
   private savePath(sport: SportId = this.activeSport()): string {
     return path.join(this.dir, sport === 'football' ? 'career.json' : `career.${sport}.json`);
-  }
-
-  /** The country each sport's waiting career is with. */
-  careers(): Partial<Record<SportId, string>> {
-    const out: Partial<Record<SportId, string>> = {};
-    for (const sport of SPORT_IDS) {
-      const at = this.savedAt(sport);
-      let known = this.careerNames.get(sport);
-      if (known?.at !== at) {
-        const c = at ? this.load(sport)?.career : undefined;
-        known = { at, name: c?.clubs?.[c.playerClubId]?.name };
-        this.careerNames.set(sport, known);
-      }
-      if (known.name) out[sport] = known.name;
-    }
-    return out;
   }
 
   load(sport: SportId = this.activeSport()): SavedGame | null {

@@ -31,7 +31,7 @@ International football, rugby and cricket sims that live in a small box in your 
 | Match lengths | 30 sec, 2 min, 5 min | 1 min, 2 min, 5 min | 2 min, 5 min |
 | Season at those lengths | 25 min, 1½ hr, 3¾ hr | 20 min, 35 min, 1½ hr | 25 min, 1 hr |
 
-Each sport has its own career, and they wait where you leave them. Only the one you're playing runs. Switch from the Team tab or with **Sports Simulator: Switch Sport**.
+Play one sport or all three at once. The box lists them: start or end each one whenever you like, and open one to see it in full while the others show one line and carry on. Pause any of them from its row. Each career keeps its own match length.
 
 ## Features
 

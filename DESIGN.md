@@ -366,6 +366,17 @@ All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned wi
 - **Table:** promotion, play-off and relegation places highlighted
 - **Rival:** your nation's real rival for the whole career (§10), shown on the Team tab with where it is now and your all-time record against it (*England · League 1, 5th · Played 6 · W3 D1 L2*), and marked ⚔ in the table
 
+### The list of sports
+
+The box lists every sport, one row each. Only one opens fully at a time, beneath its row; clicking it again minimises it, and all can be minimised. A minimised row shows the least worth knowing: country, position and score (*Rugby · Wales / 8th · SAM 14–18 WAL 54'*), *Not started*, or *Season over: one decision waiting*.
+
+- **Start:** a row with no career has a Start button, which opens the setup form.
+- **End:** the open row has an End button, with a confirmation. The career is archived with its history and records, like any finished career. Other sports aren't touched.
+- **Pause:** a minimised row has its own ⏸/▶; the open sport's is in its header.
+- **Everything runs:** opening a sport only changes what you're looking at. Each sport's summer waits for its own answer while the others play on.
+
+The status bar and collapsed box follow the sport last opened, or if that has no career, the first that does; a bell appears if another sport is waiting on you. The hover lists every career, and the badge counts decisions waiting. A season's notification comes unless that sport is open in view.
+
 ### Status bar
 
 `⚽ SCO 2–1 RSA 67'`, which you can click to open the sidebar box.
@@ -448,10 +459,10 @@ The game uses real nations, not clubs: country names, flags and colours are free
 
 ## 11. Settings 🟢 NOW
 
-- Match duration (30 seconds / 2 / 5 minutes), also switchable from the ⏱ button in the box
+- Match duration (30 seconds / 2 / 5 minutes): the length a new career starts from. Each career keeps its own, changed from the ⏱ button in the box
 - Full-time overlay on/off
 - Status bar score on/off
-- Reset career (with confirmation)
+- Reset career (with confirmation): the command palette, for the sport open or being followed. End in the box is the usual way, and keeps the history
 
 ---
 
@@ -560,7 +571,7 @@ Football's numbers and behaviour are unchanged: whole careers on fixed seeds has
 
 **Worlds** come from the rankings: men's rugby, July 2026 (an unofficial copy of the World Rugby table); men's T20I, October 2026. Lower down rugby's list some nations rarely play. Only nations in a sport's world can be chosen there, unlike football's 210. Players' names work as in every sport (§10).
 
-**Saves.** One file per sport, football's still `career.json`; `sport.json` says which is being played, and every window follows it. Only that career's clock runs.
+**Saves.** One file per sport, football's still `career.json`, each written by its own game; `sport.json` holds the sport the corner follows. Every career with no pause on it runs; the window that owns the game runs all their clocks. Careers left waiting from before this were paused once on upgrade, so none started up on its own. A save's match length is an optional field, so the save version stayed at 8 and older saves still load. Refreshing for all three clocks at their fastest costs about 0.1% of one core (measured).
 
 ---
 
@@ -602,6 +613,7 @@ In rough priority order:
 | Renamed from Sideline to Sports Simulator | *Sideline - Live Sports Scores* already exists on the Marketplace; the plain name says what it is |
 | Football first; other sports only after it's finished | Keeps version 1 small |
 | Rugby 6 × 8, 2 up 2 down, no play-offs; cricket T20 only, 5 × 6, 1 up 1 down; cups fitted to the team count | The user's choices after measuring (§13b). Favourites win more than in football because seasons are short |
+| Several sports at once, as a list with one open at a time | The user's design. Careers no longer stop on switching; minimised rows keep it glanceable, and the corner still shows one score rather than three |
 | No format choice in cricket | T20 fits a 2-minute match, has no draws and is the only format with 30 real nations; a choice would be options for the sake of it |
 | Unbeaten-run tracker in status bar: **rejected** | Unnecessary; records page covers it |
 | League picker with a random, mid-weighted start instead of a 0–99 rating | Simpler: choose where to start, not a number; a little uncertainty about how good you are |

@@ -11,6 +11,7 @@ import {
   type PlayoffView,
   type SeasonEndView,
   type SetupView,
+  type SportRowView,
   type TableView,
   type TeamBadge,
   type TimelineView,
@@ -26,6 +27,9 @@ declare function acquireVsCodeApi(): { postMessage(m: ToHost): void; getState():
 
 const vscode = acquireVsCodeApi();
 const app = document.getElementById('app')!;
+/** The open sport's full view; moves into whichever sport is open in the list. */
+const panel = document.createElement('div');
+panel.id = 'panel';
 // The full-time card lives outside #app so re-renders underneath don't restart its animation.
 const overlay = document.createElement('div');
 overlay.className = 'ft-layer';
@@ -42,8 +46,12 @@ interface UiState {
 
 const ui: UiState = { tab: 'match', tableTier: null, cup: 'cup', ...((vscode.getState() as Partial<UiState>) ?? {}) };
 let view: View | null = null;
-/** The side to rebuild, picked but not yet confirmed, and the season it belongs to. */
-const summer = { season: 0, focus: null as Focus | null, sent: false };
+let rows: SportRowView[] = [];
+let open: SportId | null = null;
+/** The sport last shown in full, so opening another starts on your own league. */
+let shownSport: SportId | null = null;
+/** The side to rebuild, picked but not yet confirmed, and the sport and season it belongs to. */
+const summer = { sport: null as SportId | null, season: 0, focus: null as Focus | null, sent: false };
 
 const setup = {
   sport: null as SportId | null,
@@ -94,7 +102,7 @@ function paintSwatches(root: ParentNode = app): void {
 // ---------------------------------------------------------------------------
 // Setup
 
-type Option = [value: string, label: string, sub?: string, icon?: string];
+type Option = [value: string, label: string, sub?: string];
 
 /** Plain line icons in the text colour, one per sport. */
 const SPORT_ICONS: Record<SportId, string> = {
@@ -110,8 +118,8 @@ function sportIcon(sport: SportId): string {
 function seg(name: string, options: Option[], value: string, disabled = false): string {
   return `<div class="seg" role="radiogroup" data-name="${name}">${options
     .map(
-      ([val, label, sub, icon]) =>
-        `<button type="button" role="radio" aria-checked="${val === value}" class="${val === value && !disabled ? 'on' : ''}" data-value="${val}"${disabled ? ' disabled' : ''}>${icon ?? ''}${esc(label)}${
+      ([val, label, sub]) =>
+        `<button type="button" role="radio" aria-checked="${val === value}" class="${val === value && !disabled ? 'on' : ''}" data-value="${val}"${disabled ? ' disabled' : ''}>${esc(label)}${
           sub ? `<span class="sub-label">${esc(sub)}</span>` : ''
         }</button>`,
     )
@@ -145,11 +153,10 @@ function renderSetup(v: SetupView): void {
   }
   const chosen = v.nations.find((n) => n.code === setup.team);
   const leagueOptions = Array.from({ length: v.leagues }, (_, i) => i + 1).map((t): Option => [String(t), `L${t}`, chosen?.tier === t ? 'Usual' : undefined]);
-  app.dataset.mode = 'setup';
-  app.innerHTML = `
+  panel.dataset.mode = 'setup';
+  panel.innerHTML = `
   <div class="setup card">
-    <h2>New career</h2>
-    <div class="field">Sport ${seg('sport', v.sports.map((s): Option => [s.id, s.name, s.career, sportIcon(s.id)]), v.sport)}</div>
+    <h2>New ${esc(v.terms.name.toLowerCase())} career</h2>
     <p class="muted">Pick your country and where it starts. Every match plays on its own; each summer you make one decision that shapes your team.</p>
 
     <div class="field">Country
@@ -164,7 +171,49 @@ function renderSetup(v: SetupView): void {
 
     <button type="button" id="start" class="primary" ${chosen ? '' : 'disabled'}>${chosen ? 'Start career' : 'Pick a country'}</button>
   </div>`;
-  paintSwatches();
+  paintSwatches(panel);
+}
+
+// ---------------------------------------------------------------------------
+// The list of sports
+
+/** A row's parts that rarely change; its line changes every tick and is written on its own. */
+function rowHtml(r: SportRowView, isOpen: boolean): string {
+  const control = isOpen
+    ? r.club
+      ? `<button type="button" class="chip" data-end="${r.id}" title="End this career">End</button>`
+      : ''
+    : !r.club
+      ? `<button type="button" class="chip" data-open="${r.id}">Start</button>`
+      : r.waiting
+        ? ''
+        : `<button type="button" class="chip icon" data-pause="${r.id}" title="${r.paused ? 'Play' : 'Pause'}" aria-label="${r.paused ? 'Play' : 'Pause'} ${esc(r.name)}">${r.paused ? '▶' : '⏸'}</button>`;
+  return `<div class="sport-row${isOpen ? ' open' : ''}${r.waiting ? ' waiting' : ''}">
+    <button type="button" class="row-main" data-open="${r.id}" aria-expanded="${isOpen}">
+      <span class="chevron" aria-hidden="true"></span>${sportIcon(r.id)}
+      <span class="row-text"><span class="row-name">${esc(r.name)}${r.club ? `<span class="muted"> · ${esc(r.club)}</span>` : ''}</span><span class="row-line muted small"></span></span>
+    </button>${control}
+  </div>`;
+}
+
+/**
+ * The rows stay in place and only their lines change: a button replaced between
+ * mouse-down and mouse-up would swallow the click.
+ */
+function renderRows(): void {
+  if (app.querySelectorAll(':scope > .sport').length !== rows.length) {
+    app.innerHTML = rows.map((r) => `<section class="sport" data-sport="${r.id}"><div class="row-slot"></div></section>`).join('');
+  }
+  for (const r of rows) {
+    const section = app.querySelector<HTMLElement>(`:scope > [data-sport="${r.id}"]`)!;
+    const isOpen = open === r.id;
+    patch(section.querySelector<HTMLElement>('.row-slot')!, [rowHtml(r, isOpen)]);
+    const line = r.waiting ? 'Season over: one decision waiting' : isOpen ? '' : r.club ? (r.line ?? '') : 'Not started';
+    const lineEl = section.querySelector<HTMLElement>('.row-line')!;
+    if (lineEl.textContent !== line) lineEl.textContent = line;
+    if (isOpen && panel.parentElement !== section) section.appendChild(panel);
+  }
+  if (!open) panel.remove();
 }
 
 // ---------------------------------------------------------------------------
@@ -210,9 +259,9 @@ function patch(container: HTMLElement, parts: string[]): void {
 
 function renderGame(v: GameView): void {
   renderOverlay(v.seasonEnd ? null : v.fullTime);
-  if (app.dataset.mode !== 'game') {
-    app.innerHTML = '<div id="top"></div><div id="main"></div>';
-    app.dataset.mode = 'game';
+  if (panel.dataset.mode !== 'game') {
+    panel.innerHTML = '<div id="top"></div><div id="main"></div>';
+    panel.dataset.mode = 'game';
   }
   // The narrowest layout shows only the header, except when a summer choice is waiting.
   app.classList.toggle('needs-choice', !!v.seasonEnd);
@@ -227,7 +276,7 @@ function renderGame(v: GameView): void {
   const nav = `<nav class="tabs" role="tablist">${tabs
     .map(([id, label]) => `<button type="button" role="tab" aria-selected="${ui.tab === id}" class="${ui.tab === id ? 'on' : ''}" data-tab="${id}">${label}</button>`)
     .join('')}</nav>`;
-  patch(document.getElementById('main')!, v.seasonEnd ? [seasonEndHtml(v.seasonEnd, v.terms)] : [nav, ...panelParts(v)]);
+  patch(document.getElementById('main')!, v.seasonEnd ? [seasonEndHtml(v.seasonEnd, v.sport, v.terms)] : [nav, ...panelParts(v)]);
   paintSwatches();
   trackGoals(v);
   showFlash();
@@ -300,7 +349,8 @@ function panelParts(v: GameView): string[] {
     case 'match':
       return matchParts(v);
     case 'table': {
-      const tier = ui.tableTier ?? v.playerTier;
+      // A league picked in a sport with more leagues than this one doesn't apply here.
+      const tier = ui.tableTier !== null && ui.tableTier <= v.tables.length ? ui.tableTier : v.playerTier;
       const playoff = v.playoffs.find((p) => p.tier === tier);
       const chips = `<div class="seg chips">${v.tables
         .map((x) => {
@@ -445,7 +495,7 @@ function cupParts(v: GameView): string[] {
   return [toggle, status, run, ...rounds, groups, past];
 }
 
-function seasonEndHtml(e: SeasonEndView, terms: SportTerms): string {
+function seasonEndHtml(e: SeasonEndView, sport: SportId, terms: SportTerms): string {
   const r = e.report;
   const verdict =
     e.performance === 'above'
@@ -453,7 +503,7 @@ function seasonEndHtml(e: SeasonEndView, terms: SportTerms): string {
       : e.performance === 'below'
         ? `You fell short: expected ${ordinal(e.expected)}, finished ${ordinal(e.position)}. Less to build with this summer.`
         : `You finished where you were expected: ${ordinal(e.position)}.`;
-  if (summer.season !== e.season) Object.assign(summer, { season: e.season, focus: null, sent: false });
+  if (summer.sport !== sport || summer.season !== e.season) Object.assign(summer, { sport, season: e.season, focus: null, sent: false });
   const option = (o: SeasonEndView['question']['options'][number]) => `<button type="button" role="radio" aria-checked="${summer.focus === o.focus}" class="focus ${o.focus} ${summer.focus === o.focus ? 'on' : ''}" data-focus="${o.focus}"${summer.sent ? ' disabled' : ''}>
       <strong>${esc(o.title)}</strong>${o.line ? `<span class="muted small">${esc(o.line)}</span>` : ''}
     </button>`;
@@ -591,34 +641,52 @@ function clubHtml(v: GameView): string {
             .join('')}</ol>`
         : '<p class="muted small">Your first season is under way.</p>'
     }
-    <p class="small"><button type="button" class="link" id="resetCareer">Reset career…</button></p>
   </div>
-  <div class="card">
-    <h3 class="sub first">Play another sport</h3>
-    <p class="muted small">This career waits where you leave it.</p>
-    ${seg('sport', v.sports.map((s): Option => [s.id, s.name, s.id === v.sport ? 'Playing' : (s.career ?? 'New')]), v.sport)}
-  </div>`;
+`;
 }
 
 // ---------------------------------------------------------------------------
 // Rendering and events
 
 function render(): void {
-  if (!view) return;
+  renderRows();
+  if (!view) {
+    renderOverlay(null);
+    app.classList.remove('needs-choice');
+    return;
+  }
+  if (open !== shownSport) {
+    shownSport = open;
+    ui.tableTier = null;
+    scrollFixtures = true;
+  }
   if (view.screen === 'setup') {
     renderOverlay(null);
-    if (app.dataset.mode !== 'setup' || setup.sport !== view.setup.sport) renderSetup(view.setup);
+    app.classList.remove('needs-choice');
+    if (panel.dataset.mode !== 'setup' || setup.sport !== view.setup.sport) renderSetup(view.setup);
     return;
   }
   setup.initialised = false;
   renderGame(view);
 }
 
+/** The sport the open panel belongs to. */
+function openSport(): SportId {
+  return open!;
+}
+
 app.addEventListener('click', (e) => {
   const target = e.target as HTMLElement;
   const button = target.closest('button');
   if (!button) return;
-  if (button.dataset.tab) {
+  if (button.dataset.open) {
+    // Only one opens at a time; clicking the open one minimises it.
+    send({ type: 'openSport', sport: button.dataset.open === open ? null : (button.dataset.open as SportId) });
+  } else if (button.dataset.pause) {
+    send({ type: 'togglePause', sport: button.dataset.pause as SportId });
+  } else if (button.dataset.end) {
+    send({ type: 'endCareer', sport: button.dataset.end as SportId });
+  } else if (button.dataset.tab) {
     ui.tab = button.dataset.tab as Tab;
     scrollFixtures = true;
     saveUi();
@@ -637,19 +705,17 @@ app.addEventListener('click', (e) => {
   } else if (button.id === 'nextSeason' && summer.focus && !summer.sent) {
     summer.sent = true;
     render();
-    send({ type: 'chooseFocus', focus: summer.focus });
+    send({ type: 'chooseFocus', sport: openSport(), focus: summer.focus });
   } else if (button.dataset.copy) {
     send({ type: 'copy', text: button.dataset.copy });
   } else if (button.id === 'newCareer') {
-    send({ type: 'newCareer' });
-  } else if (button.id === 'resetCareer') {
-    send({ type: 'resetCareer' });
+    send({ type: 'endCareer', sport: openSport() });
   } else if (button.id === 'speed') {
-    send({ type: 'setDuration', duration: button.dataset.next as Duration });
+    send({ type: 'setDuration', sport: openSport(), duration: button.dataset.next as Duration });
   } else if (button.id === 'pause') {
-    send({ type: 'togglePause' });
+    send({ type: 'togglePause', sport: openSport() });
   } else if (button.id === 'start' && setup.team) {
-    send({ type: 'startCareer', team: setup.team, league: setup.league, duration: setup.duration });
+    send({ type: 'startCareer', sport: openSport(), team: setup.team, league: setup.league, duration: setup.duration });
   } else if (button.dataset.team && view?.screen === 'setup') {
     setup.team = button.dataset.team;
     setup.league = view.setup.nations.find((n) => n.code === setup.team)!.tier;
@@ -657,10 +723,6 @@ app.addEventListener('click', (e) => {
   } else if (button.closest('.seg')?.getAttribute('data-name')) {
     const group = button.closest('.seg')!.getAttribute('data-name')!;
     const value = button.dataset.value!;
-    if (group === 'sport') {
-      send({ type: 'switchSport', sport: value as SportId });
-      return;
-    }
     if (group === 'league') setup.league = Number(value);
     if (group === 'duration') setup.duration = value as Duration;
     if (view?.screen === 'setup') renderSetup(view.setup);
@@ -679,7 +741,7 @@ app.addEventListener('input', (e) => {
 window.addEventListener('message', (event: MessageEvent<ToWebview>) => {
   const message = event.data;
   if (message.type === 'view') {
-    view = message.view;
+    ({ rows, open, view } = message);
     render();
   }
 });

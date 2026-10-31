@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { allocatePoints, chooseFocus, endSeason, focusAllocation, newCareer, nextRound, playRound, teamSheet, type Career } from '../src/core/career';
 import { rating } from '../src/core/club';
 import { cupStages } from '../src/core/cups';
-import { CRICKET, FOOTBALL, FORMATS, RUGBY, SPORT_IDS, teamCount } from '../src/core/format';
+import { CRICKET, FOOTBALL, FORMATS, RUGBY, SPORT_IDS, teamCount, type SportId } from '../src/core/format';
 import { band, emptyTable, goalRanks, recordResult, sortTable, startRating, zone } from '../src/core/league';
 import { totalRating } from '../src/core/ratings';
 import { Rng } from '../src/core/rng';
 import type { TeamSheet } from '../src/core/sport';
 import { fitDuration, Game, migrate, SAVE_VERSION, tickMs, type SavedGame, type Scheduler } from '../src/extension/game';
-import { buildView, collapsedText, GoalWatch, seasonClue, statusText, summerQuestion } from '../src/extension/viewModel';
+import { boxStatus, buildView, collapsedText, GoalWatch, seasonClue, sportRows, statusGame, statusText, summerQuestion } from '../src/extension/viewModel';
 import { SPORTS } from '../src/sports';
 import { CRICKET_ORDER, CRICKET_RIVALS } from '../src/sports/cricket/data';
 import { createMatch as createCricket, isFinished as cricketDone, outcome as cricketOutcome, step as cricketStep, TUNING as CRICKET_TUNING, type CricketMatch } from '../src/sports/cricket/match';
@@ -627,6 +627,88 @@ describe('sports in the save', () => {
     again.load(null, false);
     again.load(older, false);
     expect(again.duration).toBe('2m');
+  });
+
+  describe('several sports at once', () => {
+    const setUp = (sports: SportId[] = ['football', 'rugby', 'cricket']) => {
+      const clocks = new Map<SportId, ReturnType<typeof manual>>();
+      const saved = new Map<SportId, number>();
+      const games = sports.map((id) => {
+        const clock = manual();
+        clocks.set(id, clock);
+        const game = new Game({ save: () => void saved.set(id, (saved.get(id) ?? 0) + 1), changed: () => {} }, clock.scheduler);
+        game.selectSport(id);
+        return game;
+      });
+      const game = (id: SportId) => games.find((g) => g.sportId === id)!;
+      return { games, game, clocks, saved };
+    };
+    const start = (g: Game, team: string, seed = 5) => g.start({ rating: 55, difficulty: 'medium', seed, team });
+
+    it('runs each career on its own clock, and pausing or ending one leaves the others alone', () => {
+      const { game, clocks } = setUp();
+      start(game('football'), 'SCO');
+      start(game('rugby'), 'WAL');
+      clocks.get('football')!.run(5);
+      clocks.get('rugby')!.run(5);
+      game('rugby').togglePause();
+      expect(game('football').paused).toBe(false);
+      const clockAt = statusText(game('football'));
+      clocks.get('football')!.run(5);
+      expect(statusText(game('football'))).not.toBe(clockAt);
+      game('football').reset();
+      expect(game('football').career).toBeNull();
+      expect(game('rugby').career).not.toBeNull();
+      expect(game('cricket').career).toBeNull();
+    });
+
+    it('gives a minimised sport one line, or none until it starts', () => {
+      const { games, game, clocks } = setUp();
+      start(game('football'), 'SCO');
+      game('football').togglePause();
+      start(game('rugby'), 'WAL');
+      clocks.get('rugby')!.run(3);
+      const [football, rugby, cricket] = sportRows(games);
+      expect(football).toMatchObject({ id: 'football', name: 'Football', club: 'Scotland', paused: true, waiting: false });
+      expect(rugby.line).toMatch(/^\d+(st|nd|rd|th) · /);
+      expect(cricket).toEqual({ id: 'cricket', name: 'Cricket', paused: false, waiting: false });
+    });
+
+    it('marks a sport whose summer decision is waiting, and the others play on', () => {
+      const { games, game, clocks } = setUp();
+      start(game('rugby'), 'WAL');
+      start(game('cricket'), 'SRI');
+      const rugby = game('rugby');
+      while (rugby.phase !== 'seasonOver') clocks.get('rugby')!.run(1);
+      expect(sportRows(games)[1]).toMatchObject({ waiting: true, line: 'Season over' });
+      expect(game('cricket').phase).not.toBe('seasonOver');
+      clocks.get('cricket')!.run(3);
+      expect(game('cricket').phase).toBe('live');
+      const status = boxStatus(games, 'cricket');
+      expect(status.text).toMatch(/\$\(bell\)$/);
+      expect(boxStatus(games, 'rugby').text).toBe('$(bell) Rugby: season over');
+    });
+
+    it('follows the sport last opened, or the first with a career if that has none', () => {
+      const { games, game, clocks } = setUp();
+      expect(boxStatus(games, 'rugby').text).toBe('$(trophy) Start a career');
+      start(game('cricket'), 'SRI');
+      clocks.get('cricket')!.run(2);
+      expect(statusGame(games, 'rugby')).toBe(game('cricket'));
+      start(game('rugby'), 'WAL');
+      expect(statusGame(games, 'rugby')).toBe(game('rugby'));
+    });
+
+    it('lists every career on hover', () => {
+      const { games, game } = setUp();
+      start(game('football'), 'SCO');
+      expect(boxStatus(games, 'football').tooltip).toMatch(/^\*\*Scotland\*\*/);
+      start(game('rugby'), 'WAL');
+      const { tooltip } = boxStatus(games, 'football');
+      expect(tooltip).toMatch(/Football: \*\*Scotland\*\*/);
+      expect(tooltip).toMatch(/Rugby: \*\*Wales\*\*/);
+      expect(tooltip.match(/Click to open/g)).toHaveLength(1);
+    });
   });
 
   it('keeps a career in its own sport after switching away and back', () => {

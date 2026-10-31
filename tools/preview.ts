@@ -5,15 +5,15 @@
  *   npm run build && npx tsx tools/preview.ts [--light]
  *   open dist/preview/index.html?screen=match
  *
- * Screens: setup, match, table, fixtures, club, cups, fullTime, seasonOver, championship, clubLater, championshipLater,
+ * Screens: list (every sport minimised), setup, match, table, fixtures, club, cups, fullTime, seasonOver, championship, clubLater, championshipLater,
  * and the same for the other sports with a prefix, such as rugby_match or cricket_seasonOver.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fillAllocation } from '../src/core/career';
 import { Game, type Scheduler } from '../src/extension/game';
-import { buildView } from '../src/extension/viewModel';
-import type { View } from '../src/shared/view';
+import { buildView, sportRows } from '../src/extension/viewModel';
+import type { SportRowView, View } from '../src/shared/view';
 
 const root = resolve(process.cwd());
 const out = join(root, 'dist', 'preview');
@@ -36,7 +36,8 @@ const run = (n = 1) => {
 const game = new Game({ save: () => {}, changed: () => {} }, manual);
 // Read through a function so TypeScript doesn't narrow the phase across calls that change it.
 const phase = () => game.phase;
-const views: Record<string, { view: View; tab?: string; cup?: string }> = {};
+const views: Record<string, { view: View | null; tab?: string; cup?: string; rows?: SportRowView[]; open?: string | null }> = {};
+const sampleRows: Partial<Record<string, SportRowView>> = {};
 views.setup = { view: buildView(game) };
 
 game.start({ rating: 55, difficulty: 'medium', seed: 11, team: 'SCO' });
@@ -54,6 +55,7 @@ views.club = { view: live, tab: 'club' };
 views.cups = { view: live, tab: 'cups' };
 
 while (phase() === 'live') run();
+sampleRows.football = sportRows([game])[0];
 views.fullTime = { view: buildView(game), tab: 'match' };
 
 while (phase() !== 'seasonOver') run();
@@ -84,6 +86,7 @@ for (const [sport, team, seed] of [['rugby', 'WAL', 7], ['cricket', 'SRI', 7]] a
   g.selectSport(sport);
   g.load(null);
   views[`${sport}_setup`] = { view: buildView(g) };
+  if (sport === 'rugby') sampleRows.rugbyNone = sportRows([g])[0];
   g.start({ rating: 55, difficulty: 'medium', seed, team });
   for (let md = 0; md < 4; md++) {
     while (at() === 'live') run();
@@ -95,10 +98,12 @@ for (const [sport, team, seed] of [['rugby', 'WAL', 7], ['cricket', 'SRI', 7]] a
   views[`${sport}_table`] = { view: now, tab: 'table' };
   views[`${sport}_fixtures`] = { view: now, tab: 'fixtures' };
   views[`${sport}_cups`] = { view: now, tab: 'cups' };
+  if (sport === 'rugby') sampleRows.rugby = sportRows([g])[0];
   while (at() === 'live') run();
   views[`${sport}_fullTime`] = { view: buildView(g), tab: 'match' };
   while (at() !== 'seasonOver') run();
   views[`${sport}_seasonOver`] = { view: buildView(g), tab: 'match' };
+  if (sport === 'cricket') sampleRows.cricketWaiting = sportRows([g])[0];
   for (let season = 0; season < 3; season++) {
     g.chooseFocus(season % 2 ? 'attack' : 'defence');
     while (at() !== 'seasonOver') run();
@@ -109,6 +114,15 @@ for (const [sport, team, seed] of [['rugby', 'WAL', 7], ['cricket', 'SRI', 7]] a
   views[`${sport}_club`] = { view: buildView(g), tab: 'club' };
   views[`${sport}_championshipLater`] = { view: buildView(g), tab: 'cups', cup: 'championship' };
 }
+// Every screen sits in the list: its own sport open, the others minimised.
+const { football, rugby, rugbyNone, cricketWaiting } = sampleRows as Record<string, SportRowView>;
+for (const entry of Object.values(views)) {
+  const v = entry.view!;
+  const sport = v.screen === 'setup' ? v.setup.sport : v.sport;
+  entry.open = sport;
+  entry.rows = [football, sport === 'rugby' && v.screen === 'setup' ? rugbyNone : rugby, cricketWaiting];
+}
+views.list = { view: null, open: null, rows: [{ ...football, paused: true }, rugbyNone, cricketWaiting] };
 writeFileSync(join(out, 'views.js'), `window.__views = ${JSON.stringify(views)};`);
 
 const dark = {
@@ -166,7 +180,7 @@ writeFileSync(
   window.acquireVsCodeApi = () => ({ postMessage() {}, getState: () => ({ tab: entry.tab || 'match', cup: entry.cup || 'cup' }), setState() {} });
 </script>
 <script src="../webview.js"></script>
-<script>window.postMessage({ type: 'view', view: entry.view }, '*');</script>
+<script>window.postMessage({ type: 'view', rows: entry.rows, open: entry.open, view: entry.view }, '*');</script>
 </body></html>`,
 );
 console.log(`Wrote ${join(out, 'index.html')} (${Object.keys(views).join(', ')})`);

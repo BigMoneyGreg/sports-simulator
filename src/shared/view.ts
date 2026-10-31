@@ -178,11 +178,17 @@ export interface HeaderView {
   durations: Duration[];
 }
 
-/** A sport to choose, and whether a career is waiting in it. */
-export interface SportOption {
+/** One sport in the box's list: the least worth knowing while it's minimised. */
+export interface SportRowView {
   id: SportId;
   name: string;
-  career?: string;
+  /** The country this sport's career is with; none until one starts. */
+  club?: string;
+  /** "3rd · SCO 1–1 RSA 59'". */
+  line?: string;
+  paused: boolean;
+  /** The summer's decision is waiting. */
+  waiting: boolean;
 }
 
 export interface NationOption {
@@ -195,7 +201,6 @@ export interface NationOption {
 
 export interface SetupView {
   sport: SportId;
-  sports: SportOption[];
   terms: SportTerms;
   /** How many leagues this sport's world has. */
   leagues: number;
@@ -275,7 +280,6 @@ export interface SeasonEndView {
 export interface GameView {
   screen: 'game';
   sport: SportId;
-  sports: SportOption[];
   terms: SportTerms;
   header: HeaderView;
   match: LiveMatchView | null;
@@ -335,13 +339,14 @@ export type View = { screen: 'setup'; setup: SetupView } | GameView;
 
 export type ToHost =
   | { type: 'ready' }
-  | { type: 'startCareer'; team: string; league: number; duration: Duration }
-  | { type: 'togglePause' }
-  | { type: 'setDuration'; duration: Duration }
-  | { type: 'switchSport'; sport: SportId }
-  | { type: 'chooseFocus'; focus: Focus }
+  | { type: 'startCareer'; sport: SportId; team: string; league: number; duration: Duration }
+  | { type: 'togglePause'; sport: SportId }
+  | { type: 'setDuration'; sport: SportId; duration: Duration }
+  /** Opens this sport in the list, closing whichever was open; null minimises them all. */
+  | { type: 'openSport'; sport: SportId | null }
+  | { type: 'chooseFocus'; sport: SportId; focus: Focus }
   | { type: 'copy'; text: string }
-  | { type: 'newCareer' }
-  | { type: 'resetCareer' };
+  | { type: 'endCareer'; sport: SportId };
 
-export type ToWebview = { type: 'view'; view: View };
+/** Every sport's row, and the full view of the one open. */
+export type ToWebview = { type: 'view'; rows: SportRowView[]; open: SportId | null; view: View | null };

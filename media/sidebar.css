@@ -593,11 +593,6 @@ input:focus-visible {
   vertical-align: -2px;
 }
 
-.seg .sport-icon {
-  margin-right: 4px;
-}
-
-
 .card.yellow,
 .card.red {
   display: inline-block;
@@ -1350,6 +1345,88 @@ body.vscode-light .focus.defence strong {
   }
 }
 
+/* The list of sports: one row each, and the open one's full view beneath its row. */
+.sport-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  padding: 2px 6px 2px 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.sport-row.waiting {
+  border-color: var(--accent);
+}
+
+.row-main {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 4px 0 4px 8px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chevron {
+  flex: none;
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 5px solid currentColor;
+  opacity: 0.7;
+}
+
+.open .chevron {
+  transform: rotate(90deg);
+}
+
+.row-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.row-name,
+.row-line {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.row-name {
+  font-weight: 600;
+}
+
+.row-name .muted {
+  font-weight: 400;
+}
+
+.row-line:empty {
+  display: none;
+}
+
+.waiting .row-line {
+  color: var(--vscode-foreground);
+}
+
+.sport-row .chip {
+  flex: none;
+}
+
+#panel {
+  margin-bottom: 8px;
+}
+
 /* Header stays in view while the table or fixtures scroll underneath. */
 #top {
   position: sticky;
@@ -1357,8 +1434,8 @@ body.vscode-light .focus.defence strong {
   z-index: 5;
   /* Own block so the header's bottom margin stays inside; bleeds over the body padding. */
   display: flow-root;
-  margin: calc(-1 * var(--pad-top)) calc(-1 * var(--pad-x)) 0;
-  padding: var(--pad-top) var(--pad-x) 0;
+  margin: 0 calc(-1 * var(--pad-x));
+  padding: 2px var(--pad-x) 0;
   background: var(--vscode-sideBar-background, var(--vscode-editor-background));
 }
 

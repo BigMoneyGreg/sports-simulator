@@ -1,7 +1,7 @@
 import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { SavedGame } from '../src/extension/game';
 import { Storage } from '../src/extension/storage';
 
@@ -100,20 +100,6 @@ describe('storage', () => {
     s.setActiveSport('rugby');
     expect(s.load()).toBeNull();
     expect(s.load('football')).toEqual(save(9));
-  });
-
-  it('names each sport\'s waiting career, and only re-reads a save that has changed', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'ss-storage-'));
-    const s = new Storage(dir, memento());
-    const named = (name: string) => ({ version: 8, career: { playerClubId: 0, clubs: [{ name }] }, live: null, paused: false }) as unknown as SavedGame;
-    expect(s.careers()).toEqual({});
-    s.save(named('Scotland'));
-    s.setActiveSport('rugby');
-    s.save(named('Wales'));
-    expect(s.careers()).toEqual({ football: 'Scotland', rugby: 'Wales' });
-    const load = vi.spyOn(s, 'load');
-    s.careers();
-    expect(load).not.toHaveBeenCalled();
   });
 
   it('saves each sport to its own file, whichever is active', () => {
