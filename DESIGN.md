@@ -361,12 +361,14 @@ All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned wi
 - **Live match:** scoreboard (crests, score, clock) and a match report like a real game summary: goals prominent, cards small and greyed, half-time and full-time markers, newest first. No running commentary
 - **Tabs:** Match · Table · Fixtures · Cups · Team (stats, trophies, history)
 - **Cups tab:** a two-line status naming your next tie and when it's played (*Still in · Round of 32 v Brazil (away)* / *After matchday 12*), your run once it's more than one tie, the latest round in full, earlier rounds and finished groups folded away, past winners
-- **Fixtures:** one short label per matchday (*MD 7*, *C32*, *WCQF*, *PO SF1*), full name on hover; cup rows marked with an accent edge and listed as soon as they're drawn
+- **Fixtures:** one short label per matchday (*MD 7*, *Cup 32*, *WC QF*, *PO SF1*), full name on hover; cup rows marked with an accent edge and listed as soon as they're drawn
 - **History:** one row a season, with the cup runs on one short line (*Cup: R64 · WC: Groups*)
 - **Table:** promotion, play-off and relegation places highlighted
 - **Rival:** your nation's real rival for the whole career (§10), shown on the Team tab with where it is now and your all-time record against it (*England · League 1, 5th · Played 6 · W3 D1 L2*), and marked ⚔ in the table
 
 ### The list of sports
+
+Each sport has its own colour (football green, rugby orange, cricket purple, Honours yellow), in a border round its row and its open page.
 
 The box lists every sport, one row each. Only one opens fully at a time, beneath its row; clicking it again minimises it, and all can be minimised. A minimised row shows the least worth knowing: country, position and score (*Rugby · Wales / 8th · SAM 14–18 WAL 54'*), *Not started*, or *Season over: one decision waiting*.
 
@@ -375,9 +377,9 @@ The box lists every sport, one row each. Only one opens fully at a time, beneath
 - **Pause:** a minimised row has its own ⏸/▶; the open sport's is in its header.
 - **Everything runs:** opening a sport only changes what you're looking at. Each sport's summer waits for its own answer while the others play on.
 
-The status bar and collapsed box follow the sport last opened, or if that has no career, the first that does; a bell appears if another sport is waiting on you. With several careers the score names its sport (*Rugby: WAL 12–7 ENG 54'*). The hover lists every career, and the badge counts decisions waiting. A season's notification comes unless that sport is open in view, or another sport is already waiting: at the fastest speeds three sports would otherwise bring one about every 8 minutes.
+The status bar and collapsed box follow the sport last opened, or if that has no career, the first that does; a bell appears if another sport is waiting on you. With several careers the score names its sport (*Rugby: WAL 12–7 ENG 54'*). The hover lists every career, and the badge counts decisions waiting. When a season ends a short message says so and goes by itself after 6 seconds (*Rugby season 3 finished: 2nd in League 3, promoted. Decision waiting.*), unless that sport is open in view. The decision is only ever made in the box; the badge, bell and pinned line stay until it is.
 
-While something is open, a sport waiting on you is also pinned to the top of the box (*Cricket: one decision waiting*), because a long page can push its row out of sight. Clicking it opens that sport.
+While something is open, a sport waiting on you is also pinned to the top of the box (*Cricket: season over, decision waiting*), because a long page can push its row out of sight. Clicking it opens that sport.
 
 ### Honours
 
@@ -582,6 +584,10 @@ Football's numbers and behaviour are unchanged: whole careers on fixed seeds has
 
 **Rugby's engine.** Overall strength sets the margin and levels off for huge gaps; team shape only moves how open the game is. Letting attack v defence do both meant two attacking sides traded tries and the better one barely showed (favourites stalled at 74%, with thrashings).
 
+**Batting order (31 Oct 2026).** Every place in the order now differs, replacing one step down at number 8. Measured over 6,000 matches between level sides: runs per dismissal fall from about 36 for the openers to 24 at number 5, 9 at number 8 and 2.6 at number 11; the chance of getting out on a ball rises from 4% to 27%. A typical total stays about 156 (was 155), and favourites still win 66%.
+
+**Cricket's scorecard.** A real scorecard replaces the match report in cricket: how each batter got out, runs and balls, who's yet to bat and the bowling figures, with the finished innings folded away.
+
 **Cricket's engine.** The ball-by-ball simulation: a chasing side takes risks when behind the rate and plays safe when ahead. The summer clue ranks run rates, not totals, because a side stops batting once it has won: measured over 720 seasons, ranks pointed the right way 89% of the time when not level, against 78% for totals (they are level more often, 58% v 32%, and then the leavers decide). A side bowled out counts its full 20 overs, the real rule. Every ball is its own tick, so it can be followed live: 0.5 sec a ball at 2-minute matches. Favourites at about 66% match the one, unverified, figure found for real T20.
 
 **AI titles, re-measured (31 Oct 2026).** Most titles for one AI side in 40 seasons: rugby median 7, worst 13; cricket median 8, worst 16 (40 of 40 balance targets met). With 8 or 6 sides in a league, an even share of 40 titles is already 5 or nearly 7, so a typical top side is close to what chance alone gives, and the worst cases are rare. No change made.
@@ -635,6 +641,8 @@ In rough priority order:
 | Several sports at once, as a list with one open at a time | The user's design. Careers no longer stop on switching; minimised rows keep it glanceable, and the corner still shows one score rather than three |
 | Reset honours leaves running careers alone | Honours are a side record: wiping them shouldn't cost seasons of play, and End and Reset already deal with careers one at a time |
 | One End… button instead of separate End and Reset; the Reset command removed | Two ways to stop a career needed explaining; asking at the moment makes the difference clear. VS Code's pop-ups can't be red, so these questions live in the box |
+| Season-end message is one short line that goes by itself; no answering from it | A big pop-up with the decision in it was too much. See it, then go and act in the box |
+| Times shown with ~ (*~2 min*, *Season ~25 min*) | A season's length is an estimate, and a chase or a knockout changes a match's |
 | Honours list only what's been earned | Players work things out; no greyed-out goals or checklist |
 | No format choice in cricket | T20 fits a 2-minute match, has no draws and is the only format with 30 real nations; a choice would be options for the sake of it |
 | Unbeaten-run tracker in status bar: **rejected** | Unnecessary; records page covers it |

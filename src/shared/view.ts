@@ -2,12 +2,12 @@
 // The webview only displays what it is sent; all game logic stays in the host.
 
 import type { SportId } from '../core/format';
-import type { SportTerms } from '../core/sport';
+import type { InningsCard, SportTerms } from '../core/sport';
 
 export type Duration = '30s' | '1m' | '2m' | '5m';
 /** Every match length in any sport; each sport offers its own few. */
 export const DURATIONS: Duration[] = ['30s', '1m', '2m', '5m'];
-export const DURATION_LABELS: Record<Duration, string> = { '30s': '30 sec', '1m': '1 min', '2m': '2 min', '5m': '5 min' };
+export const DURATION_LABELS: Record<Duration, string> = { '30s': '~30 sec', '1m': '~1 min', '2m': '~2 min', '5m': '~5 min' };
 export type Focus = 'attack' | 'defence';
 export type Zone = 'champion' | 'promotion' | 'playoff' | 'relegation' | null;
 
@@ -54,6 +54,8 @@ export interface LiveMatchView {
   /** The player's men banned for this match, e.g. "Ross". */
   suspended?: string[];
   timeline: TimelineView[];
+  /** Shown instead of the timeline in a sport that has one, latest innings first. */
+  scorecard?: InningsCard[];
 }
 
 export interface FullTimeView {

@@ -9,8 +9,6 @@ export const rugbyPresenter: SportPresenter<RugbyMatch> = {
     defence: 'Defence',
     clueScored: 'for points scored',
     clueConceded: 'for points conceded',
-    scoredWord: 'Scored',
-    concededWord: 'conceded',
     diffShort: 'PD',
     diffLong: 'Points difference',
     draws: true,
@@ -28,7 +26,7 @@ export const rugbyPresenter: SportPresenter<RugbyMatch> = {
       "Every summer some players retire or are dropped, and the squad loses strength, more among the backs or the forwards. Who's leaving shows where most of it went; your season shows where you were already short.",
       "Whatever the question, one answer strengthens the attack and the other the defence. Let one side fall too far behind and opponents exploit it, and at the top there's less room for a weak side.",
     ],
-    seasonLabels: { '1m': 'Season 20 min', '2m': 'Season 35 min', '5m': 'Season 1½ hr' },
+    seasonLabels: { '1m': 'Season ~20 min', '2m': 'Season ~35 min', '5m': 'Season ~1½ hr' },
   },
   questions: {
     callUp: { prompt: 'Retirements leave gaps. Who gets the call?' },

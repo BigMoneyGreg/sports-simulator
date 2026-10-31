@@ -3,7 +3,6 @@ import { fullHistory } from '../core/career';
 import { SPORT_IDS, type SportId } from '../core/format';
 import { startRating } from '../core/league';
 import { Rng } from '../core/rng';
-import { ordinal } from '../shared/format';
 import { newFeats, FEAT_TITLES, type CareerSummary } from '../core/honours';
 import { DURATIONS, type Duration, type PanelId, type ToHost } from '../shared/view';
 import { Game } from './game';
@@ -11,12 +10,13 @@ import { Ownership, POLL_MS } from './ownership';
 import { SidebarProvider } from './sidebar';
 import { StatusBar } from './statusBar';
 import { Storage, type LiveStatus } from './storage';
-import { anotherDecisionWaiting, boxStatus, buildHonours, buildView, careerSummary, honoursLine, GoalWatch, leaversLine, SEASON_OVER, seasonClue, sportRows, statusGame, summerQuestion } from './viewModel';
+import { boxStatus, buildHonours, buildView, careerSummary, GoalWatch, honoursLine, SEASON_OVER, seasonFinished, sportRows, statusGame } from './viewModel';
 
 let ownership: Ownership | undefined;
 
 /** How long another window's shared status text counts as current (it's rewritten every match-minute while a match is on). */
 const LIVE_FRESH_MS = 30_000;
+const TOAST_MS = 6000;
 
 export function activate(context: vscode.ExtensionContext): void {
   const storage = new Storage(context.globalStorageUri.fsPath, context.globalState);
@@ -74,6 +74,11 @@ export function activate(context: vscode.ExtensionContext): void {
     sidebar.setInfo(live.description, decisions ? { value: decisions, tooltip: decisions === 1 ? SEASON_OVER : `${decisions} seasons over: decisions waiting` } : undefined);
   };
 
+  /** A small message that goes by itself; the badge, bell and pinned line stay until the player acts. */
+  function toast(text: string): void {
+    void vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: text }, () => new Promise<void>((done) => setTimeout(done, TOAST_MS)));
+  }
+
   function openView() {
     if (open === 'honours') return buildHonours(liveCareers(), storage.archives(), storage.feats());
     return open && buildView(games[open], { fullTimeOverlay: config().get('fullTimeOverlay', true), language: vscode.env.language });
@@ -92,7 +97,7 @@ export function activate(context: vscode.ExtensionContext): void {
     const earned = newFeats(liveCareers(), storage.archives(), storage.feats(), new Date().toISOString(), label);
     if (!earned.length) return;
     storage.addFeats(earned);
-    for (const f of earned) void vscode.window.showInformationMessage(`Honour earned: ${FEAT_TITLES[f.id]}. ${f.detail}`);
+    for (const f of earned) toast(`Honour earned: ${FEAT_TITLES[f.id]}. ${f.detail}`);
     refresh();
   }
 
@@ -105,25 +110,7 @@ export function activate(context: vscode.ExtensionContext): void {
       changed: () => refresh(sport),
       seasonOver: (end) => {
         checkHonours();
-        if ((sidebar.visible && open === sport) || anotherDecisionWaiting(all(), sport)) return;
-        // The one notification: the result, the clues (goal ranks and who's leaving) and the summer's question.
-        const career = game.career!;
-        const question = summerQuestion(career);
-        const leavers = leaversLine(career);
-        void vscode.window
-          .showInformationMessage(
-            `${game.sport.present.terms.name} season ${end.season} over: ${ordinal(end.position)} in League ${end.tier}. ${seasonClue(career, end.tier)}${leavers ? ` ${leavers}` : ''} ${question.prompt}`,
-            ...question.options.map((o) => o.title),
-            'Open',
-          )
-          .then((choice) => {
-            if (!choice) return;
-            const answer = question.options.find((o) => o.title === choice);
-            if (!answer) {
-              openPanel(sport);
-              void vscode.commands.executeCommand('sportsSimulator.open');
-            } else owner.whenOwner(() => game.career?.pending?.season === end.season && game.chooseFocus(answer.focus));
-          });
+        if (!(sidebar.visible && open === sport)) toast(seasonFinished(game, end));
       },
       unreadable: (old) => {
         // Kept whole as a backup, and its history archived like a finished career, before the player starts again.

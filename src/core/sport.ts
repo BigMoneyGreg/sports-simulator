@@ -102,9 +102,6 @@ export interface SportTerms {
   /** "for goals scored", beside the attack's rank. */
   clueScored: string;
   clueConceded: string;
-  /** The notification's clue: "Scored 44 (3rd), conceded 40 (5th)." */
-  scoredWord: string;
-  concededWord: string;
   diffShort: string;
   diffLong: string;
   /** Whether the table needs a drawn column. */
@@ -137,6 +134,20 @@ export interface QuestionCopy {
   training: { prompt: string; titles: Record<'attack' | 'defence', string> };
 }
 
+/** One innings of a scorecard, as shown. */
+export interface InningsCard {
+  team: string;
+  /** "156/4". */
+  total: string;
+  /** "18.2". */
+  overs: string;
+  /** Being played now. */
+  live: boolean;
+  batters: { name: string; how: string; runs: number; balls: number; out: boolean; striker: boolean }[];
+  yetToBat: string[];
+  bowlers: { name: string; overs: string; runs: number; wickets: number }[];
+}
+
 /** How a sport's matches read on screen. */
 export interface SportPresenter<M> {
   terms: SportTerms;
@@ -149,8 +160,10 @@ export interface SportPresenter<M> {
   score(match: M): [string, string];
   /** Under the scoreboard: "Need 34 from 18 balls". */
   situation?(match: M, names: [string, string]): string | undefined;
-  /** Smaller lines under that: who's in, this over. */
+  /** Smaller lines under that: this over. */
   details?(match: M, ctx: TimelineContext): string[];
+  /** A sport with a scorecard shows it instead of the match report, latest innings first. */
+  scorecard?(match: M, ctx: TimelineContext, teams: [string, string]): InningsCard[];
   /** The full-time card's note ("after extra time") and scorers line. */
   fullTime(match: M, names: [string, string], name: (id: number) => string): { note?: string; scorers: string };
   /** Under a leaver's name: "142 goals", "38 tries", "2,310 runs". */

@@ -1,4 +1,4 @@
-import { currentSlot, FOCUSES, formatOf, fullHistory, leagueRounds, type Career, type Focus, type Playoff, type SeasonRecord, type Slot } from '../core/career';
+import { currentSlot, FOCUSES, formatOf, fullHistory, leagueRounds, type SeasonEnd, type Career, type Focus, type Playoff, type SeasonRecord, type Slot } from '../core/career';
 import { SPORT_IDS, type SportId } from '../core/format';
 import { CHAMPIONSHIP_EVERY, CUP_NAMES, cupFixtures, cupRun, cupStages, stageLabel, stillIn, type Cup, type CupId, type CupTie } from '../core/cups';
 import { better, emptyRecords, topScorers, type MatchRecord } from '../core/records';
@@ -184,15 +184,6 @@ export function summerQuestion(career: Career): QuestionView {
   };
 }
 
-/** For the notification: "Finlay Ross (striker) and 2 others leave." */
-export function leaversLine(career: Career): string | undefined {
-  const change = career.pending?.turnover?.find((t) => t.clubId === career.playerClubId);
-  const first = change && career.clubs[career.playerClubId].squad.find((p) => p.id === change.out[0]);
-  if (!change || !first) return undefined;
-  const others = change.out.length - 1;
-  return `${first.name} (${sportOf(career).role(first).label})${others ? ` and ${others} other${others === 1 ? '' : 's'}` : ''} ${others ? 'leave' : 'leaves'}.`;
-}
-
 /** The season report's line for a competition: how far you went, and who won if it wasn't you. */
 function seasonCupLine(career: Career, cup: Cup): CupRunView {
   const run = cupRun(formatOf(career), cup, career.playerClubId) ?? "Didn't qualify";
@@ -291,16 +282,6 @@ function scoreTexts(table: TableRow[], row: TableRow): { scoredText: string; con
 function differenceText(row: TableRow): string {
   const d = difference(row);
   return `${d > 0 ? '+' : ''}${row.ballsFaced === undefined ? d : d.toFixed(2)}`;
-}
-
-/** For the notification: "Scored 44 (3rd), conceded 40 (5th)." */
-export function seasonClue(career: Career, tier: number): string {
-  const { terms } = sportOf(career).present;
-  const table = career.season.leagues[tier - 1].table;
-  const row = table.find((r) => r.clubId === career.playerClubId)!;
-  const ranks = goalRanks(table, row.clubId);
-  const text = scoreTexts(table, row);
-  return `${terms.scoredWord} ${text.scoredText} (${ordinal(ranks.scored)}), ${terms.concededWord} ${text.concededText} (${ordinal(ranks.conceded)}).`;
 }
 
 /** How the season went against the rival, if they met. */
@@ -480,9 +461,11 @@ function buildMatch(game: Game): LiveMatchView | null {
   const towns: [string, string] = [shortName(career.clubs[fixture.home]), shortName(career.clubs[fixture.away])];
   const situation = present.situation?.(match, towns);
   const details = present.details?.(match, { playerName }) ?? [];
+  const scorecard = present.scorecard?.(match, { playerName }, towns);
   const view: LiveMatchView = {
     competition: competition(fixture, career),
-    round: fixture.kind === 'league' ? roundLabel(career) : undefined,
+    // Once the match is over the calendar has moved on, so its label would be the next match's.
+    round: fixture.kind === 'league' && !module.isFinished(match) ? roundLabel(career) : undefined,
     homeTown: towns[0],
     awayTown: towns[1],
     rival: isRivalFixture(career, fixture),
@@ -492,6 +475,7 @@ function buildMatch(game: Game): LiveMatchView | null {
     alerts: module.alerts(match),
     ...(situation ? { situation } : {}),
     ...(details.length ? { details } : {}),
+    ...(scorecard ? { scorecard } : {}),
     clock: present.clock(match),
     finished: module.isFinished(match),
     timeline: present.timeline(match, { playerName }),
@@ -555,7 +539,7 @@ function buildTables(game: Game): TableView[] {
 
 const STAGE_SHORT: Record<string, string> = { 'Round of 64': '64', 'Round of 32': '32', 'Round of 16': '16', 'Quarter-final': 'QF', 'Semi-final': 'SF', Final: 'F' };
 
-/** A short label that fits beside "MD 38" ("C32", "WCQF", "PO SF1"), and the full one for hovering. */
+/** A short label that fits beside "MD 38" ("Cup 32", "WC QF", "PO SF1"), and the full one for hovering. */
 function slotLabel(career: Career, slot: Slot): { label: string; title: string } {
   if (slot.kind === 'league') return { label: `MD ${slot.index + 1}`, title: `League matchday ${slot.index + 1}` };
   if (slot.kind === 'playoff') {
@@ -569,7 +553,7 @@ function slotLabel(career: Career, slot: Slot): { label: string; title: string }
   const stage = cupStages(format, slot.kind)[slot.stage];
   const title = `${CUP_NAMES[slot.kind]}: ${stageLabel(format, slot.kind, stage)}`;
   if ('group' in stage) return { label: `WC G${stage.group + 1}`, title };
-  return { label: `${slot.kind === 'cup' ? 'C' : 'WC'}${STAGE_SHORT[stageLabel(format, slot.kind, stage)]}`, title };
+  return { label: `${slot.kind === 'cup' ? 'Cup' : 'WC'} ${STAGE_SHORT[stageLabel(format, slot.kind, stage)]}`, title };
 }
 
 /** The player's matchdays in calendar order: every league round, plus cup and play-off matches once they're known. */
@@ -778,7 +762,9 @@ export function sportRows(games: Game[]): SportRowView[] {
   return games.map((game) => {
     const career = game.career;
     const row = { id: game.sportId, name: game.sport.present.terms.name, paused: game.paused, waiting: !!career?.pending };
-    return career ? { ...row, club: career.clubs[career.playerClubId].name, line: collapsedText(game) } : { ...row, paused: false };
+    if (!career) return { ...row, paused: false };
+    const line = collapsedText(game);
+    return { ...row, club: career.clubs[career.playerClubId].name, line: game.paused && !career.pending ? `Paused · ${line}` : line };
   });
 }
 
@@ -786,6 +772,13 @@ export function sportRows(games: Game[]): SportRowView[] {
 export function statusGame(games: Game[], followed: SportId): Game {
   const chosen = games.find((g) => g.sportId === followed)!;
   return chosen.career ? chosen : (games.find((g) => g.career) ?? chosen);
+}
+
+/** The short message when a season ends: the result, and that a decision is waiting. */
+export function seasonFinished(game: Game, end: SeasonEnd): string {
+  const place = end.position === 1 ? `champions of League ${end.tier}` : `${ordinal(end.position)} in League ${end.tier}`;
+  const tails: Partial<Record<NonNullable<SeasonEnd['outcome']>, string>> = { promoted: ', promoted', playoffWinner: ', promoted', relegated: ', relegated', playoffs: ', lost in the play-offs' };
+  return `${game.sport.present.terms.name} season ${end.season} finished: ${place}${(end.outcome && tails[end.outcome]) ?? ''}. Decision waiting.`;
 }
 
 /** A running career, in the form the honours rules read. */
@@ -852,11 +845,6 @@ export function honoursLine(games: Game[], pastCareers: number, feats: number): 
   const parts = [feats && plural(feats, 'honour'), pastCareers && plural(pastCareers, 'past career')].filter(Boolean);
   if (parts.length) return parts.join(' · ');
   return games.some((g) => g.career && (g.career.history.length || g.career.pending)) ? 'Records and greatest teams' : null;
-}
-
-/** Another sport is already waiting on the player: its badge and bell say enough, so a second season's end stays quiet. */
-export function anotherDecisionWaiting(games: Game[], sport: SportId): boolean {
-  return games.some((g) => g.sportId !== sport && g.career?.pending);
 }
 
 /** The status bar and collapsed box: one sport's score, a bell if another is waiting on the player, and every career on hover. */

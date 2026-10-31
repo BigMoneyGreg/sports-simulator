@@ -9,8 +9,6 @@ export const footballPresenter: SportPresenter<FootballMatch> = {
     defence: 'Defence',
     clueScored: 'for goals scored',
     clueConceded: 'for goals conceded',
-    scoredWord: 'Scored',
-    concededWord: 'conceded',
     diffShort: 'GD',
     diffLong: 'Goal difference',
     draws: true,
@@ -28,7 +26,7 @@ export const footballPresenter: SportPresenter<FootballMatch> = {
       "Every summer some players retire or are dropped, and the squad loses strength, more at one end of the pitch than the other. Who's leaving shows where most of it went; your season shows where you were already short.",
       "Whatever the question, one answer strengthens the attack and the other the defence. Let one side fall too far behind and opponents exploit it, and at the top there's less room for a weak side.",
     ],
-    seasonLabels: { '30s': 'Season 25 min', '2m': 'Season 1½ hr', '5m': 'Season 3¾ hr' },
+    seasonLabels: { '30s': 'Season ~25 min', '2m': 'Season ~1½ hr', '5m': 'Season ~3¾ hr' },
   },
   questions: {
     callUp: { prompt: 'Retirements leave gaps. Who gets the call?' },

@@ -1,6 +1,6 @@
-import type { SportPresenter, TimelineItem } from '../../core/sport';
+import type { InningsCard, SportPresenter, TimelineItem } from '../../core/sport';
 import { surname } from '../football/names';
-import { overLabel, resultLine, TUNING, type CricketMatch, type Side, type SideKey } from './match';
+import { battersIn, overLabel, resultLine, TUNING, type CricketMatch, type Dismissal, type Side, type SideKey } from './match';
 
 /** "156/4", or "130" when all out. */
 function runs(s: Side): string {
@@ -13,6 +13,43 @@ function total(m: CricketMatch, key: SideKey): string {
   return yetToBat ? '' : runs(m[key]);
 }
 
+/** "c Ross b Singh", "b Singh", "lbw b Singh", "run out". */
+function dismissal(d: Dismissal, name: (id: number) => string): string {
+  if (d.how === 'run out') return 'run out';
+  const bowler = `b ${name(d.bowler)}`;
+  if (d.how === 'c') return d.fielder === undefined ? `c ${bowler}` : `c ${name(d.fielder)} ${bowler}`;
+  return d.how === 'lbw' ? `lbw ${bowler}` : bowler;
+}
+
+function inningsCard(m: CricketMatch, key: SideKey, team: string, ctx: { playerName(side: SideKey, id: number): string }): InningsCard {
+  const side = m[key];
+  const otherKey: SideKey = key === 'home' ? 'away' : 'home';
+  const fielding = m[otherKey];
+  const name = (s: SideKey, id: number) => surname(ctx.playerName(s, id));
+  const live = m.batting === key && (m.period === 'first' || m.period === 'second');
+  const lineup = side.sheet.lineup;
+  const inAt = battersIn(side);
+  return {
+    team,
+    total: runs(side),
+    overs: overLabel(side.balls),
+    live,
+    batters: lineup.slice(0, inAt).map(({ id }, i) => {
+      const out = side.outs?.[id];
+      return {
+        name: name(key, id),
+        how: out ? dismissal(out, (x) => name(otherKey, x)) : live ? 'batting' : 'not out',
+        runs: side.runsBy[id] ?? 0,
+        balls: side.ballsBy?.[id] ?? 0,
+        out: !!out,
+        striker: live && i === m.striker,
+      };
+    }),
+    yetToBat: lineup.slice(inAt).map(({ id }) => name(key, id)),
+    bowlers: Object.entries(fielding.bowled ?? {}).map(([id, f]) => ({ name: name(otherKey, Number(id)), overs: overLabel(f.balls), runs: f.runs, wickets: fielding.wicketsBy[Number(id)] ?? 0 })),
+  };
+}
+
 export const cricketPresenter: SportPresenter<CricketMatch> = {
   terms: {
     name: 'Cricket',
@@ -20,8 +57,6 @@ export const cricketPresenter: SportPresenter<CricketMatch> = {
     defence: 'Bowling',
     clueScored: 'for runs an over',
     clueConceded: 'for runs conceded an over',
-    scoredWord: 'Scored',
-    concededWord: 'conceded',
     diffShort: 'NRR',
     diffLong: 'Net run rate',
     draws: false,
@@ -39,7 +74,7 @@ export const cricketPresenter: SportPresenter<CricketMatch> = {
       "Every summer some players retire or are dropped, and the squad loses strength, more in the batting or the bowling. Who's leaving shows where most of it went; your season shows where you were already short.",
       "Whatever the question, one answer strengthens the batting and the other the bowling. Let one fall too far behind and opponents exploit it, and at the top there's less room for a weak side.",
     ],
-    seasonLabels: { '2m': 'Season 25 min', '5m': 'Season 1 hr' },
+    seasonLabels: { '2m': 'Season ~25 min', '5m': 'Season ~1 hr' },
   },
   questions: {
     callUp: { prompt: 'Retirements leave gaps. Who gets the call?' },
@@ -95,16 +130,14 @@ export const cricketPresenter: SportPresenter<CricketMatch> = {
     if (side.balls === 0 && toss?.type === 'toss') return `${names[index(toss.winner)]} won the toss and chose to ${toss.bat ? 'bat' : 'bowl'}`;
     return `${names[index(m.batting)]} batting first · ${((side.goals * 6) / Math.max(1, side.balls)).toFixed(1)} an over`;
   },
-  details(m, ctx) {
-    if (m.period !== 'first' && m.period !== 'second') return [];
-    const side = m[m.batting];
-    const batter = (at: number) => {
-      const entry = side.sheet.lineup[at];
-      return entry ? `${surname(ctx.playerName(m.batting, entry.id))} ${side.runsBy[entry.id] ?? 0}` : undefined;
-    };
-    const lines = [[batter(m.striker)?.concat('*'), batter(m.nonStriker)].filter(Boolean).join(' · ')];
-    if (m.thisOver?.length) lines.push(`This over: ${m.thisOver.map((b) => (b === '0' ? '·' : b)).join(' ')}`);
-    return lines;
+  details(m) {
+    if ((m.period !== 'first' && m.period !== 'second') || !m.thisOver?.length) return [];
+    return [`This over: ${m.thisOver.map((b) => (b === '0' ? '·' : b)).join(' ')}`];
+  },
+  scorecard(m, ctx, teams) {
+    const second: SideKey = m.first === 'home' ? 'away' : 'home';
+    const card = (key: SideKey) => inningsCard(m, key, teams[key === 'home' ? 0 : 1], ctx);
+    return m.period === 'first' ? [card(m.first)] : m.period === 'break' ? [card(m.first)] : [card(second), card(m.first)];
   },
   fullTime(m, names, name) {
     const best = (tally: Record<number, number>) => Object.entries(tally).reduce<[string, number] | null>((b, [id, n]) => (!b || n > b[1] ? [id, n] : b), null);

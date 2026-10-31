@@ -16,10 +16,9 @@ export const TUNING = {
   homeAdvantage: 1.03,
   awayFactor: 0.98,
   formSpread: 0.15,
-  /** The batting order thins out from this position. */
-  tailFrom: 7,
-  tailRuns: 0.75,
-  tailWicket: 1.5,
+  /** Each place in the batting order, from the openers down: the further down, the sooner out and the slower the scoring. */
+  orderWicket: [0.85, 0.85, 0.88, 0.92, 0.98, 1.06, 1.18, 1.55, 1.95, 2.35, 2.8],
+  orderRuns: [1.02, 1.02, 1.03, 1.02, 1, 0.98, 0.95, 0.78, 0.68, 0.6, 0.52],
   milestones: [50, 100, 150],
 };
 
@@ -45,6 +44,18 @@ export interface Side {
   wicketRate: number;
   runsBy: Record<number, number>;
   wicketsBy: Record<number, number>;
+  /** For the scorecard; a match saved before there was one has none of these yet. */
+  ballsBy?: Record<number, number>;
+  outs?: Record<number, Dismissal>;
+  /** This side's bowlers: balls bowled and runs given away. */
+  bowled?: Record<number, { balls: number; runs: number }>;
+}
+
+export interface Dismissal {
+  how: 'b' | 'c' | 'lbw' | 'run out';
+  bowler: number;
+  /** Who took the catch. */
+  fielder?: number;
 }
 
 export interface CricketMatch {
@@ -166,17 +177,21 @@ function bowl(m: CricketMatch, rng: Rng, bowler: number): void {
   const p = phase(over);
   const c = chase(m, side, { runs: side.runRate * p.runs });
   const batterAt = m.striker;
-  const tail = batterAt >= TUNING.tailFrom;
-  const mean = side.runRate * p.runs * c.runs * (tail ? TUNING.tailRuns : 1);
-  const wicketChance = side.wicketRate * p.wicket * c.wicket * (tail ? TUNING.tailWicket : 1);
+  const mean = side.runRate * p.runs * c.runs * TUNING.orderRuns[batterAt];
+  const wicketChance = side.wicketRate * p.wicket * c.wicket * TUNING.orderWicket[batterAt];
   const batter = side.sheet.lineup[batterAt].id;
   if (side.balls % 6 === 0) m.thisOver = [];
   side.balls++;
+  (side.ballsBy ??= {})[batter] = (side.ballsBy[batter] ?? 0) + 1;
+  const figures = ((fielding.bowled ??= {})[bowler] ??= { balls: 0, runs: 0 });
+  figures.balls++;
   if (rng.chance(wicketChance)) {
     side.wickets++;
     (m.thisOver ??= []).push('W');
     const how = rng.weighted(['c', 'b', 'lbw', 'run out'] as const, (x) => ({ c: 6, b: 2, lbw: 1.5, 'run out': 0.5 })[x]);
     if (how !== 'run out') fielding.wicketsBy[bowler] = (fielding.wicketsBy[bowler] ?? 0) + 1;
+    const fielder = how === 'c' ? rng.weighted(fielding.sheet.lineup, (p) => (p.id === bowler ? 0 : 1)).id : undefined;
+    (side.outs ??= {})[batter] = { how, bowler, ...(fielder !== undefined ? { fielder } : {}) };
     m.events.push({ type: 'wicket', over: overLabel(side.balls), side: other(key), batter, bowler, how, runs: side.runsBy[batter] ?? 0, score: side.wickets >= 10 ? String(side.goals) : `${side.goals}/${side.wickets}` });
     m.striker = m.nextIn++;
     return;
@@ -184,6 +199,7 @@ function bowl(m: CricketMatch, rng: Rng, bowler: number): void {
   const runs = runsOffBall(rng, mean);
   (m.thisOver ??= []).push(String(runs));
   const before = side.runsBy[batter] ?? 0;
+  figures.runs += runs;
   side.goals += runs;
   side.runsBy[batter] = before + runs;
   for (const mark of TUNING.milestones) {
@@ -280,6 +296,11 @@ export function resultLine(m: CricketMatch, names: [string, string]): string {
   }
   const by = 10 - m[key].wickets;
   return `${name} won by ${by} wicket${by === 1 ? '' : 's'}`;
+}
+
+/** Who has come in: the two openers, then one more for each wicket. */
+export function battersIn(side: Side): number {
+  return Math.min(side.sheet.lineup.length, 2 + side.wickets);
 }
 
 export function isFinished(m: CricketMatch): boolean {

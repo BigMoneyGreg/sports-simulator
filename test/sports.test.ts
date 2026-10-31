@@ -8,7 +8,7 @@ import { totalRating } from '../src/core/ratings';
 import { Rng } from '../src/core/rng';
 import type { TeamSheet } from '../src/core/sport';
 import { fitDuration, Game, migrate, SAVE_VERSION, tickMs, type SavedGame, type Scheduler } from '../src/extension/game';
-import { anotherDecisionWaiting, boxStatus, buildView, collapsedText, GoalWatch, seasonClue, sportRows, statusGame, statusText, summerQuestion } from '../src/extension/viewModel';
+import { boxStatus, buildView, collapsedText, GoalWatch, seasonFinished, sportRows, statusGame, statusText, summerQuestion } from '../src/extension/viewModel';
 import { SPORTS } from '../src/sports';
 import { CRICKET_ORDER, CRICKET_RIVALS } from '../src/sports/cricket/data';
 import { createMatch as createCricket, isFinished as cricketDone, outcome as cricketOutcome, step as cricketStep, TUNING as CRICKET_TUNING, type CricketMatch } from '../src/sports/cricket/match';
@@ -294,7 +294,7 @@ describe('cricket', () => {
     expect(chases).toBeGreaterThan(0);
   });
 
-  it('moves one ball at a time, showing who is in and this over', () => {
+  it('moves one ball at a time, showing this over', () => {
     const rng = new Rng(4);
     const m = createCricket(sheet('cricket', 1, 50), sheet('cricket', 2, 50), {}, rng);
     const ctx = { playerName: (_side: 'home' | 'away', id: number) => `Test Player${id}` };
@@ -304,9 +304,85 @@ describe('cricket', () => {
     }
     expect(m.thisOver).toHaveLength(2);
     const details = SPORTS.cricket.present.details!(m, ctx);
-    expect(details[0]).toContain('*');
-    expect(details[1]).toMatch(/^This over: /);
+    expect(details).toEqual([expect.stringMatching(/^This over: /)]);
     expect(SPORTS.cricket.present.clock(m)).toBe('Ov 1.2');
+  });
+
+  it('gets out sooner and scores slower further down the order', () => {
+    const faced = Array(11).fill(0);
+    const runs = Array(11).fill(0);
+    const outs = Array(11).fill(0);
+    const rng = new Rng(9);
+    for (let g = 0; g < 1500; g++) {
+      const m = createCricket(sheet('cricket', 1, 50), sheet('cricket', 2, 50), {}, rng);
+      while (m.period !== 'done') {
+        const side = m[m.batting];
+        const at = m.striker;
+        const [balls, wickets, scored, playing] = [side.balls, side.wickets, side.goals, m.period === 'first' || m.period === 'second'];
+        cricketStep(m, rng);
+        if (!playing || side.balls === balls) continue;
+        faced[at]++;
+        runs[at] += side.goals - scored;
+        if (side.wickets > wickets) outs[at]++;
+      }
+    }
+    const average = (from: number, to: number) => runs.slice(from, to).reduce((a, b) => a + b, 0) / outs.slice(from, to).reduce((a, b) => a + b, 0);
+    const outRate = (from: number, to: number) => outs.slice(from, to).reduce((a, b) => a + b, 0) / faced.slice(from, to).reduce((a, b) => a + b, 0);
+    expect(average(0, 3)).toBeGreaterThan(average(3, 7) * 1.2);
+    expect(average(3, 7)).toBeGreaterThan(average(7, 11) * 2);
+    expect(outRate(7, 11)).toBeGreaterThan(outRate(3, 7) * 1.8);
+    expect(outRate(3, 7)).toBeGreaterThan(outRate(0, 3) * 1.2);
+  });
+
+  it('keeps a real scorecard: who is out and how, who is in, and the bowling', () => {
+    const rng = new Rng(4);
+    const m = createCricket(sheet('cricket', 1, 50), sheet('cricket', 2, 50), {}, rng);
+    const ctx = { playerName: (_side: 'home' | 'away', id: number) => `Test P${id}` };
+    const card = () => SPORTS.cricket.present.scorecard!(m, ctx, ['Home', 'Away']);
+    expect(card()).toHaveLength(1);
+    while (m.period === 'first') cricketStep(m, rng);
+    const [first] = card();
+    const side = m[m.first];
+    expect(first.total).toBe(side.wickets >= 10 ? String(side.goals) : `${side.goals}/${side.wickets}`);
+    expect(first.batters).toHaveLength(Math.min(11, 2 + side.wickets));
+    expect(first.batters.reduce((t, b) => t + b.runs, 0)).toBe(side.goals);
+    expect(first.batters.reduce((t, b) => t + b.balls, 0)).toBe(side.balls);
+    expect(first.batters.filter((b) => b.out)).toHaveLength(side.wickets);
+    expect(first.batters.filter((b) => !b.out).every((b) => b.how === 'not out')).toBe(true);
+    expect(first.batters.filter((b) => b.out).every((b) => /^(c \S+ )?b \S+$|^lbw b \S+$|^run out$/.test(b.how.replace(/Test /g, '')))).toBe(true);
+    expect(first.yetToBat).toHaveLength(11 - first.batters.length);
+    expect(first.bowlers.reduce((t, b) => t + b.runs, 0)).toBe(side.goals);
+    while (m.period !== 'second') cricketStep(m, rng);
+    cricketStep(m, rng);
+    const [now, earlier] = card();
+    expect(now.live).toBe(true);
+    expect(earlier).toMatchObject({ live: false, total: first.total });
+    expect(now.batters.filter((b) => b.striker)).toHaveLength(1);
+    expect(now.batters.filter((b) => !b.out).every((b) => b.how === 'batting')).toBe(true);
+  });
+
+  it('shows no next round on a league match that has just finished', () => {
+    const clock = manual();
+    const game = new Game({ save: () => {}, changed: () => {} }, clock.scheduler);
+    game.selectSport('cricket');
+    game.start({ rating: 55, difficulty: 'medium', seed: 31, team: 'SRI' });
+    while (game.phase !== 'fullTime') clock.run(1);
+    const view = buildView(game);
+    expect(view.screen === 'game' && view.match!.round).toBeUndefined();
+  });
+
+  it('copes with a match saved before there was a scorecard', () => {
+    const rng = new Rng(5);
+    const m = createCricket(sheet('cricket', 1, 50), sheet('cricket', 2, 50), {}, rng);
+    for (const key of ['home', 'away'] as const) {
+      delete m[key].ballsBy;
+      delete m[key].outs;
+      delete m[key].bowled;
+    }
+    const ctx = { playerName: (_side: 'home' | 'away', id: number) => `Test P${id}` };
+    expect(SPORTS.cricket.present.scorecard!(m, ctx, ['Home', 'Away'])[0].bowlers).toEqual([]);
+    while (m.period !== 'done') cricketStep(m, rng);
+    expect(SPORTS.cricket.present.scorecard!(m, ctx, ['Home', 'Away'])).toHaveLength(2);
   });
 
   it('always has a winner, a tie going to a super over', () => {
@@ -523,7 +599,6 @@ describe.each(NEW_SPORTS)('%s in the game', (id) => {
     const end = live(game).seasonEnd!;
     expect(end.report.scoredText).toBeTruthy();
     expect(end.question.options).toHaveLength(2);
-    expect(seasonClue(game.career!, end.tier)).toMatch(/^Scored .* \(\d+\w\w\), conceded .* \(\d+\w\w\)\.$/);
     game.chooseFocus('attack');
     expect(game.career!.season.number).toBe(2);
     expect(phase()).toBe('live');
@@ -714,9 +789,9 @@ describe('sports in the save', () => {
       const status = boxStatus(games, 'cricket');
       expect(status.text).toMatch(/\$\(bell\)$/);
       expect(boxStatus(games, 'rugby').text).toBe('$(bell) Rugby: season over');
-      // Rugby is waiting, so another sport's season end keeps quiet; rugby's own doesn't count.
-      expect(anotherDecisionWaiting(games, 'cricket')).toBe(true);
-      expect(anotherDecisionWaiting(games, 'rugby')).toBe(false);
+      expect(seasonFinished(rugby, { ...rugby.career!.pending!, season: 3, position: 2, tier: 3, outcome: 'promoted' })).toBe('Rugby season 3 finished: 2nd in League 3, promoted. Decision waiting.');
+      expect(seasonFinished(rugby, { ...rugby.career!.pending!, season: 4, position: 1, tier: 1, outcome: 'champion' })).toBe('Rugby season 4 finished: champions of League 1. Decision waiting.');
+      expect(seasonFinished(rugby, { ...rugby.career!.pending!, season: 5, position: 5, tier: 2, outcome: null })).toBe('Rugby season 5 finished: 5th in League 2. Decision waiting.');
     });
 
     it('follows the sport last opened, or the first with a career if that has none', () => {

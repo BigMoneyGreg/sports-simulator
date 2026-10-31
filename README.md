@@ -28,8 +28,8 @@ International football, rugby and cricket sims that live in a small box in your 
 | Table | 3 for a win, 1 for a draw, goal difference | 4 for a win, 2 for a draw, bonus points for four tries and for losing by 7 or fewer, points difference | 2 for a win, net run rate; ties go to a super over |
 | Nations Cup | Top 64 | Top 32 | Top 16 |
 | World Championship | 40 teams | 16 teams | 12 teams |
-| Match lengths | 30 sec, 2 min, 5 min | 1 min, 2 min, 5 min | 2 min, 5 min |
-| Season at those lengths | 25 min, 1½ hr, 3¾ hr | 20 min, 35 min, 1½ hr | 25 min, 1 hr |
+| Match lengths | ~30 sec, ~2 min, ~5 min | ~1 min, ~2 min, ~5 min | ~2 min, ~5 min |
+| Season at those lengths | ~25 min, ~1½ hr, ~3¾ hr | ~20 min, ~35 min, ~1½ hr | ~25 min, ~1 hr |
 
 Play one sport or all three at once. The box lists them: start or end each one whenever you like, and open one to see it in full while the others show one line and carry on. Pause any of them from its row. Each career keeps its own match length.
 
