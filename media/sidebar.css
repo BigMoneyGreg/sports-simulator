@@ -1337,7 +1337,8 @@ body.vscode-light .focus.defence strong {
 /* The list of sports: each has its own colour, in a border round its row and its open page. */
 [data-sport='football'],
 [data-open='football'] {
-  --sport: var(--vscode-charts-green, #3fb950);
+  /* Not green: that means goals for, wins and promotion. */
+  --sport: var(--vscode-charts-blue, #58a6ff);
 }
 
 [data-sport='rugby'],
