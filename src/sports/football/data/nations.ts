@@ -254,6 +254,16 @@ export const NATIONS: Nation[] = (Object.entries(ROWS) as [Region, Row[]][]).fla
 );
 
 /**
+ * Teams in other sports that aren't FIFA members, so not playable at football:
+ * the West Indies cricket side and Jersey.
+ */
+export const EXTRA_NATIONS: Nation[] = [
+  { code: 'WIN', name: 'West Indies', colours: ['#7b0041', '#ffc72c'], region: 'northAmerica', names: 'caribbean' },
+  { code: 'JER', name: 'Jersey', colours: ['#ce1126', '#ffffff'], region: 'europe', names: 'anglo' },
+];
+export const EXTRA_LOCATIONS: Record<string, [number, number]> = { WIN: [13.1, -59.6], JER: [49.2, -2.1] };
+
+/**
  * Each nation's one rival, the fixture its fans care about most. One-way
  * where it is in real life: Scotland and Wales both have England, but
  * England has Germany.

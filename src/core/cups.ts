@@ -1,3 +1,4 @@
+import type { SportFormat } from './format';
 import { emptyTable, recordResult, sortTable, type Fixture, type TableRow } from './league';
 import type { Rng } from './rng';
 import type { MatchOutcome } from './sport';
@@ -5,12 +6,9 @@ import type { MatchOutcome } from './sport';
 export type CupId = 'cup' | 'championship';
 
 export const CUP_NAMES: Record<CupId, string> = { cup: 'Nations Cup', championship: 'World Championship' };
-export const CUP_ENTRANTS = 64;
-export const CHAMPIONSHIP_ENTRANTS = 40;
 /** The World Championship is played in the summer of every fourth season. */
 export const CHAMPIONSHIP_EVERY = 4;
 
-const GROUP_SIZE = 5;
 const GROUP_NAMES = 'ABCDEFGH';
 
 interface RoundFormat {
@@ -23,28 +21,25 @@ interface Format {
   rounds: RoundFormat[];
 }
 
-const FORMATS: Record<CupId, Format> = {
-  cup: {
-    groupDays: 0,
-    rounds: [
-      { name: 'Round of 64', neutral: false },
-      { name: 'Round of 32', neutral: false },
-      { name: 'Round of 16', neutral: false },
-      { name: 'Quarter-final', neutral: false },
-      { name: 'Semi-final', neutral: false },
-      { name: 'Final', neutral: true },
-    ],
-  },
-  championship: {
-    groupDays: GROUP_SIZE,
-    rounds: [
-      { name: 'Round of 16', neutral: true },
-      { name: 'Quarter-final', neutral: true },
-      { name: 'Semi-final', neutral: true },
-      { name: 'Final', neutral: true },
-    ],
-  },
-};
+/** "Round of 32", "Quarter-final", … by how many teams are left. */
+function roundName(teams: number): string {
+  return teams === 2 ? 'Final' : teams === 4 ? 'Semi-final' : teams === 8 ? 'Quarter-final' : `Round of ${teams}`;
+}
+
+/** Knockout rounds from this many teams down to the final. */
+function knockoutRounds(teams: number, neutral: (teams: number) => boolean): RoundFormat[] {
+  const rounds: RoundFormat[] = [];
+  for (let left = teams; left >= 2; left /= 2) rounds.push({ name: roundName(left), neutral: neutral(left) });
+  return rounds;
+}
+
+/** How a competition runs in this sport, worked out from how many teams enter it. */
+function cupFormat(format: SportFormat, id: CupId): Format {
+  if (id === 'cup') return { groupDays: 0, rounds: knockoutRounds(format.cup.entrants, (left) => left === 2) };
+  const { entrants, groupSize } = format.championship;
+  // An odd-sized group needs an extra matchday, as one team rests each time. The top two of each group go through.
+  return { groupDays: groupSize % 2 ? groupSize : groupSize - 1, rounds: knockoutRounds((entrants / groupSize) * 2, () => true) };
+}
 
 /** One-off knockout match; the team drawn first is at home, or nominally so at a neutral ground. */
 export interface CupTie {
@@ -83,13 +78,13 @@ export interface Cup {
 /** One matchday of a cup: a group matchday, or a knockout round. */
 export type CupStage = { group: number } | { round: number };
 
-export function cupStages(id: CupId): CupStage[] {
-  const f = FORMATS[id];
+export function cupStages(format: SportFormat, id: CupId): CupStage[] {
+  const f = cupFormat(format, id);
   return [...Array.from({ length: f.groupDays }, (_, group) => ({ group })), ...f.rounds.map((_, round) => ({ round }))];
 }
 
-export function stageLabel(id: CupId, stage: CupStage): string {
-  return 'group' in stage ? `Group stage, matchday ${stage.group + 1}` : FORMATS[id].rounds[stage.round].name;
+export function stageLabel(format: SportFormat, id: CupId, stage: CupStage): string {
+  return 'group' in stage ? `Group stage, matchday ${stage.group + 1}` : cupFormat(format, id).rounds[stage.round].name;
 }
 
 /** An open draw: anyone can meet anyone, and whoever comes out first is at home. */
@@ -98,16 +93,17 @@ function openDraw(ids: number[], rng: Rng): CupTie[] {
 }
 
 /** The Nations Cup: an open draw every round. */
-export function drawCup(season: number, entrants: number[], rng: Rng): Cup {
-  if (entrants.length !== CUP_ENTRANTS) throw new Error(`the cup needs ${CUP_ENTRANTS} entrants`);
-  return { id: 'cup', season, entrants: [...entrants], groups: [], rounds: [{ name: FORMATS.cup.rounds[0].name, ties: openDraw(entrants, rng) }] };
+export function drawCup(format: SportFormat, season: number, entrants: number[], rng: Rng): Cup {
+  if (entrants.length !== format.cup.entrants) throw new Error(`the cup needs ${format.cup.entrants} entrants`);
+  return { id: 'cup', season, entrants: [...entrants], groups: [], rounds: [{ name: cupFormat(format, 'cup').rounds[0].name, ties: openDraw(entrants, rng) }] };
 }
 
-/** The World Championship: five pots of eight by seeding, one from each pot in every group. */
-export function drawChampionship(season: number, entrants: number[], rng: Rng): Cup {
-  if (entrants.length !== CHAMPIONSHIP_ENTRANTS) throw new Error(`the championship needs ${CHAMPIONSHIP_ENTRANTS} entrants`);
-  const groupCount = CHAMPIONSHIP_ENTRANTS / GROUP_SIZE;
-  const pots = Array.from({ length: GROUP_SIZE }, (_, p) => rng.shuffle(entrants.slice(p * groupCount, (p + 1) * groupCount)));
+/** The World Championship: one pot by seeding for each place in a group (in football, five pots of eight), one from each pot in every group. */
+export function drawChampionship(format: SportFormat, season: number, entrants: number[], rng: Rng): Cup {
+  const { entrants: needed, groupSize } = format.championship;
+  if (entrants.length !== needed) throw new Error(`the championship needs ${needed} entrants`);
+  const groupCount = needed / groupSize;
+  const pots = Array.from({ length: groupSize }, (_, p) => rng.shuffle(entrants.slice(p * groupCount, (p + 1) * groupCount)));
   const groups = Array.from({ length: groupCount }, (_, g) => {
     const ids = pots.map((pot) => pot[g]);
     return { name: GROUP_NAMES[g], table: emptyTable(ids), days: singleRoundRobin(ids) };
@@ -134,26 +130,27 @@ function singleRoundRobin(ids: number[]): [number, number][][] {
 }
 
 /** The fixtures for one stage. */
-export function cupFixtures(cup: Cup, stageIndex: number): Fixture[] {
-  const stage = cupStages(cup.id)[stageIndex];
+export function cupFixtures(format: SportFormat, cup: Cup, stageIndex: number): Fixture[] {
+  const stage = cupStages(format, cup.id)[stageIndex];
   const base = { tier: 0, kind: cup.id, stage: stageIndex } as const;
   if ('group' in stage) {
     return cup.groups.flatMap((g) => g.days[stage.group].map(([home, away]) => ({ ...base, home, away, options: { neutral: true } })));
   }
-  const format = FORMATS[cup.id].rounds[stage.round];
+  const roundFormat = cupFormat(format, cup.id).rounds[stage.round];
   const round = cup.rounds[stage.round];
   if (!round) return [];
-  return round.ties.map((tie) => ({ ...base, home: tie.home, away: tie.away, options: { neutral: format.neutral, knockout: { aggregate: [0, 0] } } }));
+  return round.ties.map((tie) => ({ ...base, home: tie.home, away: tie.away, options: { neutral: roundFormat.neutral, knockout: { aggregate: [0, 0] } } }));
 }
 
 /** Records a cup result and, once a stage is complete, draws what comes next. */
-export function recordCupResult(cup: Cup, fixture: Fixture, outcome: MatchOutcome, rng: Rng): void {
-  const stage = cupStages(cup.id)[fixture.stage!];
+export function recordCupResult(format: SportFormat, cup: Cup, fixture: Fixture, outcome: MatchOutcome, rng: Rng): void {
+  const f = cupFormat(format, cup.id);
+  const stage = cupStages(format, cup.id)[fixture.stage!];
   if ('group' in stage) {
     const group = cup.groups.find((g) => g.table.some((r) => r.clubId === fixture.home))!;
     recordResult(group.table, fixture.home, fixture.away, outcome);
-    if (stage.group === FORMATS[cup.id].groupDays - 1 && cup.groups.every((g) => g.table.every((r) => r.played === GROUP_SIZE - 1))) {
-      cup.rounds.push({ name: FORMATS[cup.id].rounds[0].name, ties: knockoutFromGroups(cup) });
+    if (stage.group === f.groupDays - 1 && cup.groups.every((g) => g.table.every((r) => r.played === format.championship.groupSize - 1))) {
+      cup.rounds.push({ name: f.rounds[0].name, ties: knockoutFromGroups(cup) });
     }
     return;
   }
@@ -165,7 +162,7 @@ export function recordCupResult(cup: Cup, fixture: Fixture, outcome: MatchOutcom
   tie.winner = outcome.winner === 'home' ? fixture.home : fixture.away;
   if (!round.ties.every((t) => t.winner !== undefined)) return;
 
-  const next = FORMATS[cup.id].rounds[stage.round + 1];
+  const next = f.rounds[stage.round + 1];
   const winners = round.ties.map((t) => t.winner!);
   if (!next) {
     cup.winner = winners[0];
@@ -197,13 +194,13 @@ function knockoutFromGroups(cup: Cup): CupTie[] {
 }
 
 /** How far a team went: "Winners", "Final", "Semi-final", …, "Group stage", or null if it wasn't in it. */
-export function cupRun(cup: Cup, clubId: number): string | null {
+export function cupRun(format: SportFormat, cup: Cup, clubId: number): string | null {
   if (!cup.entrants.includes(clubId)) return null;
   if (cup.winner === clubId) return 'Winners';
   for (let r = cup.rounds.length - 1; r >= 0; r--) {
     if (cup.rounds[r].ties.some((t) => t.home === clubId || t.away === clubId)) return cup.rounds[r].name;
   }
-  return cup.groups.length ? 'Group stage' : FORMATS[cup.id].rounds[0].name;
+  return cup.groups.length ? 'Group stage' : cupFormat(format, cup.id).rounds[0].name;
 }
 
 /** Whether the team is still in the competition. */

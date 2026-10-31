@@ -320,4 +320,13 @@ export function playMatch(home: TeamSheet, away: TeamSheet, options: MatchOption
   return m;
 }
 
-export const football: SportModule<FootballMatch> = { createMatch, step, isFinished, outcome };
+export const football: SportModule<FootballMatch> = {
+  createMatch,
+  step,
+  isFinished,
+  outcome,
+  ticks: 90,
+  countsLive: (m) => m.minute !== 0,
+  alerts: (m) => [m.home.goals, m.away.goals],
+  notable: (m) => m.home.goals + m.away.goals + m.home.reds + m.away.reds,
+};

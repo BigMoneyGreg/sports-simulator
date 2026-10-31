@@ -1,8 +1,9 @@
+import { footballSport } from '../src/sports/football';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Game, MINUTE_MS, type SavedGame } from '../src/extension/game';
+import { Game, tickMs, type SavedGame } from '../src/extension/game';
 import { HANDOVER_TIMEOUT_MS, Ownership, POLL_MS, type Lock } from '../src/extension/ownership';
 
-const minute = MINUTE_MS['2m'];
+const minute = tickMs(footballSport, '2m');
 
 /** VS Code windows sharing one save and one lock, as they share the global storage folder. */
 function world() {

@@ -107,7 +107,7 @@ describe('full-time overlay', () => {
     while (game.phase === 'live') vi.advanceTimersByTime(1000);
     const ft = fullTime()!;
     expect(ft.ms).toBe(5000);
-    expect(ft.home.goals + ft.away.goals).toBeGreaterThanOrEqual(0);
+    expect(ft.score).toMatch(/^\d+–\d+$/);
     const off = buildView(game, { fullTimeOverlay: false });
     expect(off.screen === 'game' && off.fullTime).toBeNull();
     vi.advanceTimersByTime(5100);

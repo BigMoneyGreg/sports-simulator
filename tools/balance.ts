@@ -7,9 +7,10 @@
  *   npm run balance -- --quick fewer seeds and seasons
  *   npm run balance -- --only=world,climb
  */
+import { FOOTBALL } from '../src/core/format';
 import { allocatePoints, focusAllocation, newCareer, nextRound, playRound, endSeason, type Career, type Focus, type RoundResult } from '../src/core/career';
 import { rating, type Stat } from '../src/core/club';
-import { band, goalRanks, LEAGUE_COUNT, sortTable } from '../src/core/league';
+import { band, goalRanks, sortTable } from '../src/core/league';
 import { totalRating, type Difficulty } from '../src/core/ratings';
 import { Rng } from '../src/core/rng';
 import { footballSport } from '../src/sports/football';
@@ -140,7 +141,7 @@ function worldRun(): void {
   let maxAverageDrift = 0;
   let promotedBottomHalf = 0;
   let promotedTotal = 0;
-  const leagueAverages: number[][] = Array.from({ length: LEAGUE_COUNT }, () => []);
+  const leagueAverages: number[][] = Array.from({ length: FOOTBALL.leagues }, () => []);
 
   for (let seed = 1; seed <= SEEDS; seed++) {
     const career = newCareer({ rating: 50, difficulty: 'medium', seed }, footballSport);
@@ -169,7 +170,7 @@ function worldRun(): void {
 
       career.season.leagues.forEach((l, t) => {
         const avg = mean(l.clubIds.filter((id) => id !== career.playerClubId).map((id) => rating(career.clubs[id])));
-        const { min, max } = band(l.tier);
+        const { min, max } = band(FOOTBALL, l.tier);
         leagueAverages[t].push(avg);
         // Drift is a sustained shift, so measure it on a 5-season rolling average.
         const drift = Math.abs(mean(leagueAverages[t].slice(-5)) - (min + max) / 2);

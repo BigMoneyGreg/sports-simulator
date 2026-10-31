@@ -1,6 +1,5 @@
 import {
   DURATION_LABELS,
-  SEASON_LABELS,
   type CupView,
   type Duration,
   type FixtureView,
@@ -20,6 +19,8 @@ import {
   type View,
 } from '../shared/view';
 import { ordinal } from '../shared/format';
+import type { SportId } from '../core/format';
+import type { SportTerms } from '../core/sport';
 
 declare function acquireVsCodeApi(): { postMessage(m: ToHost): void; getState(): unknown; setState(s: unknown): void };
 
@@ -45,6 +46,7 @@ let view: View | null = null;
 const summer = { season: 0, focus: null as Focus | null, sent: false };
 
 const setup = {
+  sport: null as SportId | null,
   team: '',
   search: '',
   league: 3,
@@ -123,6 +125,7 @@ function nationList(nations: NationOption[]): string {
 }
 
 function renderSetup(v: SetupView): void {
+  if (setup.sport !== v.sport) Object.assign(setup, { sport: v.sport, team: '', search: '', league: Math.min(3, v.leagues), initialised: false });
   if (!setup.initialised) {
     setup.duration = v.duration;
     const suggested = v.nations.find((n) => n.code === v.suggested);
@@ -130,11 +133,12 @@ function renderSetup(v: SetupView): void {
     setup.initialised = true;
   }
   const chosen = v.nations.find((n) => n.code === setup.team);
-  const leagueOptions = [1, 2, 3, 4, 5].map((t): Option => [String(t), `L${t}`, chosen?.tier === t ? 'Usual' : undefined]);
+  const leagueOptions = Array.from({ length: v.leagues }, (_, i) => i + 1).map((t): Option => [String(t), `L${t}`, chosen?.tier === t ? 'Usual' : undefined]);
   app.dataset.mode = 'setup';
   app.innerHTML = `
   <div class="setup card">
     <h2>New career</h2>
+    <div class="field">Sport ${seg('sport', v.sports.map((s): Option => [s.id, `${s.icon} ${s.name}`, s.career]), v.sport)}</div>
     <p class="muted">Pick your country and where it starts. Every match plays on its own; each summer you make one decision that shapes your team.</p>
 
     <div class="field">Country
@@ -145,7 +149,7 @@ function renderSetup(v: SetupView): void {
 
     <div class="field">League ${seg('league', leagueOptions, String(setup.league), !chosen)}</div>
 
-    <div class="field">Match length ${seg('duration', v.durations.map((d): Option => [d, DURATION_LABELS[d], SEASON_LABELS[d]]), setup.duration)}</div>
+    <div class="field">Match length ${seg('duration', v.durations.map((d): Option => [d, DURATION_LABELS[d], v.terms.seasonLabels[d]]), setup.duration)}</div>
 
     <button type="button" id="start" class="primary" ${chosen ? '' : 'disabled'}>${chosen ? 'Start career' : 'Pick a country'}</button>
   </div>`;
@@ -165,7 +169,7 @@ function renderOverlay(ft: FullTimeView | null): void {
   overlayKey = ft.key;
   overlay.innerHTML = `<div class="ft-card" role="status">
       <div class="muted small">Full time · ${esc(ft.competition)}${ft.note ? ` · ${esc(ft.note)}` : ''}</div>
-      <div class="ft-score">${swatch(ft.home)}<span>${esc(ft.home.name)}</span> <strong>${ft.home.goals}–${ft.away.goals}</strong> <span>${esc(ft.away.name)}</span>${swatch(ft.away)}</div>
+      <div class="ft-score">${swatch(ft.home)}<span>${esc(ft.home.name)}</span> <strong>${esc(ft.score)}</strong> <span>${esc(ft.away.name)}</span>${swatch(ft.away)}</div>
       ${ft.scorers ? `<div class="small muted">${esc(ft.scorers)}</div>` : ''}
     </div>`;
   paintSwatches(overlay);
@@ -212,7 +216,7 @@ function renderGame(v: GameView): void {
   const nav = `<nav class="tabs" role="tablist">${tabs
     .map(([id, label]) => `<button type="button" role="tab" aria-selected="${ui.tab === id}" class="${ui.tab === id ? 'on' : ''}" data-tab="${id}">${label}</button>`)
     .join('')}</nav>`;
-  patch(document.getElementById('main')!, v.seasonEnd ? [seasonEndHtml(v.seasonEnd)] : [nav, ...panelParts(v)]);
+  patch(document.getElementById('main')!, v.seasonEnd ? [seasonEndHtml(v.seasonEnd, v.terms)] : [nav, ...panelParts(v)]);
   paintSwatches();
   trackGoals(v);
   showFlash();
@@ -229,20 +233,20 @@ const FLASH_MS = 1600;
 const lastScore = { key: '', home: 0, away: 0 };
 const flash = { cls: '', at: 0, id: 0 };
 
-/** Notices a goal in the player's match: green when they score, red when they concede. */
+/** Notices a big moment in the player's match: green when it goes their way, red when it doesn't. */
 function trackGoals(v: GameView): void {
   const m = v.match;
   if (!m || (!m.home.isPlayer && !m.away.isPlayer)) return;
   const key = `${m.home.name}|${m.away.name}|${m.competition}|${m.round ?? ''}`;
   if (key === lastScore.key) {
-    const homeScored = m.home.goals > lastScore.home;
-    const awayScored = m.away.goals > lastScore.away;
+    const homeScored = m.alerts[0] > lastScore.home;
+    const awayScored = m.alerts[1] > lastScore.away;
     if (homeScored || awayScored) {
       const mine = (homeScored && m.home.isPlayer) || (awayScored && m.away.isPlayer);
       Object.assign(flash, { cls: mine ? 'goal-for' : 'goal-against', at: Date.now(), id: flash.id + 1 });
     }
   }
-  Object.assign(lastScore, { key, home: m.home.goals, away: m.away.goals });
+  Object.assign(lastScore, { key, home: m.alerts[0], away: m.alerts[1] });
 }
 
 /**
@@ -272,7 +276,7 @@ function headerHtml(v: GameView): string {
     <div class="right">
       <span class="form" aria-label="Form">${dots}</span>
       <span class="controls">
-        <button type="button" id="speed" class="chip" data-next="${next}" title="Match length: ${DURATION_LABELS[h.duration]} (${SEASON_LABELS[h.duration].toLowerCase()}). Click for ${DURATION_LABELS[next]}." aria-label="Match length ${DURATION_LABELS[h.duration]}"><span>⏱</span><span class="wide"> ${DURATION_LABELS[h.duration]}</span></button>
+        <button type="button" id="speed" class="chip" data-next="${next}" title="Match length: ${DURATION_LABELS[h.duration]} (${(v.terms.seasonLabels[h.duration] ?? '').toLowerCase()}). Click for ${DURATION_LABELS[next]}." aria-label="Match length ${DURATION_LABELS[h.duration]}"><span>⏱</span><span class="wide"> ${DURATION_LABELS[h.duration]}</span></button>
         <button type="button" id="pause" class="chip icon" title="${h.paused ? 'Play' : 'Pause'}" aria-label="${h.paused ? 'Play' : 'Pause'}">${h.paused ? '▶' : '⏸'}</button>
       </span>
     </div>
@@ -293,7 +297,7 @@ function panelParts(v: GameView): string[] {
           return `<button type="button" class="${x.tier === tier ? 'on' : ''} ${mine ? 'mine' : ''}" data-tier="${x.tier}"${mine ? ' title="Your league"' : ''}>L${x.tier}</button>`;
         })
         .join('')}</div>`;
-      return [chips, tableHtml(v.tables, tier), playoff ? playoffHtml(playoff) : ''];
+      return [chips, tableHtml(v.tables, tier, v.terms), playoff ? playoffHtml(playoff) : ''];
     }
     case 'fixtures':
       return [fixturesHtml(v.fixtures)];
@@ -311,30 +315,33 @@ function matchParts(v: GameView): string[] {
   // Newest first, so the latest event is always in view.
   const items = m.timeline;
   const event = (t: TimelineView) => {
-    const icon = t.kind === 'goal' ? '<span class="ball" aria-label="Goal">⚽</span>' : `<span class="card ${t.kind}" aria-label="${t.kind === 'red' ? 'Red' : 'Yellow'} card"></span>`;
+    const icon = t.kind === 'goal' ? `<span class="ball" aria-label="${esc(v.terms.eventName)}">${v.terms.icon}</span>` : t.kind === 'minor' ? '<span class="minor" aria-hidden="true">•</span>' : `<span class="card ${t.kind}" aria-label="${t.kind === 'red' ? 'Red' : 'Yellow'} card"></span>`;
     return `<span class="ev">${icon}<span class="who">${esc(t.text)}</span>${t.score ? `<span class="running">${esc(t.score)}</span>` : ''}</span>`;
   };
   const row = (t: TimelineView) =>
     t.kind === 'break'
       ? `<li class="break"><span>${esc(t.clock)}</span><span>${esc(t.text)}</span></li>`
       : `<li class="${t.kind}"><span class="home">${t.side === 'home' ? event(t) : ''}</span><span class="min">${esc(t.clock)}</span><span class="away">${t.side === 'away' ? event(t) : ''}</span></li>`;
-  return [scoreboard(m), `<div class="card feed-card">${items.length ? `<ol class="report-feed">${[...items].reverse().map(row).join('')}</ol>` : '<p class="muted small center">No goals yet.</p>'}</div>`];
+  return [scoreboard(m, v.terms), `<div class="card feed-card">${items.length ? `<ol class="report-feed">${[...items].reverse().map(row).join('')}</ol>` : `<p class="muted small center">${esc(v.terms.noEventsYet)}</p>`}</div>`];
 }
 
-function scoreboard(m: LiveMatchView): string {
+function scoreboard(m: LiveMatchView, terms: SportTerms): string {
+  // Two cricket totals need room, so they stack instead of sitting side by side.
+  const long = terms.scoreJoin !== '–';
   const team = (t: LiveMatchView['home'], town: string) =>
     `<div class="team ${t.isPlayer ? 'me' : ''}" title="${esc(t.name)}"${t.isPlayer ? ` data-accent="${esc(t.colours[0])}"` : ''}>${swatch(t, 'crest big')}<span class="code">${esc(t.short)}</span><span class="town">${esc(town)}</span></div>`;
   return `<div class="board card">
       <div class="comp muted small">${esc(m.competition)}${m.round ? ` · ${esc(m.round)}` : ''}</div>
-      <div class="score">${team(m.home, m.homeTown)}<div class="mid"><div class="goals">${m.home.goals}<span>–</span>${m.away.goals}</div>
+      <div class="score">${team(m.home, m.homeTown)}<div class="mid"><div class="goals${long ? ' long' : ''}">${esc(m.score[0] || '–')}<span>${esc(terms.scoreJoin.trim())}</span>${esc(m.score[1] || '–')}</div>
         <div class="clock-big ${m.finished ? 'ft' : 'live'}">${esc(m.clock)}</div></div>${team(m.away, m.awayTown)}</div>
+      ${m.situation ? `<div class="small situation">${esc(m.situation)}</div>` : ''}
       ${m.aggregate ? `<div class="muted small">${esc(m.aggregate)}</div>` : ''}
       ${m.penalties ? `<div class="pens small">${esc(m.penalties)}</div>` : ''}
       ${m.suspended ? `<div class="muted small">Suspended: ${m.suspended.map(esc).join(', ')}</div>` : ''}
     </div>`;
 }
 
-function tableHtml(tables: TableView[], tier: number): string {
+function tableHtml(tables: TableView[], tier: number, terms: SportTerms): string {
   const t = tables[tier - 1];
   const rows = t.rows
     .map(
@@ -342,10 +349,10 @@ function tableHtml(tables: TableView[], tier: number): string {
       <td class="pos">${r.pos}</td><td class="team" title="${esc(r.name)}${r.isRival ? ' · your rival' : ''}">${esc(r.town)}${r.isRival ? ' <span class="rival-mark" aria-label="Your rival">⚔</span>' : ''}${
         r.move ? ` <span class="move ${r.move > 0 ? 'up' : 'down'}" title="${r.move > 0 ? 'Up' : 'Down'} ${Math.abs(r.move)} since kick-off">${r.move > 0 ? '▲' : '▼'}</span>` : ''
       }</td>
-      <td>${r.played}</td><td>${r.won}</td><td>${r.drawn}</td><td>${r.lost}</td><td>${r.gd > 0 ? '+' : ''}${r.gd}</td><td class="pts">${r.points}</td></tr>`,
+      <td>${r.played}</td><td>${r.won}</td>${terms.draws ? `<td>${r.drawn}</td>` : ''}<td>${r.lost}</td><td>${esc(r.gdText)}</td><td class="pts">${r.points}</td></tr>`,
     )
     .join('');
-  return `<div class="card flush"><table class="league"><thead><tr><th></th><th></th><th title="Played">P</th><th title="Won">W</th><th title="Drawn">D</th><th title="Lost">L</th><th title="Goal difference">GD</th><th title="Points">Pts</th></tr></thead>
+  return `<div class="card flush"><table class="league"><thead><tr><th></th><th></th><th title="Played">P</th><th title="Won">W</th>${terms.draws ? '<th title="Drawn">D</th>' : ''}<th title="Lost">L</th><th title="${esc(terms.diffLong)}">${esc(terms.diffShort)}</th><th title="Points">Pts</th></tr></thead>
     <tbody>${rows}</tbody></table></div>
     ${legendHtml(t)}`;
 }
@@ -404,10 +411,10 @@ function cupParts(v: GameView): string[] {
       ]
     : [];
   const table = (g: CupView['groups'][number]) =>
-    `<table class="league group card flush"><thead><tr><th></th><th>Group ${esc(g.name)}</th><th>P</th><th>GD</th><th>Pts</th></tr></thead><tbody>${g.rows
+    `<table class="league group card flush"><thead><tr><th></th><th>Group ${esc(g.name)}</th><th>P</th><th>${esc(v.terms.diffShort)}</th><th>Pts</th></tr></thead><tbody>${g.rows
       .map(
         (r) =>
-          `<tr class="${r.through ? 'promotion' : ''} ${r.isPlayer ? 'me' : ''}"><td class="pos">${r.pos}</td><td class="team">${swatch(r.club)}${esc(r.town)}</td><td>${r.played}</td><td>${r.gd > 0 ? '+' : ''}${r.gd}</td><td class="pts">${r.points}</td></tr>`,
+          `<tr class="${r.through ? 'promotion' : ''} ${r.isPlayer ? 'me' : ''}"><td class="pos">${r.pos}</td><td class="team">${swatch(r.club)}${esc(r.town)}</td><td>${r.played}</td><td>${esc(r.gdText)}</td><td class="pts">${r.points}</td></tr>`,
       )
       .join('')}</tbody></table>`;
   const groupTables = `<div class="groups">${c.groups.map(table).join('')}</div>`;
@@ -421,7 +428,7 @@ function cupParts(v: GameView): string[] {
   return [toggle, status, run, ...rounds, groups, past];
 }
 
-function seasonEndHtml(e: SeasonEndView): string {
+function seasonEndHtml(e: SeasonEndView, terms: SportTerms): string {
   const r = e.report;
   const verdict =
     e.performance === 'above'
@@ -443,11 +450,12 @@ function seasonEndHtml(e: SeasonEndView): string {
     <h3 class="sub first">Season report</h3>
     <dl class="report">
       <dt>Record</dt><dd>${esc(r.record)} · ${r.points} pts</dd>
-      <dt>Scored</dt><dd>${r.goalsFor} <span class="muted">(league avg ${r.avgFor})</span></dd>
-      <dt>Conceded</dt><dd>${r.goalsAgainst} <span class="muted">(league avg ${r.avgAgainst})</span></dd>
+      <dt>Scored</dt><dd>${esc(r.scoredText)} <span class="muted">(league avg ${esc(r.avgForText)})</span></dd>
+      <dt>Conceded</dt><dd>${esc(r.concededText)} <span class="muted">(league avg ${esc(r.avgAgainstText)})</span></dd>
       <dt>Best run</dt><dd>${esc(r.bestRun)}</dd>
       <dt>Worst run</dt><dd>${esc(r.worstRun)}</dd>
-      ${r.topScorer ? `<dt>Top scorer</dt><dd>${esc(r.topScorer)}</dd>` : ''}
+      ${r.topScorer ? `<dt>${esc(terms.topScorer)}</dt><dd>${esc(r.topScorer)}</dd>` : ''}
+      ${r.topWickets ? `<dt>Top wicket taker</dt><dd>${esc(r.topWickets)}</dd>` : ''}
       ${r.cups.map((x) => `<dt>${esc(x.name)}</dt><dd>${esc(x.run)}</dd>`).join('')}
     </dl>
     </div>
@@ -463,12 +471,11 @@ function seasonEndHtml(e: SeasonEndView): string {
         : ''
     }
     <div class="clue">
-      <div class="clue-row"><span>Attack</span><strong>${ordinal(r.scoredRank)}</strong><span class="muted small">for goals scored</span></div>
-      <div class="clue-row"><span>Defence</span><strong>${ordinal(r.concededRank)}</strong><span class="muted small">for goals conceded</span></div>
+      <div class="clue-row"><span>${esc(terms.attack)}</span><strong>${ordinal(r.scoredRank)}</strong><span class="muted small">${esc(terms.clueScored)}</span></div>
+      <div class="clue-row"><span>${esc(terms.defence)}</span><strong>${ordinal(r.concededRank)}</strong><span class="muted small">${esc(terms.clueConceded)}</span></div>
     </div>
     <details class="howto small"><summary>How does summer work?</summary>
-      <p class="muted">Every summer some players retire or are dropped, and the squad loses strength, more at one end of the pitch than the other. Who's leaving shows where most of it went; your season shows where you were already short.</p>
-      <p class="muted">Whatever the question, one answer strengthens the attack and the other the defence. Let one side fall too far behind and opponents exploit it, and at the top there's less room for a weak side.</p>
+      ${terms.howTo.map((line) => `<p class="muted">${esc(line)}</p>`).join('')}
     </details>
     <p class="small strong">${esc(e.question.prompt)}</p>
     <div class="focus-row" role="radiogroup">${e.question.options.map(option).join('')}</div>
@@ -479,7 +486,7 @@ function seasonEndHtml(e: SeasonEndView): string {
     </div>
 
     <h3 class="sub">Final table</h3>
-    ${tableHtml([e.table], 1)}
+    ${tableHtml([e.table], 1, terms)}
     ${e.playoffs ? playoffHtml(e.playoffs) : ''}
   </div>`;
 }
@@ -496,18 +503,19 @@ function fixturesHtml(fixtures: FixtureView[]): string {
 }
 
 /** Only records that exist yet; a brand-new club gets a line instead of a column of dashes. */
-function recordsHtml(r: GameView['club']['records']): string {
+function recordsHtml(r: GameView['club']['records'], terms: SportTerms): string {
   const rows: [string, string | null][] = [
     ['Biggest win', r.biggestWin ? esc(r.biggestWin) : null],
     ['Heaviest defeat', r.heaviestDefeat ? esc(r.heaviestDefeat) : null],
     ['Unbeaten run', /^0\b/.test(r.unbeaten) ? null : esc(r.unbeaten)],
     ['Winning run', /^0\b/.test(r.winning) ? null : esc(r.winning)],
-    ['Most goals in a season', r.mostGoals ? esc(r.mostGoals) : null],
-    ['Top scorers', r.topScorers.length ? r.topScorers.map(esc).join('<br>') : null],
+    [terms.mostInSeason, r.mostGoals ? esc(r.mostGoals) : null],
+    [terms.topScorers, r.topScorers.length ? r.topScorers.map(esc).join('<br>') : null],
+    ['Top wicket takers', r.topWicketTakers?.length ? r.topWicketTakers.map(esc).join('<br>') : null],
   ];
   const shown = rows.filter(([, value]) => value !== null);
   return shown.length
-    ? `<dl class="report records">${shown.map(([label, value]) => `<dt>${label}</dt><dd>${value}</dd>`).join('')}</dl>`
+    ? `<dl class="report records">${shown.map(([label, value]) => `<dt>${esc(label)}</dt><dd>${value}</dd>`).join('')}</dl>`
     : '<p class="muted small">Records appear as the matches are played.</p>';
 }
 
@@ -519,8 +527,8 @@ function clubHtml(v: GameView): string {
     <div class="club">${swatch(c, 'crest')}<div><div class="name">${esc(c.name)}</div><div class="muted small">${esc(c.short)} · League ${c.tier} · Season ${c.season}</div></div></div>
     <p class="expect">Expected to finish <strong>${ordinal(c.expected)}</strong> this season</p>
     <dl class="report">
-      <dt>Scored</dt><dd>${g.scored} · ${ordinal(g.scoredRank)} <span class="muted">(league avg ${g.average})</span></dd>
-      <dt>Conceded</dt><dd>${g.conceded} · ${ordinal(g.concededRank)} <span class="muted">(league avg ${g.average})</span></dd>
+      <dt>Scored</dt><dd>${esc(g.scoredText)} · ${ordinal(g.scoredRank)} <span class="muted">(league avg ${esc(g.avgForText)})</span></dd>
+      <dt>Conceded</dt><dd>${esc(g.concededText)} · ${ordinal(g.concededRank)} <span class="muted">(league avg ${esc(g.avgAgainstText)})</span></dd>
     </dl>
     <p class="muted small">After ${g.played} league match${g.played === 1 ? '' : 'es'} this season.</p>
     ${
@@ -544,12 +552,12 @@ function clubHtml(v: GameView): string {
   </div>
   <div class="card">
     <h3 class="sub first">Records</h3>
-    ${recordsHtml(r)}
+    ${recordsHtml(r, v.terms)}
 
   </div>
   <div class="card">
     <h3 class="sub first">Manager</h3>
-    <p class="small">${r.manager.seasons} season${r.manager.seasons === 1 ? '' : 's'} completed · ${r.manager.matches} matches · ${r.manager.won}W ${r.manager.drawn}D ${r.manager.lost}L · ${r.manager.winPct}% won · ${r.manager.titles} title${r.manager.titles === 1 ? '' : 's'}</p>
+    <p class="small">${r.manager.seasons} season${r.manager.seasons === 1 ? '' : 's'} completed · ${r.manager.matches} matches · ${r.manager.won}W ${v.terms.draws ? `${r.manager.drawn}D ` : ''}${r.manager.lost}L · ${r.manager.winPct}% won · ${r.manager.titles} title${r.manager.titles === 1 ? '' : 's'}</p>
 
   </div>
   <div class="card">
@@ -567,6 +575,11 @@ function clubHtml(v: GameView): string {
         : '<p class="muted small">Your first season is under way.</p>'
     }
     <p class="small"><button type="button" class="link" id="resetCareer">Reset career…</button></p>
+  </div>
+  <div class="card">
+    <h3 class="sub first">Play another sport</h3>
+    <p class="muted small">This career waits where you leave it.</p>
+    ${seg('sport', v.sports.map((s): Option => [s.id, `${s.icon} ${s.name}`, s.id === v.sport ? 'Playing' : (s.career ?? 'New')]), v.sport)}
   </div>`;
 }
 
@@ -577,7 +590,7 @@ function render(): void {
   if (!view) return;
   if (view.screen === 'setup') {
     renderOverlay(null);
-    if (app.dataset.mode !== 'setup') renderSetup(view.setup);
+    if (app.dataset.mode !== 'setup' || setup.sport !== view.setup.sport) renderSetup(view.setup);
     return;
   }
   setup.initialised = false;
@@ -627,6 +640,10 @@ app.addEventListener('click', (e) => {
   } else if (button.closest('.seg')?.getAttribute('data-name')) {
     const group = button.closest('.seg')!.getAttribute('data-name')!;
     const value = button.dataset.value!;
+    if (group === 'sport') {
+      send({ type: 'switchSport', sport: value as SportId });
+      return;
+    }
     if (group === 'league') setup.league = Number(value);
     if (group === 'duration') setup.duration = value as Duration;
     if (view?.screen === 'setup') renderSetup(view.setup);

@@ -1,6 +1,7 @@
+import { footballSport } from '../src/sports/football';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fillAllocation } from '../src/core/career';
-import { Game, migrate, MINUTE_MS, SAVE_VERSION, type SavedGame } from '../src/extension/game';
+import { Game, migrate, tickMs, SAVE_VERSION, type SavedGame } from '../src/extension/game';
 import { buildView, collapsedText, GoalWatch, statusText, statusTooltip } from '../src/extension/viewModel';
 
 function setup() {
@@ -12,7 +13,7 @@ function setup() {
   return { game, saves, seasonOver, fullTime, changed };
 }
 
-const minute = MINUTE_MS['2m'];
+const minute = tickMs(footballSport, '2m');
 
 describe('game clock', () => {
   beforeEach(() => vi.useFakeTimers());

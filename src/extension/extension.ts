@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import { fullHistory } from '../core/career';
-import { goalRanks, startRating } from '../core/league';
+import { SPORT_IDS, type SportId } from '../core/format';
+import { startRating } from '../core/league';
 import { Rng } from '../core/rng';
-import { isNation } from '../sports/football/names';
+import { SPORTS } from '../sports';
 import { ordinal } from '../shared/format';
 import { DURATIONS, type Duration, type ToHost } from '../shared/view';
 import { Game } from './game';
@@ -10,7 +11,7 @@ import { Ownership, POLL_MS } from './ownership';
 import { SidebarProvider } from './sidebar';
 import { StatusBar } from './statusBar';
 import { Storage, type LiveStatus } from './storage';
-import { buildView, collapsedText, GoalWatch, leaversLine, SEASON_OVER, statusText, statusTooltip, summerQuestion } from './viewModel';
+import { buildView, collapsedText, GoalWatch, leaversLine, SEASON_OVER, seasonClue, statusText, statusTooltip, summerQuestion } from './viewModel';
 
 let ownership: Ownership | undefined;
 
@@ -28,8 +29,6 @@ export function activate(context: vscode.ExtensionContext): void {
   };
 
   const sidebar = new SidebarProvider(context.extensionUri, (message) => handle(message));
-  const durations: Duration[] = DURATIONS;
-
   const goals = new GoalWatch();
   let lastLive = '';
   /**
@@ -53,7 +52,7 @@ export function activate(context: vscode.ExtensionContext): void {
   };
 
   const refresh = () => {
-    if (sidebar.visible) sidebar.post({ type: 'view', view: buildView(game, { fullTimeOverlay: config().get('fullTimeOverlay', true), durations, language: vscode.env.language }) });
+    if (sidebar.visible) sidebar.post({ type: 'view', view: buildView(game, { fullTimeOverlay: config().get('fullTimeOverlay', true), careers: storage.careers(), language: vscode.env.language }) });
     const live = outside();
     // Starting a career and the summer choice show even with the score turned off: they're waiting on the player.
     const waiting = !game.career || !!game.career.pending;
@@ -71,14 +70,11 @@ export function activate(context: vscode.ExtensionContext): void {
       if (sidebar.visible) return;
       // The one notification: the result, the clues (goal ranks and who's leaving) and the summer's question.
       const career = game.career!;
-      const table = career.season.leagues[end.tier - 1].table;
-      const me = table.find((r) => r.clubId === career.playerClubId)!;
-      const ranks = goalRanks(table, me.clubId);
       const question = summerQuestion(career);
       const leavers = leaversLine(career);
       void vscode.window
         .showInformationMessage(
-          `Season ${end.season} over: ${ordinal(end.position)} in League ${end.tier}. Scored ${me.goalsFor} (${ordinal(ranks.scored)}), conceded ${me.goalsAgainst} (${ordinal(ranks.conceded)}).${leavers ? ` ${leavers}` : ''} ${question.prompt}`,
+          `Season ${end.season} over: ${ordinal(end.position)} in League ${end.tier}. ${seasonClue(career, end.tier)}${leavers ? ` ${leavers}` : ''} ${question.prompt}`,
           ...question.options.map((o) => o.title),
           'Open',
         )
@@ -95,7 +91,7 @@ export function activate(context: vscode.ExtensionContext): void {
       try {
         const c = old.career;
         const history = c.history ?? [];
-        void storage.archive({ club: c.clubs[c.playerClubId].name, archivedAt: new Date().toISOString(), seasons: history.length, history, records: c.records });
+        void storage.archive({ club: c.clubs[c.playerClubId].name, sport: game.sportId, archivedAt: new Date().toISOString(), seasons: history.length, history, records: c.records });
       } catch {
         // Too different to read; the backup still has it all.
       }
@@ -104,12 +100,15 @@ export function activate(context: vscode.ExtensionContext): void {
       );
     },
   });
-  game.duration = duration();
+  game.selectSport(storage.activeSport());
+  game.setDuration(duration());
   // Shown straight away; the clock only runs once this window owns the game.
   game.load(storage.load(), false);
 
   const owner = new Ownership(`${process.pid}-${Math.random().toString(36).slice(2)}`, storage, {
     start: () => {
+      game.selectSport(storage.activeSport());
+      game.setDuration(duration());
       game.load(storage.load());
       refresh();
     },
@@ -126,14 +125,15 @@ export function activate(context: vscode.ExtensionContext): void {
         refresh();
         return;
       case 'startCareer': {
-        if (!isNation(message.team)) return;
+        const sport = game.sport;
+        if (!sport.nations().some((n) => n.short === message.team)) return;
         const { team, league } = message;
         setDuration(message.duration);
         owner.whenOwner(() => {
           const seed = (Date.now() ^ (Math.random() * 2 ** 31)) >>> 0;
-          const tier = Math.min(5, Math.max(1, Math.round(league)));
+          const tier = Math.min(sport.format.leagues, Math.max(1, Math.round(league)));
           // Somewhere in the league, weighted towards mid-table, attack and defence level: the summers shape it from there.
-          const rating = startRating(tier, new Rng(seed ^ 0x9e3779b9));
+          const rating = startRating(sport.format, tier, new Rng(seed ^ 0x9e3779b9));
           // One standard game: every career gets the tuning measured as 'medium'.
           game.start({ rating, difficulty: 'medium', team, seed });
         });
@@ -145,6 +145,9 @@ export function activate(context: vscode.ExtensionContext): void {
       case 'setDuration':
         setDuration(message.duration);
         refresh();
+        return;
+      case 'switchSport':
+        switchSport(message.sport);
         return;
       case 'copy':
         void vscode.env.clipboard.writeText(message.text).then(() => vscode.window.setStatusBarMessage('Sports Simulator: summary copied', 2000));
@@ -163,8 +166,21 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   }
 
+  /** Puts this sport's career away where it is and picks up the other sport's, or its setup. */
+  function switchSport(sport: SportId): void {
+    if (sport === game.sportId || !SPORT_IDS.includes(sport)) return;
+    owner.whenOwner(() => {
+      game.shutdown();
+      storage.setActiveSport(sport);
+      game.selectSport(sport);
+      game.setDuration(duration());
+      game.load(storage.load());
+      refresh();
+    });
+  }
+
   function setDuration(d: Duration): void {
-    if (!durations.includes(d)) return;
+    if (!DURATIONS.includes(d)) return;
     game.setDuration(d);
     void config().update('matchDuration', d, vscode.ConfigurationTarget.Global);
   }
@@ -176,7 +192,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const c = game.career;
       if (!c) return;
       const history = fullHistory(c);
-      void storage.archive({ club: c.clubs[c.playerClubId].name, archivedAt: new Date().toISOString(), seasons: history.length, history, records: c.records });
+      void storage.archive({ club: c.clubs[c.playerClubId].name, sport: game.sportId, archivedAt: new Date().toISOString(), seasons: history.length, history, records: c.records });
       game.reset();
     });
   }
@@ -185,9 +201,12 @@ export function activate(context: vscode.ExtensionContext): void {
   const poll = setInterval(() => {
     owner.poll();
     if (owner.owning) return;
-    // Another window runs the game: follow its save, so this window's box keeps up with goals and full time.
+    // Another window runs the game: follow its sport and save, so this window's box keeps up with goals and full time.
+    const sport = storage.activeSport();
+    const changedSport = sport !== game.sportId;
+    if (changedSport) game.selectSport(sport);
     const at = storage.savedAt();
-    if (at !== followedSave) {
+    if (changedSport || at !== followedSave) {
       followedSave = at;
       game.load(storage.load(), false);
     }
@@ -199,6 +218,12 @@ export function activate(context: vscode.ExtensionContext): void {
     { dispose: () => clearInterval(poll) },
     vscode.window.registerWebviewViewProvider(SidebarProvider.viewId, sidebar),
     vscode.commands.registerCommand('sportsSimulator.open', () => vscode.commands.executeCommand(`${SidebarProvider.viewId}.focus`)),
+    vscode.commands.registerCommand('sportsSimulator.switchSport', async () => {
+      const careers = storage.careers();
+      const items = SPORT_IDS.map((id) => ({ id, label: `${SPORTS[id].present.terms.icon} ${SPORTS[id].present.terms.name}`, description: id === game.sportId ? 'Playing now' : (careers[id] ?? 'Start a career') }));
+      const picked = await vscode.window.showQuickPick(items, { placeHolder: 'Which sport? Your careers wait where you left them.' });
+      if (picked) switchSport(picked.id);
+    }),
     vscode.commands.registerCommand('sportsSimulator.togglePause', () => owner.whenOwner(() => game.togglePause())),
     vscode.commands.registerCommand('sportsSimulator.resetCareer', async () => {
       const answer = await vscode.window.showWarningMessage('Reset your Sports Simulator career? Your history and trophies will be lost.', { modal: true }, 'Reset career');

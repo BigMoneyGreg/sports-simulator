@@ -1,4 +1,5 @@
-import { band, LEAGUE_COUNT, LEAGUE_SIZE } from './league';
+import type { SportFormat } from './format';
+import { band } from './league';
 import { MAX_STAT, MIN_STAT, rating, shiftRating, STATS, type Club, type Stat } from './club';
 import type { Rng } from './rng';
 
@@ -11,9 +12,6 @@ export const RATING_TUNING = {
   /** The share of the decline that hits attack is drawn from this range; defence takes the rest. */
   declineSplit: [0.1, 0.9] as [number, number],
   averageGain: 10,
-  performanceMultiplier: 1.0,
-  topBonus: [6, 4, 2],
-  bottomBonus: [-2, -4, -6],
   difficultyBoost: { easy: 10, medium: 7, hard: 0 } as Record<Difficulty, number>,
   /** The smaller boost while the player is reigning League 1 champion; back to the full one once they lose the title. */
   championBoost: { easy: 4, medium: 2, hard: 0 } as Record<Difficulty, number>,
@@ -47,11 +45,11 @@ export function expectedPositions(clubs: Club[]): Map<number, number> {
   return new Map(ranked.map((c, i) => [c.id, i + 1]));
 }
 
-/** Top/bottom bonus by finishing position; none for League 1's top 3 or League 5's bottom 3. */
-export function positionBonus(tier: number, position: number): number {
-  if (position <= 3) return tier === 1 ? 0 : RATING_TUNING.topBonus[position - 1];
-  const fromBottom = LEAGUE_SIZE - position;
-  if (fromBottom < 3) return tier === LEAGUE_COUNT ? 0 : RATING_TUNING.bottomBonus[2 - fromBottom];
+/** Top/bottom bonus by finishing position; none for League 1's top 3 or the bottom league's bottom 3. */
+export function positionBonus(format: SportFormat, tier: number, position: number): number {
+  if (position <= 3) return tier === 1 ? 0 : format.topBonus[position - 1];
+  const fromBottom = format.leagueSize - position;
+  if (fromBottom < 3) return tier === format.leagues ? 0 : format.bottomBonus[2 - fromBottom];
   return 0;
 }
 
@@ -71,9 +69,9 @@ export function plateau(value: number): number {
  * flattened near 99; the player's isn't, but their boost shrinks while they
  * hold the title.
  */
-export function seasonGain(tier: number, expected: number, actual: number, currentRating: number, extra = 0, isPlayer = false): number {
+export function seasonGain(format: SportFormat, tier: number, expected: number, actual: number, currentRating: number, extra = 0, isPlayer = false): number {
   const performance = expected - actual;
-  const gain = RATING_TUNING.averageGain + RATING_TUNING.performanceMultiplier * performance + positionBonus(tier, actual) + extra;
+  const gain = RATING_TUNING.averageGain + format.performanceMultiplier * performance + positionBonus(format, tier, actual) + extra;
   const net = gain - RATING_TUNING.decline;
   return RATING_TUNING.decline + (net > 0 && !isPlayer ? net * plateau(currentRating) : net);
 }
@@ -103,8 +101,8 @@ export function applyDecline(club: Club, amount: number, rng: Rng): Record<Stat,
  * Pulls an AI club drifting outside its league's band part of the way back,
  * and keeps runaway clubs from settling at the very top.
  */
-export function bandPull(club: Club, tier: number): void {
-  const { min, max } = band(tier);
+export function bandPull(format: SportFormat, club: Club, tier: number): void {
+  const { min, max } = band(format, tier);
   const r = rating(club);
   const outside = r < min ? min - r : r > max ? max - r : 0;
   if (outside !== 0) shiftRating(club, outside * RATING_TUNING.bandPull);

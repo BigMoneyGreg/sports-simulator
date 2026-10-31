@@ -1,33 +1,34 @@
-import { currentSlot, FOCUSES, leagueRounds, type Career, type Focus, type Playoff, type QuestionStyle, type SeasonRecord, type Slot } from '../core/career';
+import { currentSlot, FOCUSES, formatOf, leagueRounds, type Career, type Focus, type Playoff, type SeasonRecord, type Slot } from '../core/career';
+import { SPORT_IDS, type SportId } from '../core/format';
 import { CHAMPIONSHIP_EVERY, CUP_NAMES, cupFixtures, cupRun, cupStages, stageLabel, stillIn, type Cup, type CupId, type CupTie } from '../core/cups';
 import { emptyRecords, topScorers } from '../core/records';
-import { goalRanks, LEAGUE_COUNT, LEAGUE_SIZE, recordResult, sortTable, zone, type Fixture, type TableRow } from '../core/league';
-import { matchClock, timeline } from '../sports/football/commentary';
-import { outcome, type SideKey } from '../sports/football/match';
-import { NATIONS } from '../sports/football/data/nations';
-import { naturalTier, shortName, surname } from '../sports/football/names';
-import { role } from '../sports/football/squad';
+import { difference, goalRanks, recordResult, runRateAgainst, runRateFor, sortTable, zone, type Fixture, type TableRow } from '../core/league';
+import { SPORTS, sportOf, type AnySport } from '../sports';
+import { shortName, surname } from '../sports/football/names';
 import { ordinal } from '../shared/format';
-import { DURATIONS, type Duration } from '../shared/view';
-import type { CupRunView, CupsView, CupTieView, CupView, NationOption, CabinetView, QuestionView, ClubView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, TableView, TeamBadge, View } from '../shared/view';
+import type { SportOption, CupRunView, CupsView, CupTieView, CupView, NationOption, CabinetView, QuestionView, ClubView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, TableView, TeamBadge, View } from '../shared/view';
 import { fullTimePause } from './game';
 import type { Game } from './game';
 
 export interface ViewOptions {
   fullTimeOverlay: boolean;
-  durations?: Duration[];
+  /** The sports with a career waiting, and which country it's with. */
+  careers?: Partial<Record<SportId, string>>;
   /** VS Code's display language, to suggest a country at setup. */
   language?: string;
 }
 
 export function buildView(game: Game, options: ViewOptions = { fullTimeOverlay: true }): View {
   const career = game.career;
+  const sports = sportOptions(options.careers);
   if (!career) {
+    const { terms, durations } = game.sport.present;
     return {
       screen: 'setup',
-      setup: { nations: nationOptions(), suggested: suggestNation(options.language), duration: game.duration, durations: options.durations ?? DURATIONS },
+      setup: { sport: game.sportId, sports, terms, leagues: game.sport.format.leagues, nations: nationOptions(game.sportId), suggested: suggestNation(options.language), duration: game.duration, durations },
     };
   }
+  const sport = sportOf(career);
   const me = career.clubs[career.playerClubId];
   const season = career.season;
   const tier = season.leagues.find((l) => l.clubIds.includes(me.id))!.tier;
@@ -36,6 +37,9 @@ export function buildView(game: Game, options: ViewOptions = { fullTimeOverlay: 
 
   const view: GameView = {
     screen: 'game',
+    sport: career.sport,
+    sports,
+    terms: sport.present.terms,
     header: {
       club: badge(career, me.id),
       tier,
@@ -46,14 +50,14 @@ export function buildView(game: Game, options: ViewOptions = { fullTimeOverlay: 
         .filter((x) => x.kind === 'league')
         .slice(-5)
         .map((x) => {
-          const result = x.goalsFor > x.goalsAgainst ? 'W' : x.goalsFor < x.goalsAgainst ? 'L' : 'D';
+          const result = matchResult(x);
           return { result, title: `${result} ${x.goalsFor}–${x.goalsAgainst} v ${shortName(career.clubs[x.opponentId])} (${x.home ? 'H' : 'A'})` };
         }),
       paused: game.paused,
       season: season.number,
       round: roundLabel(career),
       duration: game.duration,
-      durations: options.durations ?? DURATIONS,
+      durations: sport.present.durations,
     },
     match: buildMatch(game),
     tables,
@@ -68,7 +72,7 @@ export function buildView(game: Game, options: ViewOptions = { fullTimeOverlay: 
       rival: rivalView(career, tables),
       cabinet: cabinet(career.history),
       records: recordsView(career),
-      history: [...career.history].reverse().map(historyRow),
+      history: [...career.history].reverse().map((r) => historyRow(r, sport)),
     },
     waiting: career.pending ? 'seasonOver' : null,
     playoffs: season.playoffs.map((p) => playoffView(career, p)),
@@ -82,8 +86,8 @@ export function buildView(game: Game, options: ViewOptions = { fullTimeOverlay: 
 function buildFullTime(game: Game): FullTimeView | null {
   if (game.phase !== 'fullTime' || !game.lastMatch) return null;
   const career = game.career!;
+  const sport = sportOf(career);
   const { match, fixture } = game.lastMatch;
-  const goals = match.events.flatMap((e) => (e.type === 'goal' ? [e] : []));
   const name = (id: number) => {
     const ids = [fixture.home, fixture.away];
     for (const clubId of ids) {
@@ -92,31 +96,36 @@ function buildFullTime(game: Game): FullTimeView | null {
     }
     return '?';
   };
-  const list = (side: SideKey) =>
-    goals
-      .filter((g) => g.side === side)
-      .map((g) => `${name(g.playerId)} ${g.minute}${g.added ? `+${g.added}` : ''}'${g.ownGoal ? ' og' : ''}`)
-      .join(', ');
-  const home = list('home');
-  const away = list('away');
-  const o = outcome(match);
+  const { note, scorers } = sport.present.fullTime(match, [shortName(career.clubs[fixture.home]), shortName(career.clubs[fixture.away])], name);
   return {
     competition: competition(fixture, career),
-    home: { ...badge(career, fixture.home), goals: match.home.goals },
-    away: { ...badge(career, fixture.away), goals: match.away.goals },
-    note: o.penalties ? `${o.penalties[0]}–${o.penalties[1]} on penalties` : o.extraTime ? 'after extra time' : undefined,
-    scorers: [home, away].filter(Boolean).join(' · '),
+    home: badge(career, fixture.home),
+    away: badge(career, fixture.away),
+    score: sport.present.score(match).join(sport.present.terms.scoreJoin),
+    note,
+    scorers,
     ms: fullTimePause(game.duration),
     key: `${career.season.number}-${career.season.round}`,
   };
 }
 
+/** "26W 7D 5L", or "7W 3L" in a sport without draws. */
+function recordText(r: Pick<SeasonRecord, 'won' | 'drawn' | 'lost'>, draws = true): string {
+  return draws ? `${r.won}W ${r.drawn}D ${r.lost}L` : `${r.won}W ${r.lost}L`;
+}
+
+/** W, D or L; a level score settled by a super over counts as the result it ended in. */
+function matchResult(m: { goalsFor: number; goalsAgainst: number; won?: boolean }): 'W' | 'D' | 'L' {
+  if (m.won !== undefined) return m.won ? 'W' : 'L';
+  return m.goalsFor > m.goalsAgainst ? 'W' : m.goalsFor < m.goalsAgainst ? 'L' : 'D';
+}
+
 /** One line for sharing: "Season 7 · Champions, League 3 · 26W 7D 5L · Promoted 🏆". */
-export function summaryLine(r: Pick<SeasonRecord, 'season' | 'tier' | 'position' | 'won' | 'drawn' | 'lost' | 'outcome'>): string {
+export function summaryLine(r: Pick<SeasonRecord, 'season' | 'tier' | 'position' | 'won' | 'drawn' | 'lost' | 'outcome'>, draws = true): string {
   const place = r.position === 1 ? `Champions, League ${r.tier}` : `${ordinal(r.position)}, League ${r.tier}`;
   const tail =
     r.outcome === 'promoted' ? 'Promoted' : r.outcome === 'playoffWinner' ? 'Promoted via the play-offs' : r.outcome === 'relegated' ? 'Relegated' : r.outcome === 'playoffs' ? 'Lost in the play-offs' : '';
-  return [`Season ${r.season}`, place, `${r.won}W ${r.drawn}D ${r.lost}L`, tail].filter(Boolean).join(' · ') + (r.position === 1 ? ' 🏆' : '');
+  return [`Season ${r.season}`, place, recordText(r, draws), tail].filter(Boolean).join(' · ') + (r.position === 1 ? ' 🏆' : '');
 }
 
 const RUN_SHORT: Record<string, string> = {
@@ -135,7 +144,7 @@ function cupLine(r: Pick<SeasonRecord, 'cup' | 'championship'>): string | undefi
   return parts.length ? parts.join(' · ') : undefined;
 }
 
-/** Long servants retire from international football; the rest are dropped. */
+/** Long servants retire from international sport; the rest are dropped. */
 const RETIRES_AFTER = 5;
 
 /** The player's summer comings and goings: who leaves, what they play and why, and the newcomers already settled. */
@@ -143,35 +152,30 @@ function squadChanges(career: Career): SeasonEndView['squad'] {
   const change = career.pending?.turnover?.find((t) => t.clubId === career.playerClubId);
   if (!change) return { leaving: [], arriving: [] };
   const me = career.clubs[career.playerClubId];
+  const sport = sportOf(career);
   const season = career.season.number;
   const leaving = change.out.map((id) => {
     const p = me.squad.find((x) => x.id === id)!;
     const seasons = season - (p.joined ?? 1) + 1;
-    const goals = career.records?.scorers[id]?.goals ?? 0;
-    const why = seasons >= RETIRES_AFTER ? `retires after ${seasons} seasons${goals ? `, ${goals} goal${goals === 1 ? '' : 's'}` : ''}` : 'dropped';
-    return `${p.name} · ${role(p).label} · ${why}`;
+    const tally = sport.present.tally(p, career.records?.scorers[id]?.goals ?? 0, career.records?.wicketTakers?.[id]?.goals ?? 0);
+    const why = seasons >= RETIRES_AFTER ? `retires after ${seasons} seasons${tally ? `, ${tally}` : ''}` : 'dropped';
+    return `${p.name} · ${sport.role(p).label} · ${why}`;
   });
   // A call-up may take a newcomer's place, so those places wait for the answer.
   const open = Object.values(career.pending?.question?.callUps ?? {}).map((c) => c.replaces);
   return { leaving, arriving: change.in.filter((p) => !open.includes(p.id)).map((p) => p.name) };
 }
 
-const QUESTION_COPY: Record<QuestionStyle, { prompt: string; titles?: Record<Focus, string> }> = {
-  callUp: { prompt: 'Retirements leave gaps. Who gets the call?' },
-  coach: { prompt: 'Your assistant has moved on. Who do you bring in?' },
-  formation: { prompt: 'Time for a new shape?', titles: { attack: 'Three up front', defence: 'A back five' } },
-  training: { prompt: 'What does the summer camp work on?', titles: { attack: 'Finishing', defence: 'Defending' } },
-};
-
 /** The summer's question as the player sees it, attack answer first. */
 export function summerQuestion(career: Career): QuestionView {
   const q = career.pending?.question ?? { style: 'formation' };
-  const copy = QUESTION_COPY[q.style];
+  const questions = sportOf(career).present.questions;
+  const copy: { prompt: string; titles?: Record<Focus, string> } = questions[q.style];
   return {
     prompt: copy.prompt,
     options: FOCUSES.map((focus) => {
       const person = q.people?.[focus];
-      if (!person || copy.titles) return { focus, title: (copy.titles ?? QUESTION_COPY.formation.titles!)[focus] };
+      if (!person || copy.titles) return { focus, title: (copy.titles ?? questions.formation.titles)[focus] };
       return q.style === 'coach' ? { focus, title: `Appoint ${person.name}`, line: `former ${person.role}` } : { focus, title: `Call up ${person.name}`, line: person.role };
     }),
   };
@@ -183,18 +187,19 @@ export function leaversLine(career: Career): string | undefined {
   const first = change && career.clubs[career.playerClubId].squad.find((p) => p.id === change.out[0]);
   if (!change || !first) return undefined;
   const others = change.out.length - 1;
-  return `${first.name} (${role(first).label})${others ? ` and ${others} other${others === 1 ? '' : 's'}` : ''} ${others ? 'leave' : 'leaves'}.`;
+  return `${first.name} (${sportOf(career).role(first).label})${others ? ` and ${others} other${others === 1 ? '' : 's'}` : ''} ${others ? 'leave' : 'leaves'}.`;
 }
 
 /** The season report's line for a competition: how far you went, and who won if it wasn't you. */
 function seasonCupLine(career: Career, cup: Cup): CupRunView {
-  const run = cupRun(cup, career.playerClubId) ?? "Didn't qualify";
+  const run = cupRun(formatOf(career), cup, career.playerClubId) ?? "Didn't qualify";
   const winner = cup.winner !== undefined && cup.winner !== career.playerClubId ? ` · won by ${shortName(career.clubs[cup.winner])}` : '';
   return { name: CUP_NAMES[cup.id], run: run + winner };
 }
 
-function historyRow(r: SeasonRecord): HistoryRowView {
-  return { season: r.season, tier: r.tier, position: r.position, record: `${r.won}W ${r.drawn}D ${r.lost}L`, points: r.points, outcome: r.outcome, cups: cupLine(r), summary: summaryLine(r) };
+function historyRow(r: SeasonRecord, sport: AnySport): HistoryRowView {
+  const { draws } = sport.present.terms;
+  return { season: r.season, tier: r.tier, position: r.position, record: recordText(r, draws), points: r.points, outcome: r.outcome, cups: cupLine(r), summary: summaryLine(r, draws) };
 }
 
 function cabinet(history: SeasonRecord[]): CabinetView {
@@ -222,6 +227,7 @@ function recordsView(career: Career): RecordsView {
     winning: run(r.winning, 'win', 'wins'),
     mostGoals: r.mostGoalsSeason && `${r.mostGoalsSeason.goals} (S${r.mostGoalsSeason.season})`,
     topScorers: topScorers(r).map((s) => `${s.name} ${s.goals}`),
+    ...(r.wicketTakers ? { topWicketTakers: topScorers(r, 3, r.wicketTakers).map((s) => `${s.name} ${s.goals}`) } : {}),
     manager: {
       seasons: career.history.length,
       matches: mg.matches,
@@ -264,12 +270,40 @@ function seasonGoals(table: TableRow[], clubId: number): ClubView['goals'] {
   const row = table.find((r) => r.clubId === clubId)!;
   const average = table.reduce((t, r) => t + r.goalsFor, 0) / table.length;
   const ranks = goalRanks(table, clubId);
-  return { scored: row.goalsFor, conceded: row.goalsAgainst, scoredRank: ranks.scored, concededRank: ranks.conceded, average: Math.round(average), played: row.played };
+  return { scored: row.goalsFor, conceded: row.goalsAgainst, scoredRank: ranks.scored, concededRank: ranks.conceded, average: Math.round(average), played: row.played, ...scoreTexts(table, row) };
+}
+
+/** What a side has scored and conceded, and the league's averages, as shown: in cricket per over, as totals depend on who batted first. */
+function scoreTexts(table: TableRow[], row: TableRow): { scoredText: string; concededText: string; avgForText: string; avgAgainstText: string } {
+  const mean = (of: (r: TableRow) => number) => table.reduce((t, r) => t + of(r), 0) / table.length;
+  if (row.ballsFaced === undefined) {
+    const average = String(Math.round(mean((r) => r.goalsFor)));
+    return { scoredText: String(row.goalsFor), concededText: String(row.goalsAgainst), avgForText: average, avgAgainstText: average };
+  }
+  const rate = (x: number) => `${x.toFixed(2)} an over`;
+  return { scoredText: rate(runRateFor(row)), concededText: rate(runRateAgainst(row)), avgForText: rate(mean(runRateFor)), avgAgainstText: rate(mean(runRateAgainst)) };
+}
+
+/** The difference column as shown: "+3", or a net run rate, "-0.42". */
+function differenceText(row: TableRow): string {
+  const d = difference(row);
+  return `${d > 0 ? '+' : ''}${row.ballsFaced === undefined ? d : d.toFixed(2)}`;
+}
+
+/** For the notification: "Scored 44 (3rd), conceded 40 (5th)." */
+export function seasonClue(career: Career, tier: number): string {
+  const { terms } = sportOf(career).present;
+  const table = career.season.leagues[tier - 1].table;
+  const row = table.find((r) => r.clubId === career.playerClubId)!;
+  const ranks = goalRanks(table, row.clubId);
+  const text = scoreTexts(table, row);
+  return `${terms.scoredWord} ${text.scoredText} (${ordinal(ranks.scored)}), ${terms.concededWord} ${text.concededText} (${ordinal(ranks.conceded)}).`;
 }
 
 function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
   const end = career.pending!;
   const s = career.season;
+  const { draws } = sportOf(career).present.terms;
   const me = career.clubs[career.playerClubId];
   const league = s.leagues[end.tier - 1];
   const row = league.table.find((r) => r.clubId === me.id)!;
@@ -277,7 +311,7 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
   const avgAgainst = avgFor;
 
   // Runs across league matches, in order.
-  const results = s.playerMatches.filter((m) => m.kind === 'league').map((m) => (m.goalsFor > m.goalsAgainst ? 'W' : m.goalsFor === m.goalsAgainst ? 'D' : 'L'));
+  const results = s.playerMatches.filter((m) => m.kind === 'league').map(matchResult);
   const longest = (ok: (r: string) => boolean) => {
     let best = 0;
     let cur = 0;
@@ -296,7 +330,9 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
   const scorer = me.squad
     .map((p) => ({ name: p.name, goals: s.scorers[p.id] ?? 0 }))
     .sort((a, b) => b.goals - a.goals)[0];
-
+  const bowler = s.wickets
+    ? me.squad.map((p) => ({ name: p.name, wickets: s.wickets![p.id] ?? 0 })).sort((a, b) => b.wickets - a.wickets)[0]
+    : undefined;
 
   const headlines: Record<NonNullable<SeasonEndView['outcome']>, string> = {
     champion: end.tier === 1 ? 'Champions of League 1!' : `League ${end.tier} champions!`,
@@ -319,23 +355,25 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
     table,
     playoffs: myPlayoff && playoffView(career, myPlayoff),
     report: {
-      record: `${row.won}W ${row.drawn}D ${row.lost}L`,
+      record: recordText(row, draws),
       points: row.points,
       goalsFor: row.goalsFor,
       goalsAgainst: row.goalsAgainst,
       avgFor: Math.round(avgFor),
       avgAgainst: Math.round(avgAgainst),
+      ...scoreTexts(league.table, row),
       scoredRank: goalRanks(league.table, me.id).scored,
       concededRank: goalRanks(league.table, me.id).conceded,
       bestRun,
       worstRun,
       topScorer: scorer && scorer.goals > 0 ? `${scorer.name} (${scorer.goals})` : undefined,
+      ...(bowler && bowler.wickets > 0 ? { topWickets: `${bowler.name} (${bowler.wickets})` } : {}),
       cups: [s.cup, s.championship].flatMap((cup) => (cup ? [seasonCupLine(career, cup)] : [])),
     },
     performance: end.performance > 0 ? 'above' : end.performance < 0 ? 'below' : 'expected',
     squad: squadChanges(career),
     question: summerQuestion(career),
-    summary: summaryLine({ season: end.season, tier: end.tier, position: end.position, won: row.won, drawn: row.drawn, lost: row.lost, outcome: end.outcome }),
+    summary: summaryLine({ season: end.season, tier: end.tier, position: end.position, won: row.won, drawn: row.drawn, lost: row.lost, outcome: end.outcome }, draws),
     canRetire: end.outcome === 'champion',
   };
 }
@@ -355,15 +393,16 @@ function rivalView(career: Career, tables: TableView[]): ClubView['rival'] {
   };
 }
 
-let nationList: NationOption[] | undefined;
-function nationOptions(): NationOption[] {
-  nationList ??= NATIONS.map((n) => ({
-    code: n.code,
-    name: n.name,
-    colours: n.colours,
-    tier: naturalTier(n.code, LEAGUE_SIZE, LEAGUE_COUNT),
-  })).sort((a, b) => a.name.localeCompare(b.name));
-  return nationList;
+const nationLists: Partial<Record<SportId, NationOption[]>> = {};
+function nationOptions(sport: SportId): NationOption[] {
+  return (nationLists[sport] ??= SPORTS[sport]
+    .nations()
+    .map((n) => ({ code: n.short, name: n.name, colours: n.colours, tier: n.tier }))
+    .sort((a, b) => a.name.localeCompare(b.name)));
+}
+
+function sportOptions(careers: ViewOptions['careers'] = {}): SportOption[] {
+  return SPORT_IDS.map((id) => ({ id, name: SPORTS[id].present.terms.name, icon: SPORTS[id].present.terms.icon, ...(careers[id] ? { career: careers[id] } : {}) }));
 }
 
 /** VS Code display languages that point clearly to one country (plain English doesn't). */
@@ -391,7 +430,7 @@ function roundLabel(career: Career): string {
     case 'playoff':
       return ['Play-off semi-final, 1st leg', 'Play-off semi-final, 2nd leg', 'Play-off final'][slot.stage];
     default:
-      return `${CUP_NAMES[slot.kind]} · ${stageLabel(slot.kind, cupStages(slot.kind)[slot.stage])}`;
+      return `${CUP_NAMES[slot.kind]} · ${stageLabel(formatOf(career), slot.kind, cupStages(formatOf(career), slot.kind)[slot.stage])}`;
   }
 }
 
@@ -399,10 +438,11 @@ function competition(fixture: Fixture, career: Career): string {
   switch (fixture.kind) {
     case 'cup':
     case 'championship': {
-      const stage = cupStages(fixture.kind)[fixture.stage!];
+      const format = formatOf(career);
+      const stage = cupStages(format, fixture.kind)[fixture.stage!];
       const cup = fixture.kind === 'cup' ? career.season.cup : career.season.championship!;
       const group = 'group' in stage ? cup.groups.find((g) => g.table.some((r) => r.clubId === fixture.home)) : undefined;
-      return `${CUP_NAMES[fixture.kind]} · ${group ? `Group ${group.name}` : stageLabel(fixture.kind, stage)}`;
+      return `${CUP_NAMES[fixture.kind]} · ${group ? `Group ${group.name}` : stageLabel(format, fixture.kind, stage)}`;
     }
     case 'league':
       return `League ${fixture.tier}`;
@@ -419,23 +459,30 @@ function buildMatch(game: Game): LiveMatchView | null {
   const shown = game.shownMatch;
   const career = game.career!;
   if (!shown) return null;
+  const sport = sportOf(career);
+  const { module, present } = sport;
   const { match, fixture } = shown;
-  const playerName = (side: SideKey, id: number) => {
+  const playerName = (side: 'home' | 'away', id: number) => {
     const club = career.clubs[side === 'home' ? fixture.home : fixture.away];
     // Own goals are credited to the scoring side but the player belongs to the other.
     const other = career.clubs[side === 'home' ? fixture.away : fixture.home];
     return (club.squad.find((p) => p.id === id) ?? other.squad.find((p) => p.id === id))?.name ?? 'Unknown';
   };
+  const towns: [string, string] = [shortName(career.clubs[fixture.home]), shortName(career.clubs[fixture.away])];
+  const situation = present.situation?.(match, towns);
   const view: LiveMatchView = {
     competition: competition(fixture, career),
     round: fixture.kind === 'league' ? roundLabel(career) : undefined,
-    homeTown: shortName(career.clubs[fixture.home]),
-    awayTown: shortName(career.clubs[fixture.away]),
+    homeTown: towns[0],
+    awayTown: towns[1],
     home: { ...badge(career, fixture.home), goals: match.home.goals, isPlayer: fixture.home === career.playerClubId },
     away: { ...badge(career, fixture.away), goals: match.away.goals, isPlayer: fixture.away === career.playerClubId },
-    clock: matchClock(match),
-    finished: match.period === 'done',
-    timeline: timeline(match, { playerName }),
+    score: present.score(match),
+    alerts: module.alerts(match),
+    ...(situation ? { situation } : {}),
+    clock: present.clock(match),
+    finished: module.isFinished(match),
+    timeline: present.timeline(match, { playerName }),
   };
   if (match.knockout && fixture.secondLeg) {
     const [h, a] = match.knockout.aggregate;
@@ -446,8 +493,8 @@ function buildMatch(game: Game): LiveMatchView | null {
     const banned = me.squad.filter((p) => (career.suspended ?? []).includes(p.id)).map((p) => surname(p.name));
     if (banned.length && (fixture.home === me.id || fixture.away === me.id)) view.suspended = banned;
   }
-  const result = view.finished ? outcome(match) : undefined;
-  if (result?.penalties) view.penalties = `Pens ${result.penalties[0]}–${result.penalties[1]}`;
+  const result = view.finished ? module.outcome(match) : undefined;
+  if (result?.penalties) view.penalties = `${present.terms.deciderLabel} ${result.penalties[0]}–${result.penalties[1]}`;
   return view;
 }
 
@@ -455,6 +502,8 @@ function buildMatch(game: Game): LiveMatchView | null {
 function buildTables(game: Game): TableView[] {
   const career = game.career!;
   const live = game.live;
+  const { module } = sportOf(career);
+  const format = formatOf(career);
   return career.season.leagues.map((league) => {
     let table: TableRow[] = league.table;
     const before = new Map(sortTable(league.table).map((r, i) => [r.clubId, i + 1]));
@@ -464,8 +513,8 @@ function buildTables(game: Game): TableView[] {
       live.fixtures.forEach((f, i) => {
         if (f.kind !== 'league' || f.tier !== league.tier) return;
         const m = live.matches[i];
-        if (m.minute === 0) return;
-        recordResult(table, f.home, f.away, outcome(m));
+        if (!module.countsLive(m)) return;
+        recordResult(table, f.home, f.away, module.outcome(m));
         playing = true;
       });
     }
@@ -481,8 +530,9 @@ function buildTables(game: Game): TableView[] {
         drawn: r.drawn,
         lost: r.lost,
         gd: r.goalsFor - r.goalsAgainst,
+        gdText: differenceText(r),
         points: r.points,
-        zone: zone(league.tier, i + 1),
+        zone: zone(format, league.tier, i + 1),
         isPlayer: r.clubId === career.playerClubId,
         isRival: r.clubId === career.rival,
         move: (playing && before.get(r.clubId)! - (i + 1)) || undefined,
@@ -494,7 +544,7 @@ function buildTables(game: Game): TableView[] {
 const STAGE_SHORT: Record<string, string> = { 'Round of 64': '64', 'Round of 32': '32', 'Round of 16': '16', 'Quarter-final': 'QF', 'Semi-final': 'SF', Final: 'F' };
 
 /** A short label that fits beside "MD 38" ("C32", "WCQF", "PO SF1"), and the full one for hovering. */
-function slotLabel(slot: Slot): { label: string; title: string } {
+function slotLabel(career: Career, slot: Slot): { label: string; title: string } {
   if (slot.kind === 'league') return { label: `MD ${slot.index + 1}`, title: `League matchday ${slot.index + 1}` };
   if (slot.kind === 'playoff') {
     return [
@@ -503,10 +553,11 @@ function slotLabel(slot: Slot): { label: string; title: string } {
       { label: 'PO F', title: 'Play-off final' },
     ][slot.stage];
   }
-  const stage = cupStages(slot.kind)[slot.stage];
-  const title = `${CUP_NAMES[slot.kind]}: ${stageLabel(slot.kind, stage)}`;
+  const format = formatOf(career);
+  const stage = cupStages(format, slot.kind)[slot.stage];
+  const title = `${CUP_NAMES[slot.kind]}: ${stageLabel(format, slot.kind, stage)}`;
   if ('group' in stage) return { label: `WC G${stage.group + 1}`, title };
-  return { label: `${slot.kind === 'cup' ? 'C' : 'WC'}${STAGE_SHORT[stageLabel(slot.kind, stage)]}`, title };
+  return { label: `${slot.kind === 'cup' ? 'C' : 'WC'}${STAGE_SHORT[stageLabel(format, slot.kind, stage)]}`, title };
 }
 
 /** The player's matchdays in calendar order: every league round, plus cup and play-off matches once they're known. */
@@ -528,7 +579,7 @@ function buildFixtures(career: Career, game: Game): FixtureView[] {
     else if (r >= s.round && slot.kind !== 'playoff') {
       // A cup tie already drawn shows as soon as it's known.
       const cup = slot.kind === 'cup' ? s.cup : s.championship;
-      const f = cup && cupFixtures(cup, slot.stage).find((x) => x.home === me || x.away === me);
+      const f = cup && cupFixtures(formatOf(career), cup, slot.stage).find((x) => x.home === me || x.away === me);
       if (f) out.push(fixtureView(career, slot, f, undefined, false));
     }
   });
@@ -539,11 +590,12 @@ function fixtureView(career: Career, slot: Slot, f: Pick<Fixture, 'home' | 'away
   const home = f.home === career.playerClubId;
   const opponentId = home ? f.away : f.home;
   const opponent = badge(career, opponentId);
-  const { label, title } = slotLabel(slot);
+  const { label, title } = slotLabel(career, slot);
+  const { terms } = sportOf(career).present;
   const view: FixtureView = { label, labelTitle: title, kind: slot.kind, opponent, town: shortName(career.clubs[opponentId]), home, current };
   if (played) {
-    view.result = `${played.goalsFor}–${played.goalsAgainst}${played.penalties ? ` p (${played.penalties[0]}–${played.penalties[1]})` : played.extraTime ? ' aet' : ''}`;
-    if (played.penalties) view.resultTitle = `${played.goalsFor}–${played.goalsAgainst}, ${played.won ? 'won' : 'lost'} ${played.penalties[0]}–${played.penalties[1]} on penalties`;
+    view.result = `${played.goalsFor}–${played.goalsAgainst}${played.penalties ? ` ${terms.deciderShort} (${played.penalties[0]}–${played.penalties[1]})` : played.extraTime ? ' aet' : ''}`;
+    if (played.penalties) view.resultTitle = `${played.goalsFor}–${played.goalsAgainst}, ${played.won ? 'won' : 'lost'} ${played.penalties[0]}–${played.penalties[1]} ${terms.deciderLong}`;
     const won = played.won ?? played.goalsFor > played.goalsAgainst;
     const lost = played.won === false || (played.won === undefined && played.goalsFor < played.goalsAgainst);
     view.outcome = won ? 'W' : lost ? 'L' : 'D';
@@ -562,7 +614,7 @@ function buildCups(career: Career, live: boolean): CupsView {
     championship = { ...last, status: `Season ${career.lastChampionship.season} edition · ${last.status}`, next: upcoming };
   } else championship = { ...emptyCup(career, 'championship'), status: 'Not played yet', next: upcoming };
   const cup = cupView(career, s.cup, live);
-  if (!s.cup.entrants.includes(career.playerClubId)) cup.next = "Last season's top 64 qualify";
+  if (!s.cup.entrants.includes(career.playerClubId)) cup.next = `Last season's top ${formatOf(career).cup.entrants} qualify`;
   return { cup, championship };
 }
 
@@ -579,7 +631,7 @@ export function cupTieView(career: Career, t: CupTie): CupTieView {
     const name = shortName(career.clubs[t.winner]);
     if (t.penalties) {
       const [w, l] = t.winner === t.home ? t.penalties : [t.penalties[1], t.penalties[0]];
-      decided = `${name} win ${w}–${l} on penalties`;
+      decided = `${name} win ${w}–${l} ${sportOf(career).present.terms.deciderLong}`;
     } else if (t.extraTime) decided = `${name} win after extra time`;
   }
   return {
@@ -615,6 +667,7 @@ function cupView(career: Career, cup: Cup, live = false): CupView {
       town: shortName(career.clubs[r.clubId]),
       played: r.played,
       gd: r.goalsFor - r.goalsAgainst,
+      gdText: differenceText(r),
       points: r.points,
       isPlayer: r.clubId === me,
       through: i < 2,
@@ -625,7 +678,7 @@ function cupView(career: Career, cup: Cup, live = false): CupView {
     ties: round.ties.map((t) => cupTieView(career, t)),
   }));
   if (cup.winner !== undefined) view.winner = badge(career, cup.winner);
-  const run = cupRun(cup, me);
+  const run = cupRun(formatOf(career), cup, me);
   const nextTie = cup.rounds[cup.rounds.length - 1]?.ties.find((t) => (t.home === me || t.away === me) && t.winner === undefined);
   if (run === null) view.status = "You didn't qualify.";
   else if (run === 'Winners') view.status = `Winners! ${career.clubs[me].name} lift the ${CUP_NAMES[cup.id]}.`;
@@ -646,10 +699,11 @@ function scoreLine(game: Game): string | null {
   const shown = game.shownMatch;
   if (!shown) return null;
   const { match, fixture } = shown;
+  const { module, present } = sportOf(career);
   const h = career.clubs[fixture.home].short;
   const a = career.clubs[fixture.away].short;
-  if (match.period === 'done') return `FT ${h} ${match.home.goals}–${match.away.goals} ${a}`;
-  return `${h} ${match.home.goals}–${match.away.goals} ${a} ${matchClock(match)}`;
+  const line = `${h} ${present.score(match).join(present.terms.scoreJoin)} ${a}`.replace(/\s+/g, ' ');
+  return module.isFinished(match) ? `FT ${line}` : `${line} ${present.clock(match)}`;
 }
 
 export const SEASON_OVER = 'Season over: one decision waiting';
@@ -657,11 +711,12 @@ export const SEASON_OVER = 'Season over: one decision waiting';
 /** Text for the status bar; `goal` while a goal in the player's match is fresh. */
 export function statusText(game: Game, goal = false): string | null {
   const career = game.career;
-  if (!career) return '⚽ Start a career';
+  const { icon, alert } = game.sport.present.terms;
+  if (!career) return `${icon} Start a career`;
   if (career.pending) return `$(bell) ${SEASON_OVER}`;
   const score = scoreLine(game);
   if (!score) return null;
-  return `⚽ ${game.paused ? '⏸ ' : ''}${goal && !score.startsWith('FT') ? 'GOAL! ' : ''}${score}`;
+  return `${icon} ${game.paused ? '⏸ ' : ''}${goal && !score.startsWith('FT') ? `${alert} ` : ''}${score}`;
 }
 
 /** Where the player's club stands in its league table before the matchday in progress. */
@@ -712,7 +767,8 @@ export class GoalWatch {
     if (!shown) return false;
     const { match, fixture } = shown;
     const key = `${game.career!.season.number}-${game.career!.season.round}-${fixture.home}-${fixture.away}`;
-    const goals = match.home.goals + match.away.goals;
+    const [home, away] = game.sport.module.alerts(match);
+    const goals = home + away;
     if (key === this.key && goals > this.goals) this.until = now + GoalWatch.MS;
     if (key !== this.key) this.until = 0;
     this.key = key;

@@ -1,6 +1,7 @@
+import { FOOTBALL } from '../src/core/format';
 import { describe, expect, it } from 'vitest';
 import { newCareer } from '../src/core/career';
-import { band, STARTING_POTS } from '../src/core/league';
+import { band } from '../src/core/league';
 import { rating } from '../src/core/club';
 import { Rng } from '../src/core/rng';
 import { NAME_POOLS } from '../src/sports/football/data/names';
@@ -43,7 +44,7 @@ describe('nations', () => {
     expect(new Set(WORLD_ORDER).size).toBe(100);
     const codes = new Set(NATIONS.map((n) => n.code));
     for (const c of WORLD_ORDER) expect(codes.has(c), c).toBe(true);
-    expect(STARTING_POTS[STARTING_POTS.length - 1]).toBe(100);
+    expect(FOOTBALL.startingPots[FOOTBALL.startingPots.length - 1]).toBe(100);
   });
 
   it('starts a nation in its usual league, or the bottom one from outside the world', () => {
@@ -88,7 +89,7 @@ describe('the starting world', () => {
     const c = newCareer({ rating: 10, difficulty: 'medium', seed: 3, team: 'ENG' }, footballSport);
     expect(c.clubs[0].name).toBe('England');
     expect(tierOf(c, 0)).toBe(5);
-    expect(rating(c.clubs[0])).toBeGreaterThanOrEqual(band(5).min);
+    expect(rating(c.clubs[0])).toBeGreaterThanOrEqual(band(FOOTBALL, 5).min);
     expect(new Set(c.clubs.map((x) => Math.round(rating(x)))).size).toBe(100);
     expect(c.clubs.filter((x) => x.short === 'ENG')).toHaveLength(1);
   });

@@ -1,19 +1,6 @@
+import type { TimelineContext, TimelineItem } from '../../core/sport';
 import type { FootballMatch, SideKey } from './match';
 import { surname } from './names';
-
-/** One line of the match report: a goal, a card, or a break in play. */
-export interface TimelineItem {
-  clock: string;
-  kind: 'goal' | 'yellow' | 'red' | 'break';
-  side?: SideKey;
-  text: string;
-  /** Running score after a goal, e.g. "2–1". */
-  score?: string;
-}
-
-export interface TimelineContext {
-  playerName(side: SideKey, playerId: number): string;
-}
 
 export function clock(minute: number, added: number): string {
   return added > 0 ? `${minute}+${added}'` : `${minute}'`;

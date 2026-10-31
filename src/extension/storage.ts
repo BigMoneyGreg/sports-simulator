@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type * as vscode from 'vscode';
+import { SPORT_IDS, type SportId } from '../core/format';
 import type { SavedGame } from './game';
 import type { Lock, LockStore } from './ownership';
 
@@ -20,6 +21,7 @@ export interface LiveStatus {
 /** What's kept of a finished career. */
 export interface ArchivedCareer {
   club: string;
+  sport: SportId;
   archivedAt: string;
   seasons: number;
   history: SavedGame['career']['history'];
@@ -27,12 +29,13 @@ export interface ArchivedCareer {
 }
 
 /**
- * The career lives in the extension's global storage folder, so it follows you
- * across every project. A file rather than global state: every window reads
- * the latest save straight from disk when it takes over the game.
+ * Careers live in the extension's global storage folder, one per sport, so
+ * they follow you across every project. Files rather than global state: every
+ * window reads the latest save straight from disk when it takes over the game.
  */
 export class Storage implements LockStore {
-  private readonly savePath: string;
+  private readonly dir: string;
+  private readonly sportPath: string;
   private readonly lockPath: string;
   private readonly livePath: string;
 
@@ -41,13 +44,40 @@ export class Storage implements LockStore {
     private readonly memento: vscode.Memento,
   ) {
     fs.mkdirSync(dir, { recursive: true });
-    this.savePath = path.join(dir, 'career.json');
+    this.dir = dir;
+    this.sportPath = path.join(dir, 'sport.json');
     this.lockPath = path.join(dir, 'clock.json');
     this.livePath = path.join(dir, 'live.json');
   }
 
-  load(): SavedGame | null {
-    const raw = readFile(this.savePath) ?? this.memento.get<string>(LEGACY_KEY);
+  /** The sport being played; every window plays the same one. */
+  activeSport(): SportId {
+    const sport = readFile(this.sportPath)?.trim() as SportId | undefined;
+    return sport && SPORT_IDS.includes(sport) ? sport : 'football';
+  }
+
+  setActiveSport(sport: SportId): void {
+    writeFile(this.sportPath, sport);
+  }
+
+  /** Football keeps the file name it has always had. */
+  private savePath(sport: SportId = this.activeSport()): string {
+    return path.join(this.dir, sport === 'football' ? 'career.json' : `career.${sport}.json`);
+  }
+
+  /** The country each sport's waiting career is with. */
+  careers(): Partial<Record<SportId, string>> {
+    const out: Partial<Record<SportId, string>> = {};
+    for (const sport of SPORT_IDS) {
+      const c = this.load(sport)?.career;
+      const name = c?.clubs?.[c.playerClubId]?.name;
+      if (name) out[sport] = name;
+    }
+    return out;
+  }
+
+  load(sport: SportId = this.activeSport()): SavedGame | null {
+    const raw = readFile(this.savePath(sport)) ?? (sport === 'football' ? this.memento.get<string>(LEGACY_KEY) : undefined);
     if (!raw) return null;
     try {
       return JSON.parse(raw) as SavedGame;
@@ -63,21 +93,22 @@ export class Storage implements LockStore {
 
   /** Serialised straight away, so later changes to the live objects can't leak into the save. */
   save(game: SavedGame | null): void {
-    if (game) writeFile(this.savePath, JSON.stringify(game));
-    else fs.rmSync(this.savePath, { force: true });
+    if (game) writeFile(this.savePath(), JSON.stringify(game));
+    else fs.rmSync(this.savePath(), { force: true });
     if (this.memento.get(LEGACY_KEY) !== undefined) void this.memento.update(LEGACY_KEY, undefined);
   }
 
   /** Moves a save this version can't read out of the way, whole, as `career.v<version>.json`. */
   backup(game: SavedGame): void {
-    writeFile(path.join(path.dirname(this.savePath), `career.v${game.version}.json`), JSON.stringify(game));
+    const sport = this.activeSport();
+    writeFile(path.join(this.dir, sport === 'football' ? `career.v${game.version}.json` : `career.${sport}.v${game.version}.json`), JSON.stringify(game));
     this.save(null);
   }
 
   /** When the save last changed on disk (0 if there's none), so other windows can follow it. */
   savedAt(): number {
     try {
-      return fs.statSync(this.savePath).mtimeMs;
+      return fs.statSync(this.savePath()).mtimeMs;
     } catch {
       return 0;
     }

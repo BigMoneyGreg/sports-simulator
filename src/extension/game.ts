@@ -20,18 +20,21 @@ import {
 import type { Fixture } from '../core/league';
 import { Rng } from '../core/rng';
 import type { Stat } from '../core/club';
-import { footballSport } from '../sports/football';
-import { createMatch, isFinished, outcome, step, type FootballMatch } from '../sports/football/match';
+import type { SportId } from '../core/format';
+import { SPORTS, type AnySport } from '../sports';
 import type { Duration } from '../shared/view';
 
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
 
 /**
  * Upgrades for older saves: `MIGRATIONS[n]` turns a version-n save into
  * version n + 1. Whenever SAVE_VERSION goes up, add one here, so players'
  * careers carry over.
  */
-export const MIGRATIONS: Record<number, (saved: SavedGame) => SavedGame> = {};
+export const MIGRATIONS: Record<number, (saved: SavedGame) => SavedGame> = {
+  // Before rugby and cricket, every career was football.
+  7: (s) => ({ ...s, career: { ...s.career, sport: 'football', version: 8 } }),
+};
 
 /** The save brought up to SAVE_VERSION, or null if it can't be (too old, or from a newer version). */
 export function migrate(saved: SavedGame, migrations = MIGRATIONS): SavedGame | null {
@@ -44,12 +47,19 @@ export function migrate(saved: SavedGame, migrations = MIGRATIONS): SavedGame | 
   return s.version === SAVE_VERSION ? s : null;
 }
 
-/** Real milliseconds per match-minute. */
-export const MINUTE_MS: Record<Duration, number> = {
-  '30s': 30_000 / 90,
-  '2m': 120_000 / 90,
-  '5m': 300_000 / 90,
-};
+const DURATION_MS: Record<Duration, number> = { '30s': 30_000, '1m': 60_000, '2m': 120_000, '5m': 300_000 };
+
+/** Real milliseconds per tick of a match: a match-minute, or in cricket an over. */
+export function tickMs(sport: AnySport, duration: Duration): number {
+  return DURATION_MS[duration] / sport.module.ticks;
+}
+
+/** The match length to use when this one isn't offered in the sport: the next longer, or else its longest. */
+export function fitDuration(sport: AnySport, duration: Duration): Duration {
+  const offered = sport.present.durations;
+  if (offered.includes(duration)) return duration;
+  return offered.find((d) => DURATION_MS[d] >= DURATION_MS[duration]) ?? offered[offered.length - 1];
+}
 
 /** How long the full-time result stays up before the next matchday. */
 export function fullTimePause(duration: Duration): number {
@@ -58,7 +68,9 @@ export function fullTimePause(duration: Duration): number {
 
 export interface LiveRound {
   fixtures: Fixture[];
-  matches: FootballMatch[];
+  // Each sport's own match type: only its definition reads them.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  matches: any[];
   /** Index of the player's match in `fixtures`. */
   player: number;
   rng: number;
@@ -80,7 +92,7 @@ export interface GameHost {
   save(game: SavedGame | null): void;
   /** Something visible changed. */
   changed(): void;
-  fullTime?(match: FootballMatch, fixture: Fixture): void;
+  fullTime?(match: unknown, fixture: Fixture): void;
   seasonOver?(end: SeasonEnd): void;
   /** A save that couldn't be brought up to date: keep it somewhere before a new career replaces it. */
   unreadable?(saved: SavedGame): void;
@@ -92,10 +104,13 @@ export class Game {
   career: Career | null = null;
   live: LiveRound | null = null;
   /** The player's last finished match, shown during the full-time pause. */
-  lastMatch: { match: FootballMatch; fixture: Fixture } | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  lastMatch: { match: any; fixture: Fixture } | null = null;
   paused = false;
   phase: Phase = 'idle';
   duration: Duration = '2m';
+  /** The sport being played, or chosen for the next career. */
+  sportId: SportId = 'football';
   private timer: unknown = null;
 
   constructor(
@@ -103,7 +118,18 @@ export class Game {
     private readonly scheduler: Scheduler = { setTimeout: (fn, ms) => setTimeout(fn, ms), clearTimeout: (h) => clearTimeout(h as ReturnType<typeof setTimeout>) },
   ) {}
 
+  get sport(): AnySport {
+    return SPORTS[this.sportId];
+  }
+
   // -- lifecycle ------------------------------------------------------------
+
+  /** Changes sport, with the clock stopped: the caller then loads that sport's save, if it has one. */
+  selectSport(sport: SportId): void {
+    this.stop();
+    this.sportId = sport;
+    this.duration = fitDuration(this.sport, this.duration);
+  }
 
   /** Loads a save; with `run` false it's only shown (another window is running the game). */
   load(found: SavedGame | null, run = true): void {
@@ -119,6 +145,8 @@ export class Game {
       return;
     }
     this.career = saved.career;
+    this.sportId = saved.career.sport;
+    this.duration = fitDuration(this.sport, this.duration);
     this.live = saved.live;
     this.paused = saved.paused;
     this.phase = this.career.pending ? 'seasonOver' : this.live ? 'live' : 'idle';
@@ -127,7 +155,7 @@ export class Game {
 
   start(options: CareerOptions): void {
     this.stop();
-    this.career = newCareer(options, footballSport);
+    this.career = newCareer(options, this.sport);
     this.live = null;
     this.lastMatch = null;
     this.paused = false;
@@ -153,11 +181,11 @@ export class Game {
   }
 
   setDuration(duration: Duration): void {
-    this.duration = duration;
+    this.duration = fitDuration(this.sport, duration);
     // Only a running clock is rescheduled: a window that's just showing the game must not start one.
     if (this.phase === 'live' && this.timer !== null) {
       this.stop();
-      this.schedule(() => this.tick(), MINUTE_MS[duration]);
+      this.schedule(() => this.tick(), tickMs(this.sport, this.duration));
     }
   }
 
@@ -202,7 +230,7 @@ export class Game {
       case 'seasonOver':
         return;
       case 'live':
-        this.schedule(() => this.tick(), MINUTE_MS[this.duration]);
+        this.schedule(() => this.tick(), tickMs(this.sport, this.duration));
         return;
       case 'fullTime':
         this.schedule(() => this.nextMatchday(), fullTimePause(this.duration));
@@ -216,10 +244,11 @@ export class Game {
   /** Starts the next round the player plays in, resolving any rounds without them instantly. */
   private nextMatchday(): void {
     const career = this.career!;
+    const sport = this.sport;
     this.lastMatch = null;
     for (;;) {
       if (career.pending || isSeasonOver(career)) {
-        const end = endSeason(career, footballSport);
+        const end = endSeason(career, sport);
         this.phase = 'seasonOver';
         this.live = null;
         this.save();
@@ -230,42 +259,41 @@ export class Game {
       const fixtures = nextRound(career)!;
       const mine = playerInRound(career, fixtures);
       if (!mine) {
-        playRound(career, footballSport);
+        playRound(career, sport);
         continue;
       }
       const rng = new Rng(career.rng);
-      const matches = fixtures.map((f) =>
-        createMatch(teamSheet(career, f.home, footballSport), teamSheet(career, f.away, footballSport), f.options, rng),
-      );
+      const matches = fixtures.map((f) => sport.module.createMatch(teamSheet(career, f.home, sport), teamSheet(career, f.away, sport), f.options, rng));
       this.live = { fixtures, matches, player: fixtures.indexOf(mine), rng: rng.state };
       this.phase = 'live';
       this.save();
       this.host.changed();
-      this.schedule(() => this.tick(), MINUTE_MS[this.duration]);
+      this.schedule(() => this.tick(), tickMs(sport, this.duration));
       return;
     }
   }
 
-  /** One match-minute for every match in the round. */
+  /** One tick (in football, a match-minute) for every match in the round. */
   tick(): void {
     const live = this.live;
     if (!live || this.paused) return;
     const rng = new Rng(live.rng);
+    const { module } = this.sport;
     const mine = live.matches[live.player];
-    const eventsBefore = mine.events.length;
-    for (const m of live.matches) if (!isFinished(m)) step(m, rng);
+    const notableBefore = module.notable(mine);
+    for (const m of live.matches) if (!module.isFinished(m)) module.step(m, rng);
     live.rng = rng.state;
 
-    if (isFinished(mine)) {
+    if (module.isFinished(mine)) {
       // The player's match is over: finish the rest of the round straight away.
-      for (const m of live.matches) while (!isFinished(m)) step(m, rng);
+      for (const m of live.matches) while (!module.isFinished(m)) module.step(m, rng);
       live.rng = rng.state;
       this.finishRound();
       return;
     }
-    if (mine.events.slice(eventsBefore).some((e) => e.type === 'goal' || e.type === 'red')) this.save();
+    if (module.notable(mine) !== notableBefore) this.save();
     this.host.changed();
-    this.schedule(() => this.tick(), MINUTE_MS[this.duration]);
+    this.schedule(() => this.tick(), tickMs(this.sport, this.duration));
   }
 
   private finishRound(): void {
@@ -274,7 +302,7 @@ export class Game {
     career.rng = live.rng;
     completeRound(
       career,
-      live.fixtures.map((fixture, i) => ({ fixture, outcome: outcome(live.matches[i]) })),
+      live.fixtures.map((fixture, i) => ({ fixture, outcome: this.sport.module.outcome(live.matches[i]) })),
     );
     this.lastMatch = { match: live.matches[live.player], fixture: live.fixtures[live.player] };
     this.live = null;
@@ -288,7 +316,8 @@ export class Game {
   // -- helpers --------------------------------------------------------------
 
   /** The match to show: live, or the one that just finished. */
-  get shownMatch(): { match: FootballMatch; fixture: Fixture } | null {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  get shownMatch(): { match: any; fixture: Fixture } | null {
     if (this.live) return { match: this.live.matches[this.live.player], fixture: this.live.fixtures[this.live.player] };
     return this.lastMatch;
   }

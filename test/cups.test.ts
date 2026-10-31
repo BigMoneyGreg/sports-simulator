@@ -1,3 +1,4 @@
+import { FOOTBALL } from '../src/core/format';
 import { describe, expect, it } from 'vitest';
 import { allocatePoints, fillAllocation, newCareer, nextRound, playRound, playSeason, type Career } from '../src/core/career';
 import { rating } from '../src/core/club';
@@ -19,12 +20,12 @@ describe('Nations Cup', () => {
     const topMeetings = new Set<number>();
     let topAtHome = 0;
     for (let seed = 1; seed <= 20; seed++) {
-      const cup = drawCup(1, ids(64), new Rng(seed));
+      const cup = drawCup(FOOTBALL, 1, ids(64), new Rng(seed));
       const ties = cup.rounds[0].ties;
       expect(ties).toHaveLength(32);
       expect(new Set(ties.flatMap((t) => [t.home, t.away])).size).toBe(64);
       for (const t of ties) if (t.home < 32 && t.away < 32) topMeetings.add(seed);
-      for (const f of cupFixtures(cup, 0)) {
+      for (const f of cupFixtures(FOOTBALL, cup, 0)) {
         expect(f.options.knockout).toBeDefined();
         expect(f.options.neutral).toBeFalsy();
         if (f.home < 32) topAtHome++;
@@ -36,25 +37,25 @@ describe('Nations Cup', () => {
   });
 
   it('plays one-off ties all the way, the final at a neutral ground', () => {
-    const cup = drawCup(1, ids(64), new Rng(2));
+    const cup = drawCup(FOOTBALL, 1, ids(64), new Rng(2));
     const rng = new Rng(3);
-    cupStages('cup').forEach((stage, i) => {
-      const fixtures = cupFixtures(cup, i);
+    cupStages(FOOTBALL, 'cup').forEach((stage, i) => {
+      const fixtures = cupFixtures(FOOTBALL, cup, i);
       expect(fixtures.every((f) => f.options.knockout && !f.secondLeg)).toBe(true);
       expect(fixtures.every((f) => !!f.options.neutral === ('round' in stage && stage.round === 5))).toBe(true);
-      for (const f of fixtures) recordCupResult(cup, f, result(1, 0, 'home'), rng);
+      for (const f of fixtures) recordCupResult(FOOTBALL, cup, f, result(1, 0, 'home'), rng);
     });
-    expect(cupStages('cup')).toHaveLength(6);
+    expect(cupStages(FOOTBALL, 'cup')).toHaveLength(6);
     expect(cup.rounds.map((r) => r.ties.length)).toEqual([32, 16, 8, 4, 2, 1]);
     expect(cup.winner).toBeDefined();
-    expect(cupRun(cup, cup.winner!)).toBe('Winners');
-    expect(cupRun(cup, 999)).toBeNull();
+    expect(cupRun(FOOTBALL, cup, cup.winner!)).toBe('Winners');
+    expect(cupRun(FOOTBALL, cup, 999)).toBeNull();
   });
 });
 
 describe('World Championship', () => {
   it('draws eight groups of five with one team from each pot, so the top eight are split', () => {
-    const wc = drawChampionship(4, ids(40), new Rng(5));
+    const wc = drawChampionship(FOOTBALL, 4, ids(40), new Rng(5));
     expect(wc.groups).toHaveLength(8);
     for (const g of wc.groups) {
       const pots = g.table.map((r) => Math.floor(r.clubId / 8)).sort();
@@ -66,17 +67,17 @@ describe('World Championship', () => {
   });
 
   it('sends group winners against another group’s runners-up, keeping groups apart until the final', () => {
-    const wc = drawChampionship(4, ids(40), new Rng(6));
+    const wc = drawChampionship(FOOTBALL, 4, ids(40), new Rng(6));
     const rng = new Rng(7);
-    for (let i = 0; i < 5; i++) for (const f of cupFixtures(wc, i)) recordCupResult(wc, f, f.home < f.away ? result(2, 0) : result(0, 2), rng);
+    for (let i = 0; i < 5; i++) for (const f of cupFixtures(FOOTBALL, wc, i)) recordCupResult(FOOTBALL, wc, f, f.home < f.away ? result(2, 0) : result(0, 2), rng);
     const r16 = wc.rounds[0].ties;
     expect(r16).toHaveLength(8);
     const groupOf = (id: number) => wc.groups.findIndex((g) => g.table.some((r) => r.clubId === id));
     for (const t of r16) expect(groupOf(t.home)).not.toBe(groupOf(t.away));
-    for (let i = 5; i < cupStages('championship').length; i++) {
-      for (const f of cupFixtures(wc, i)) {
+    for (let i = 5; i < cupStages(FOOTBALL, 'championship').length; i++) {
+      for (const f of cupFixtures(FOOTBALL, wc, i)) {
         expect(f.options.neutral).toBe(true);
-        recordCupResult(wc, f, result(1, 1, 'away'), rng);
+        recordCupResult(FOOTBALL, wc, f, result(1, 1, 'away'), rng);
       }
     }
     expect(wc.rounds.map((r) => r.ties.length)).toEqual([8, 4, 2, 1]);

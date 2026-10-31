@@ -1,11 +1,13 @@
 // Messages and view snapshots shared by the extension host and the webview.
 // The webview only displays what it is sent; all game logic stays in the host.
 
-export type Duration = '30s' | '2m' | '5m';
-export const DURATIONS: Duration[] = ['30s', '2m', '5m'];
-export const DURATION_LABELS: Record<Duration, string> = { '30s': '30 sec', '2m': '2 min', '5m': '5 min' };
-/** Roughly how long a whole season takes at each match length (measured: about 40 matches with full-time pauses). */
-export const SEASON_LABELS: Record<Duration, string> = { '30s': 'Season 25 min', '2m': 'Season 1½ hr', '5m': 'Season 3¾ hr' };
+import type { SportId } from '../core/format';
+import type { SportTerms } from '../core/sport';
+
+export type Duration = '30s' | '1m' | '2m' | '5m';
+/** Every match length in any sport; each sport offers its own few. */
+export const DURATIONS: Duration[] = ['30s', '1m', '2m', '5m'];
+export const DURATION_LABELS: Record<Duration, string> = { '30s': '30 sec', '1m': '1 min', '2m': '2 min', '5m': '5 min' };
 export type Focus = 'attack' | 'defence';
 export type Zone = 'champion' | 'promotion' | 'playoff' | 'relegation' | null;
 
@@ -19,7 +21,7 @@ export interface TeamBadge {
 /** One line of the match report. */
 export interface TimelineView {
   clock: string;
-  kind: 'goal' | 'yellow' | 'red' | 'break';
+  kind: 'goal' | 'minor' | 'yellow' | 'red' | 'break';
   side?: 'home' | 'away';
   text: string;
   score?: string;
@@ -34,6 +36,12 @@ export interface LiveMatchView {
   awayTown: string;
   home: TeamBadge & { goals: number; isPlayer: boolean };
   away: TeamBadge & { goals: number; isPlayer: boolean };
+  /** Each side's score as shown: "2", "24", "156/4" (empty until a cricket side bats). */
+  score: [string, string];
+  /** How many big moments went each side's way, for the flash: goals, tries, wickets taken. */
+  alerts: [number, number];
+  /** Under the scoreboard: "Need 34 from 18 balls". */
+  situation?: string;
   clock: string;
   finished: boolean;
   aggregate?: string;
@@ -47,8 +55,10 @@ export interface LiveMatchView {
 export interface FullTimeView {
   /** e.g. "League 3" or "Nations Cup · Round of 64". */
   competition: string;
-  home: TeamBadge & { goals: number };
-  away: TeamBadge & { goals: number };
+  home: TeamBadge;
+  away: TeamBadge;
+  /** "2–1", "156/8 v 142/9". */
+  score: string;
   note?: string;
   scorers: string;
   /** How long the card stays up, in ms. */
@@ -84,6 +94,8 @@ export interface RecordsView {
   winning: string;
   mostGoals?: string;
   topScorers: string[];
+  /** Cricket. */
+  topWicketTakers?: string[];
   manager: { seasons: number; matches: number; won: number; drawn: number; lost: number; winPct: number; titles: number };
 }
 
@@ -98,6 +110,8 @@ export interface TableRowView {
   drawn: number;
   lost: number;
   gd: number;
+  /** The difference column as shown: "+3", "-0.42". */
+  gdText: string;
   points: number;
   zone: Zone;
   isPlayer: boolean;
@@ -133,8 +147,8 @@ export interface ClubView {
   short: string;
   colours: string[];
   /** This season's goals against the league average, the only clue to where the drain hit. */
-  /** Ranks: 1 = most scored, fewest conceded. */
-  goals: { scored: number; conceded: number; scoredRank: number; concededRank: number; average: number; played: number };
+  /** Ranks: 1 = most scored, fewest conceded. The texts read "44" or, in cricket, "8.23 an over". */
+  goals: { scored: number; conceded: number; scoredRank: number; concededRank: number; average: number; played: number; scoredText: string; concededText: string; avgForText: string; avgAgainstText: string };
   tier: number;
   season: number;
   expected: number;
@@ -162,6 +176,14 @@ export interface HeaderView {
   durations: Duration[];
 }
 
+/** A sport to choose, and whether a career is waiting in it. */
+export interface SportOption {
+  id: SportId;
+  name: string;
+  icon: string;
+  career?: string;
+}
+
 export interface NationOption {
   code: string;
   name: string;
@@ -171,6 +193,11 @@ export interface NationOption {
 }
 
 export interface SetupView {
+  sport: SportId;
+  sports: SportOption[];
+  terms: SportTerms;
+  /** How many leagues this sport's world has. */
+  leagues: number;
   /** Every playable nation, A–Z. */
   nations: NationOption[];
   /** Picked to start with, from VS Code's display language. */
@@ -219,12 +246,18 @@ export interface SeasonEndView {
     goalsAgainst: number;
     avgFor: number;
     avgAgainst: number;
+    /** As shown: "44" or, in cricket, "8.23 an over". */
+    scoredText: string;
+    concededText: string;
+    avgForText: string;
+    avgAgainstText: string;
     /** Where the season ranked in the league: the clue to which side dropped off. */
     scoredRank: number;
     concededRank: number;
     bestRun: string;
     worstRun: string;
     topScorer?: string;
+    topWickets?: string;
     cups: CupRunView[];
   };
   /** How the finish compared with expectation; the summer's points themselves stay in the host. */
@@ -240,6 +273,9 @@ export interface SeasonEndView {
 
 export interface GameView {
   screen: 'game';
+  sport: SportId;
+  sports: SportOption[];
+  terms: SportTerms;
   header: HeaderView;
   match: LiveMatchView | null;
   tables: TableView[];
@@ -272,7 +308,7 @@ export interface CupTieView {
 
 export interface CupGroupView {
   name: string;
-  rows: { pos: number; club: TeamBadge; town: string; played: number; gd: number; points: number; isPlayer: boolean; through: boolean }[];
+  rows: { pos: number; club: TeamBadge; town: string; played: number; gd: number; gdText: string; points: number; isPlayer: boolean; through: boolean }[];
 }
 
 export interface CupView {
@@ -301,6 +337,7 @@ export type ToHost =
   | { type: 'startCareer'; team: string; league: number; duration: Duration }
   | { type: 'togglePause' }
   | { type: 'setDuration'; duration: Duration }
+  | { type: 'switchSport'; sport: SportId }
   | { type: 'chooseFocus'; focus: Focus }
   | { type: 'copy'; text: string }
   | { type: 'newCareer' }

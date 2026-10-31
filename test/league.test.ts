@@ -1,3 +1,4 @@
+import { FOOTBALL } from '../src/core/format';
 import { describe, expect, it } from 'vitest';
 import {
   allocatePoints,
@@ -59,46 +60,46 @@ describe('table', () => {
   });
 
   it('marks promotion, play-off and relegation places', () => {
-    expect(zone(1, 1)).toBe('champion');
-    expect(zone(1, 2)).toBe(null);
-    expect(zone(2, 2)).toBe('promotion');
-    expect(zone(3, 6)).toBe('playoff');
-    expect(zone(4, 18)).toBe('relegation');
-    expect(zone(5, 20)).toBe(null);
+    expect(zone(FOOTBALL, 1, 1)).toBe('champion');
+    expect(zone(FOOTBALL, 1, 2)).toBe(null);
+    expect(zone(FOOTBALL, 2, 2)).toBe('promotion');
+    expect(zone(FOOTBALL, 3, 6)).toBe('playoff');
+    expect(zone(FOOTBALL, 4, 18)).toBe('relegation');
+    expect(zone(FOOTBALL, 5, 20)).toBe(null);
   });
 
   it('has bands of 20 from League 1 (80–99) down to League 5 (0–19)', () => {
-    expect(band(1)).toEqual({ min: 80, max: 99 });
-    expect(band(5)).toEqual({ min: 0, max: 19 });
+    expect(band(FOOTBALL, 1)).toEqual({ min: 80, max: 99 });
+    expect(band(FOOTBALL, 5)).toEqual({ min: 0, max: 19 });
   });
 });
 
 describe('ratings', () => {
   it('reproduces the worked examples in the design', () => {
-    expect(seasonGain(1, 1, 10, 99) - 10).toBe(-9);
-    expect(seasonGain(1, 10, 12, 90) - 10).toBe(-2);
-    expect(seasonGain(5, 11, 8, 9) - 10).toBe(3);
-    expect(seasonGain(5, 20, 10, 0) - 10).toBe(10);
-    expect(seasonGain(1, 1, 1, 99) - 10).toBe(0);
+    expect(seasonGain(FOOTBALL, 1, 1, 10, 99) - 10).toBe(-9);
+    expect(seasonGain(FOOTBALL, 1, 10, 12, 90) - 10).toBe(-2);
+    expect(seasonGain(FOOTBALL, 5, 11, 8, 9) - 10).toBe(3);
+    expect(seasonGain(FOOTBALL, 5, 20, 10, 0) - 10).toBe(10);
+    expect(seasonGain(FOOTBALL, 1, 1, 1, 99) - 10).toBe(0);
   });
 
   it('gives staggered top/bottom bonuses, with none at the very top or bottom', () => {
-    expect([1, 2, 3, 4, 17, 18, 19, 20].map((p) => positionBonus(3, p))).toEqual([6, 4, 2, 0, 0, -2, -4, -6]);
-    expect([1, 2, 3].map((p) => positionBonus(1, p))).toEqual([0, 0, 0]);
-    expect([18, 19, 20].map((p) => positionBonus(5, p))).toEqual([0, 0, 0]);
-    expect(positionBonus(1, 20)).toBe(-6);
-    expect(positionBonus(5, 1)).toBe(6);
+    expect([1, 2, 3, 4, 17, 18, 19, 20].map((p) => positionBonus(FOOTBALL, 3, p))).toEqual([6, 4, 2, 0, 0, -2, -4, -6]);
+    expect([1, 2, 3].map((p) => positionBonus(FOOTBALL, 1, p))).toEqual([0, 0, 0]);
+    expect([18, 19, 20].map((p) => positionBonus(FOOTBALL, 5, p))).toEqual([0, 0, 0]);
+    expect(positionBonus(FOOTBALL, 1, 20)).toBe(-6);
+    expect(positionBonus(FOOTBALL, 5, 1)).toBe(6);
   });
 
   it('flattens AI rises near 99 but not falls', () => {
     expect(plateau(50)).toBe(1);
     expect(plateau(99)).toBeCloseTo(0.3);
-    expect(seasonGain(1, 10, 1, 95) - 10).toBeLessThan(9);
-    expect(seasonGain(1, 1, 10, 95) - 10).toBe(-9);
+    expect(seasonGain(FOOTBALL, 1, 10, 1, 95) - 10).toBeLessThan(9);
+    expect(seasonGain(FOOTBALL, 1, 1, 10, 95) - 10).toBe(-9);
   });
 
   it('leaves the player’s rises unflattened', () => {
-    expect(seasonGain(1, 10, 1, 95, 0, true) - 10).toBe(9);
+    expect(seasonGain(FOOTBALL, 1, 10, 1, 95, 0, true) - 10).toBe(9);
   });
 
   it('gives the reigning League 1 champion the smaller boost, and the full one once the title is lost', () => {
@@ -162,7 +163,7 @@ describe('career', () => {
   it('places clubs into leagues by rating band', () => {
     const c = start(14);
     c.season.leagues.forEach((l) => {
-      const { min, max } = band(l.tier);
+      const { min, max } = band(FOOTBALL, l.tier);
       expect(l.clubIds).toHaveLength(20);
       for (const id of l.clubIds) {
         expect(rating(c.clubs[id])).toBeGreaterThanOrEqual(min);
@@ -368,7 +369,7 @@ describe('summer focus', () => {
 describe('league picker', () => {
   it('starts the player mid-table in whichever league they choose', () => {
     for (const tier of [1, 2, 3, 4, 5]) {
-      const c = newCareer({ rating: band(tier).min + 10, difficulty: 'medium', seed: tier }, footballSport);
+      const c = newCareer({ rating: band(FOOTBALL, tier).min + 10, difficulty: 'medium', seed: tier }, footballSport);
       expect(c.season.leagues[tier - 1].clubIds).toContain(c.playerClubId);
       expect(c.season.expected[c.playerClubId]).toBe(10);
     }
@@ -381,8 +382,8 @@ describe('starting position', () => {
     const counts = { low: 0, mid: 0, high: 0 };
     for (let i = 0; i < 4000; i++) {
       const tier = 1 + (i % 5);
-      const r = startRating(tier, rng);
-      const pos = r - band(tier).min;
+      const r = startRating(FOOTBALL, tier, rng);
+      const pos = r - band(FOOTBALL, tier).min;
       expect(pos).toBeGreaterThanOrEqual(4);
       expect(pos).toBeLessThanOrEqual(15);
       counts[pos < 8 ? 'low' : pos < 12 ? 'mid' : 'high']++;
