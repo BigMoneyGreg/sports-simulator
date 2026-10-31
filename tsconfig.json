@@ -15,5 +15,5 @@
     "isolatedModules": true,
     "types": ["node", "vscode"]
   },
-  "include": ["src", "tools", "test", "vitest.config.ts"]
+  "include": ["src", "tools", "test", "vitest.config.mts"]
 }
