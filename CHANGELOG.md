@@ -3,7 +3,7 @@
 ## Unreleased
 
 - **Rugby:** 48 nations in 6 leagues of 8. Tries, conversions, penalties, drop goals and sin bins; bonus points; kicking contests in knockouts; matches from 1 minute
-- **Cricket (T20):** 30 nations in 5 leagues of 6, including the West Indies. Follow it ball by ball, with who's in and this over; wickets and the chase ("need 34 from 18 balls"); net run rate; super overs; run scorers and wicket takers; matches from 2 minutes
+- **Cricket (T20):** 30 nations in 5 leagues of 6, including the West Indies. Follow it ball by ball on a real scorecard, with this over; wickets and the chase ("need 34 from 18 balls"); net run rate; super overs; run scorers and wicket takers; matches from 2 minutes
 - Players in every sport now get the most common names in their own country, with no mixing between countries and real stars' names blocked. Squads in a career already under way keep their names until those players leave
 - A nation's players now and then take a surname from a neighbour: England from Wales, Scotland and Ireland, and so on
 - Each sport has its own career, cups, summer questions and records

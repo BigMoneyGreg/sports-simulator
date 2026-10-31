@@ -430,10 +430,12 @@ This is the **only thing in Sports Simulator that asks for your attention**, bec
 
 - When the season ends (after the play-offs), **the game waits**. Nothing continues until you've allocated your points.
 - The end-of-season screen opens **inside the Sports Simulator box**.
-- If the box is hidden or collapsed, **one VS Code notification** appears with the result, the clues and the question, e.g. *"Season 4 over: 3rd in League 4. Scored 52 (6th), conceded 61 (15th). Finlay Ross (striker) and 2 others leave. Retirements leave gaps. Who gets the call?"*, with the two answers as buttons and **Open**. This is the only VS Code notification Sports Simulator ever shows.
+- Unless that sport is open in view, **one short VS Code message** says so and goes by itself after 10 seconds (§8, The list of sports). The decision is only made in the box.
 - The status bar shows `🔔 Season over: one decision waiting` until you do.
 
 Screen contents:
+
+The question comes first, under the headline, so it's in view without scrolling; the season report and final table follow.
 
 1. Final table with promotion, play-offs and relegation
 2. **Season report:** goals scored and conceded against the league average, goals a game in your matches against the league's, best and worst runs, top scorer. No verdict: reading it is the player's job (lots of goals at both ends = leaning attacking).
@@ -592,7 +594,7 @@ Football's numbers and behaviour are unchanged: whole careers on fixed seeds has
 
 **AI titles, re-measured (31 Oct 2026).** Most titles for one AI side in 40 seasons: rugby median 7, worst 13; cricket median 8, worst 16 (40 of 40 balance targets met). With 8 or 6 sides in a league, an even share of 40 titles is already 5 or nearly 7, so a typical top side is close to what chance alone gives, and the worst cases are rare. No change made.
 
-**Where it stands (31 Oct 2026).** Rugby, cricket, several sports at once, Honours, rival call-outs and the End… question are merged into `main`. 218 tests pass and VS Code starts with it loaded; the box has been clicked through in headless Chrome with sample games, but a real End, Reset career and Reset honours are still to try before publishing.
+**Where it stands (31 Oct 2026).** Rugby, cricket, several sports at once, Honours, rival call-outs, the End… question and the visual polish are all on `main`. 223 tests pass and VS Code starts with it loaded; the box has been clicked through in headless Chrome with sample games. Before publishing: try a real End, Reset career and Reset honours, see the season-end message in real VS Code, and retake the README screenshots.
 
 **Worlds** come from the rankings: men's rugby, July 2026 (an unofficial copy of the World Rugby table); men's T20I, October 2026. Lower down rugby's list some nations rarely play. Only nations in a sport's world can be chosen there, unlike football's 210. Players' names work as in every sport (§10).
 
@@ -659,7 +661,7 @@ In rough priority order:
 | One window runs the game; focusing another hands it over | Each window used to run its own clock on the shared save, so two windows played different matches and overwrote each other (a summer choice could be lost). Many people keep several windows open all day |
 | Fictional club names only, checked against real club lists | Avoid trademark issues; renaming handled locally later |
 | Engine runs in extension host | Game and status bar keep running without the sidebar open |
-| End of season is the only VS Code notification; the game waits for your allocation | It's the one moment that needs a decision; everything else stays in the box |
+| End of season is the only routine VS Code message; the game waits for your answer in the box | It's the one moment that needs a decision; everything else stays in the box |
 | Full-time result as an overlay inside the sidebar box, not a VS Code notification | Never covers code or clutters notifications; status bar covers the hidden case |
 | Sport-agnostic core + sport modules | Rugby/cricket can be added later without a rewrite |
 | One extension for all sports (later) | One codebase; keywords handle discovery |

@@ -44,7 +44,7 @@ export interface LiveMatchView {
   alerts: [number, number];
   /** Under the scoreboard: "Need 34 from 18 balls". */
   situation?: string;
-  /** Smaller lines under that: who's in, this over. */
+  /** Smaller lines under that: this over. */
   details?: string[];
   clock: string;
   finished: boolean;
@@ -132,7 +132,7 @@ export interface TableView {
 }
 
 export interface FixtureView {
-  /** Short: "MD 7", "C32", "WCQF". */
+  /** Short: "MD 7", "Cup 32", "WC QF". */
   label: string;
   /** The label in full, on hover. */
   labelTitle?: string;
