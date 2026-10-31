@@ -188,7 +188,7 @@ export interface SportRowView {
   name: string;
   /** The country this sport's career is with; none until one starts. */
   club?: string;
-  /** "3rd · Week 7/38 · SCO 1–1 RSA 59'". */
+  /** "3rd W7/38 · SCO 1–1 RSA 59'". */
   line?: string;
   /** How far through the league season, from 0 to 1. */
   progress?: number;

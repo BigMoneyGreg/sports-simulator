@@ -690,7 +690,7 @@ function cupView(career: Career, cup: Cup, live = false): CupView {
 }
 
 /** The score line shared by the status bar and the collapsed box: "SCO 1–1 RSA 59'" or "FT SCO 1–1 RSA". */
-function scoreLine(game: Game): string | null {
+function scoreLine(game: Game, short = false): string | null {
   const career = game.career!;
   const shown = game.shownMatch;
   if (!shown) return null;
@@ -698,8 +698,12 @@ function scoreLine(game: Game): string | null {
   const { module, present } = sportOf(career);
   const h = career.clubs[fixture.home].short;
   const a = career.clubs[fixture.away].short;
-  const line = `${h} ${present.score(match).join(present.terms.scoreJoin)} ${a}`.replace(/\s+/g, ' ');
-  return module.isFinished(match) ? `FT ${line}` : `${line} ${present.clock(match)}`;
+  const score = present.score(match);
+  // Tight spaces join two totals with a dash too; a side yet to bat keeps the "v", or the dash would read as a minus.
+  const join = short && score[0] && score[1] ? '–' : present.terms.scoreJoin;
+  const line = `${h} ${score.join(join)} ${a}`.replace(/\s+/g, ' ');
+  if (module.isFinished(match)) return `FT ${line}`;
+  return `${line} ${short && present.shortClock ? present.shortClock(match) : present.clock(match)}`;
 }
 
 /** One VS Code icon for every sport: the status bar can't show the box's own. */
@@ -754,13 +758,13 @@ function leagueWeek(game: Game): number {
   return live && live.fixtures[live.player].kind === 'league' ? played + 1 : played;
 }
 
-/** Shown beside the box's title while it's collapsed, and on a minimised row: "3rd · Week 7/38 · SCO 1–1 RSA 59'". */
+/** Shown beside the box's title while it's collapsed, and on a minimised row: "3rd W7/38 · SCO 1–1 RSA 59'". */
 export function collapsedText(game: Game): string | undefined {
   const career = game.career;
   if (!career) return undefined;
   if (career.pending) return 'Season over';
-  const place = `${ordinal(leaguePlace(career).position)} · Week ${Math.max(1, leagueWeek(game))}/${leagueRounds(career.season)}`;
-  const score = scoreLine(game);
+  const place = `${ordinal(leaguePlace(career).position)} W${Math.max(1, leagueWeek(game))}/${leagueRounds(career.season)}`;
+  const score = scoreLine(game, true);
   return score ? `${place} · ${score}` : place;
 }
 
@@ -772,7 +776,7 @@ export function sportRows(games: Game[]): SportRowView[] {
     if (!career) return { ...row, paused: false };
     const line = collapsedText(game);
     const progress = career.pending ? 1 : leaguePlace(career).played / leagueRounds(career.season);
-    return { ...row, club: career.clubs[career.playerClubId].name, line: game.paused && !career.pending ? `Paused · ${line}` : line, progress };
+    return { ...row, club: career.clubs[career.playerClubId].name, line: game.paused && !career.pending ? `⏸ ${line}` : line, progress };
   });
 }
 

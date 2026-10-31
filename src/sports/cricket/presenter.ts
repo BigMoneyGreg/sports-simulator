@@ -89,6 +89,11 @@ export const cricketPresenter: SportPresenter<CricketMatch> = {
     if (m.period === 'superOver') return 'Super over';
     return `Ov ${overLabel(m[m.batting].balls)}`;
   },
+  shortClock(m) {
+    if (m.period === 'break') return 'break';
+    if (m.period === 'superOver') return 'SO';
+    return overLabel(m[m.batting].balls);
+  },
   timeline(m, ctx) {
     const items: TimelineItem[] = [];
     const name = (side: SideKey, id: number) => surname(ctx.playerName(side, id));

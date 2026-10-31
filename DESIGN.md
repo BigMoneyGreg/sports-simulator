@@ -370,7 +370,7 @@ All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned wi
 
 Each sport has its own colour (football teal, rugby orange, cricket purple, Honours yellow; not green or red, which mean good and bad news), in a border round its row and its open page.
 
-The box lists every sport, one row each. Only one opens fully at a time, beneath its row; clicking it again minimises it, and all can be minimised. A minimised row shows the least worth knowing: country, position, league week and score (*Rugby · Wales / 8th · Week 4/14 · SAM 14–18 WAL 54'*), *Not started*, or *Season over: decision waiting*, when the whole row also fills with a light version of its colour. A thin line along the bottom of a row shows how far through the league season it is, which still reads when a narrow box cuts the text off.
+The box lists every sport, one row each. Only one opens fully at a time, beneath its row; clicking it again minimises it, and all can be minimised. A minimised row shows the least worth knowing: country, position, league week and score (*Rugby · Wales / 8th W4/14 · SAM 14–18 WAL 54'*; cricket drops the *Ov*: *1st W4/10 · SRI 144/3–51/2 USA 17.2*), *Not started*, or *Season over: decision waiting*, when the whole row also fills with a light version of its colour. A thin line along the bottom of a row shows how far through the league season it is, which still reads when a narrow box cuts the text off.
 
 - **Start:** a row with no career has a Start button, which opens the setup form.
 - **End or reset:** the open row has one button, *End…*, which asks in the box what should happen. *End career* stops it and keeps it in Past careers, where it still counts for greatest teams and records. *Reset career* deletes it as if it was never played, and asks again in red. There's one button so the difference is explained at the moment it matters. Other sports aren't touched, and honours already earned stay.
@@ -405,7 +405,7 @@ A match against your rival is marked ⚔ in the status bar, and *Rival match* on
 
 ### When the box is collapsed
 
-- Its title bar shows the position, week and score: *SPORTS SIMULATOR 3rd · Week 7/38 · SCO 1–1 RSA 59'* (VS Code only does this once the box has been opened in that window).
+- Its title bar shows the position, week and score: *SPORTS SIMULATOR 3rd W7/38 · SCO 1–1 RSA 59'* (VS Code only does this once the box has been opened in that window).
 - While the summer choice waits, a **1** badge sits on the Explorer icon.
 - On first install the box opens once, so it's clear where the game lives.
 

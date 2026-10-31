@@ -155,6 +155,8 @@ export interface SportPresenter<M> {
   /** Match lengths offered, shortest first. */
   durations: Duration[];
   clock(match: M): string;
+  /** The clock where space is tight, if it has a shorter form. */
+  shortClock?(match: M): string;
   timeline(match: M, ctx: TimelineContext): TimelineItem[];
   /** Each side's score as shown: "2", "24", "156/4". */
   score(match: M): [string, string];

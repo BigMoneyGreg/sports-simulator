@@ -260,6 +260,6 @@ describe('outside the box', () => {
     vi.advanceTimersByTime(minute * 30);
     expect(statusTooltip(game)).toMatch(/^\*\*Wales\*\* · League \d, \d+(st|nd|rd|th) · 0\/38 played/);
     expect(statusTooltip(game)).toMatch(/Expected to finish \d+/);
-    expect(collapsedText(game)).toMatch(/^\d+(st|nd|rd|th) · Week 1\/38 · [A-Z]{3} \d+–\d+ [A-Z]{3} 30'$/);
+    expect(collapsedText(game)).toMatch(/^\d+(st|nd|rd|th) W1\/38 · [A-Z]{3} \d+–\d+ [A-Z]{3} 30'$/);
   });
 });

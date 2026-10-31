@@ -371,6 +371,19 @@ describe('cricket', () => {
     expect(view.screen === 'game' && view.match!.round).toBeUndefined();
   });
 
+  it('keeps the minimised line short, in the status bar\'s full form only where there\'s room', () => {
+    const clock = manual();
+    const game = new Game({ save: () => {}, changed: () => {} }, clock.scheduler);
+    game.selectSport('cricket');
+    game.start({ rating: 55, difficulty: 'medium', seed: 31, team: 'SRI' });
+    clock.run(10);
+    expect(collapsedText(game)).toMatch(/^\d+\w\w W1\/\d+ · [A-Z]{3} v \d+\/\d [A-Z]{3} \d+\.\d$|^\d+\w\w W1\/\d+ · [A-Z]{3} \d+\/\d v [A-Z]{3} \d+\.\d$/);
+    expect(statusText(game)).toMatch(/Ov \d+\.\d$/);
+    while (game.live?.matches[game.live.player].period !== 'second') clock.run(1);
+    clock.run(3);
+    expect(collapsedText(game)).toMatch(/[A-Z]{3} \d+(\/\d)?–\d+\/\d [A-Z]{3} \d+\.\d$/);
+  });
+
   it('copes with a match saved before there was a scorecard', () => {
     const rng = new Rng(5);
     const m = createCricket(sheet('cricket', 1, 50), sheet('cricket', 2, 50), {}, rng);
@@ -772,7 +785,7 @@ describe('sports in the save', () => {
       clocks.get('rugby')!.run(3);
       const [football, rugby, cricket] = sportRows(games);
       expect(football).toMatchObject({ id: 'football', name: 'Football', club: 'Scotland', paused: true, waiting: false });
-      expect(rugby.line).toMatch(/^\d+(st|nd|rd|th) · Week \d+\/14 · /);
+      expect(rugby.line).toMatch(/^\d+(st|nd|rd|th) W\d+\/14 · /);
       expect(rugby.progress).toBe(0);
       expect(cricket).toEqual({ id: 'cricket', name: 'Cricket', paused: false, waiting: false });
     });
