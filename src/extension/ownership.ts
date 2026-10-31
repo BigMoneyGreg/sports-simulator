@@ -57,10 +57,14 @@ export class Ownership {
     this.waitingSince = this.now();
   }
 
-  /** Runs every POLL_MS. Idle windows don't touch the lock. */
+  /** Runs every POLL_MS. */
   poll(): void {
-    if (!this.owning && this.waitingSince === null) return;
     const lock = this.store.read();
+    if (!this.owning && this.waitingSince === null) {
+      // The window running the game has closed: carry on here rather than wait to be focused.
+      if (!lock.owner) this.claim();
+      return;
+    }
     if (this.owning) {
       if (lock.owner === this.id) return;
       // Another window took over: save, stop, and tell it the save is ready.

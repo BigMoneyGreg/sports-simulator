@@ -712,13 +712,14 @@ const STATUS_ICONS: Record<SportId, string> = { football: '⚽', rugby: '🏉', 
 export const SEASON_OVER = 'Season over: one decision waiting';
 
 /** Text for the status bar; `goal` while a goal in the player's match is fresh. */
-export function statusText(game: Game, goal = false): string | null {
+export function statusText(game: Game, goal = false): string {
   const career = game.career;
   const { alert } = game.sport.present.terms;
   if (!career) return '$(trophy) Start a Sports Simulator career';
   if (career.pending) return `$(bell) ${SEASON_OVER}`;
   const score = scoreLine(game);
-  if (!score) return null;
+  // Paused between matches after a restart: nothing to show but where the career stands.
+  if (!score) return `${STATUS_ICONS[game.sportId]}  ${game.paused ? '⏸ ' : ''}${standing(game)}`;
   const rival = game.shownMatch && isRivalFixture(career, game.shownMatch.fixture) ? '⚔ ' : '';
   return `${STATUS_ICONS[game.sportId]}  ${rival}${game.paused ? '⏸ ' : ''}${goal && !score.startsWith('FT') ? `${alert} ` : ''}${score} · ${standing(game)}`;
 }
@@ -768,14 +769,14 @@ export function collapsedText(game: Game): string | undefined {
   return score ? `${place} · ${score}` : place;
 }
 
-/** "Wk 7/14 · 2nd in League 3". */
+/** "Wk 7/14 · 2nd in L3". */
 function standing(game: Game): string {
   const career = game.career!;
   const { position, tier } = leaguePlace(career);
-  return `Wk ${Math.max(1, leagueWeek(game))}/${leagueRounds(career.season)} · ${ordinal(position)} in League ${tier}`;
+  return `Wk ${Math.max(1, leagueWeek(game))}/${leagueRounds(career.season)} · ${ordinal(position)} in L${tier}`;
 }
 
-/** The status bar's line for one of several careers: "🏉 Rugby: Wk 7/14 · 2nd in League 3". */
+/** The status bar's line for one of several careers: "🏉  Rugby: Wk 7/14 · 2nd in L3". */
 function standingText(game: Game): string {
   const name = game.sport.present.terms.name;
   if (game.career!.pending) return `$(bell) ${name}: season over`;
@@ -889,7 +890,7 @@ export function honoursLine(games: Game[], pastCareers: number, feats: number): 
 }
 
 /** The status bar and collapsed box: the live score of a lone career, or where the sport `showing` stands among several, a bell if another is waiting on the player, and every career on hover. The collapsed box stays on the sport followed. */
-export function boxStatus(games: Game[], followed: SportId, goal = false, showing = followed): { text: string | null; tooltip: string; description?: string } {
+export function boxStatus(games: Game[], followed: SportId, goal = false, showing = followed): { text: string | null; tooltip: string; description?: string; sport: SportId } {
   const game = statusGame(games, showing);
   const careers = games.filter((g) => g.career);
   const name = (g: Game) => g.sport.present.terms.name;
@@ -897,7 +898,7 @@ export function boxStatus(games: Game[], followed: SportId, goal = false, showin
   let text = careers.length > 1 ? standingText(game) : statusText(game, goal);
   if (waitingElsewhere) text = text ? `${text} $(bell)` : `$(bell) ${SEASON_OVER}`;
   const tooltip = careers.length > 1 ? `${careers.map((g) => `${name(g)}: ${careerLines(g).join('\n\n')}`).join('\n\n---\n\n')}\n\nClick to open` : statusTooltip(game);
-  return { text, tooltip, description: collapsedText(statusGame(games, followed)) };
+  return { text, tooltip, description: collapsedText(statusGame(games, followed)), sport: game.sportId };
 }
 
 /** Spots a goal in the player's match between updates, so the status bar can call it out for a few seconds. */

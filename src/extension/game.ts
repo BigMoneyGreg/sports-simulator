@@ -167,8 +167,8 @@ export class Game {
     this.live = null;
     this.lastMatch = null;
     this.phase = 'idle';
-    this.host.save(null);
-    this.host.changed();
+    this.tell(() => this.host.save(null));
+    this.tell(() => this.host.changed());
   }
 
   /** Stops the clock (VS Code closing) and saves exactly where it was. */
@@ -197,7 +197,7 @@ export class Game {
     this.paused = paused;
     this.stop();
     this.save();
-    this.host.changed();
+    this.tell(() => this.host.changed());
     if (!paused) this.run();
   }
 
@@ -219,7 +219,7 @@ export class Game {
   private nextSeason(): void {
     this.phase = 'idle';
     this.save();
-    this.host.changed();
+    this.tell(() => this.host.changed());
     this.run();
   }
 
@@ -253,8 +253,8 @@ export class Game {
         this.phase = 'seasonOver';
         this.live = null;
         this.save();
-        this.host.seasonOver?.(end);
-        this.host.changed();
+        this.tell(() => this.host.seasonOver?.(end));
+        this.tell(() => this.host.changed());
         return;
       }
       const fixtures = nextRound(career)!;
@@ -268,7 +268,7 @@ export class Game {
       this.live = { fixtures, matches, player: fixtures.indexOf(mine), rng: rng.state };
       this.phase = 'live';
       this.save();
-      this.host.changed();
+      this.tell(() => this.host.changed());
       this.schedule(() => this.tick(), tickMs(sport, this.duration));
       return;
     }
@@ -293,7 +293,7 @@ export class Game {
       return;
     }
     if (module.notable(mine) !== notableBefore) this.save();
-    this.host.changed();
+    this.tell(() => this.host.changed());
     this.schedule(() => this.tick(), tickMs(this.sport, this.duration));
   }
 
@@ -305,16 +305,26 @@ export class Game {
       career,
       live.fixtures.map((fixture, i) => ({ fixture, outcome: this.sport.module.outcome(live.matches[i]) })),
     );
-    this.lastMatch = { match: live.matches[live.player], fixture: live.fixtures[live.player] };
+    const last = { match: live.matches[live.player], fixture: live.fixtures[live.player] };
+    this.lastMatch = last;
     this.live = null;
     this.phase = 'fullTime';
     this.save();
-    this.host.fullTime?.(this.lastMatch.match, this.lastMatch.fixture);
-    this.host.changed();
+    this.tell(() => this.host.fullTime?.(last.match, last.fixture));
+    this.tell(() => this.host.changed());
     this.schedule(() => this.nextMatchday(), fullTimePause(this.duration));
   }
 
   // -- helpers --------------------------------------------------------------
+
+  /** Saving or redrawing can fail (a full disk, a file held open); that must never stop the clock. */
+  private tell(call: () => void): void {
+    try {
+      call();
+    } catch (error) {
+      console.error('Sports Simulator:', error);
+    }
+  }
 
   /** The match to show: live, or the one that just finished. */
   get shownMatch(): { match: any; fixture: Fixture } | null {
@@ -328,7 +338,7 @@ export class Game {
   }
 
   private save(): void {
-    this.host.save(this.snapshot());
+    this.tell(() => this.host.save(this.snapshot()));
   }
 
   private schedule(fn: () => void, ms: number): void {

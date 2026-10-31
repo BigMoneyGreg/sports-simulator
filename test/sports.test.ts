@@ -817,8 +817,8 @@ describe('sports in the save', () => {
       expect(boxStatus(games, 'rugby', true).text).toMatch(/TRY!/);
       start(game('cricket'), 'SRI');
       clocks.get('cricket')!.run(3);
-      expect(boxStatus(games, 'rugby').text).toMatch(/^🏉  Rugby: Wk \d+\/14 · \d+(st|nd|rd|th) in League \d$/);
-      expect(boxStatus(games, 'cricket', true).text).toMatch(/^🏏  Cricket: Wk \d+\/\d+ · \d+(st|nd|rd|th) in League \d$/);
+      expect(boxStatus(games, 'rugby').text).toMatch(/^🏉  Rugby: Wk \d+\/14 · \d+(st|nd|rd|th) in L\d$/);
+      expect(boxStatus(games, 'cricket', true).text).toMatch(/^🏏  Cricket: Wk \d+\/\d+ · \d+(st|nd|rd|th) in L\d$/);
     });
 
     it('shows only the sports ticked in the settings, or all of them if none is', () => {
@@ -853,6 +853,14 @@ describe('sports in the save', () => {
       expect(status.text).toMatch(/^🏉  Rugby: /);
       expect(status.description).toBe(boxStatus(games, 'football').description);
       expect(boxStatus(games, 'football', false, 'cricket').text).toMatch(/^🏏  Cricket: ⏸ Wk /);
+    });
+
+    it('says which sport is on show, for the status bar click', () => {
+      const { games, game } = setUp();
+      start(game('football'), 'SCO');
+      start(game('rugby'), 'WAL');
+      expect(boxStatus(games, 'football', false, 'rugby').sport).toBe('rugby');
+      expect(boxStatus(games, 'cricket').sport).toBe('football');
     });
 
     it('lists every career on hover', () => {

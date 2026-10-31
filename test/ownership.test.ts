@@ -47,6 +47,21 @@ describe('one game across several windows', () => {
     expect(a.game.shownMatch!.match.minute).toBe(10);
   });
 
+  it('another window takes over when the one running the game closes, unfocused or not', () => {
+    const { open } = world();
+    const a = open('a', true);
+    a.game.start({ rating: 50, seed: 2 });
+    const b = open('b', false);
+    vi.advanceTimersByTime(minute * 10);
+    a.owner.release();
+    clearInterval(a.poll);
+    vi.advanceTimersByTime(POLL_MS * 2);
+    expect(b.owner.owning).toBe(true);
+    const before = b.game.shownMatch!.match.minute;
+    vi.advanceTimersByTime(minute * 5);
+    expect(b.game.shownMatch!.match.minute).toBeGreaterThan(before);
+  });
+
   it('hands the game over on focus: the old window saves and stops, the new one carries on from that minute', () => {
     const { open, disk } = world();
     const a = open('a', true);

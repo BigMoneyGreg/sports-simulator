@@ -492,7 +492,7 @@ function panelParts(v: GameView): string[] {
 function matchParts(v: GameView): string[] {
   if (v.waiting === 'seasonOver') return [`<p class="notice">The season is over: one decision waiting.</p>`];
   const m = v.match;
-  if (!m) return [`<p class="muted">Next match about to kick off…</p>`];
+  if (!m) return [`<p class="muted">${v.header.paused ? 'The next match kicks off when you press ▶.' : 'Next match about to kick off…'}</p>`];
   // Newest first, so the latest event is always in view.
   const items = m.timeline;
   const icon = (t: TimelineView) =>

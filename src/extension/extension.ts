@@ -19,13 +19,25 @@ const LIVE_FRESH_MS = 30_000;
 const TOAST_MS = 10_000;
 
 export function activate(context: vscode.ExtensionContext): void {
-  const storage = new Storage(context.globalStorageUri.fsPath, context.globalState);
+  let warnedWrite = false;
+  const storage = new Storage(context.globalStorageUri.fsPath, context.globalState, {
+    // Saves come often, so one warning is enough.
+    writeFailed: () => {
+      if (warnedWrite) return;
+      warnedWrite = true;
+      void vscode.window.showWarningMessage("Sports Simulator can't save to disk right now. The game plays on, but recent progress could be lost if VS Code closes.");
+    },
+    damagedSave: (sport, kept) => {
+      void vscode.window.showWarningMessage(`Sports Simulator: your ${sport} save was damaged and can't be read, so that sport starts afresh. The file is kept as ${kept}.`);
+    },
+  });
   const statusBar = new StatusBar();
 
   const config = () => vscode.workspace.getConfiguration('sportsSimulator');
+  /** A new career's length: the one the last career started at, until the player changes the setting. */
   const duration = (): Duration => {
-    const value = config().get<string>('matchDuration', '2m');
-    return (DURATIONS as string[]).includes(value) ? (value as Duration) : '2m';
+    const value = storage.lastDuration() ?? config().get<string>('matchDuration', '30s');
+    return (DURATIONS as string[]).includes(value) ? (value as Duration) : '30s';
   };
 
   const shownSports = () => enabledSports(config().get('sports'));
@@ -37,6 +49,8 @@ export function activate(context: vscode.ExtensionContext): void {
   /** The one thing fully open in the box, if any. Each window has its own. */
   let open: PanelId | null = followed;
   let lastLive = '';
+  /** The sport the status bar has on show. */
+  let onShow: SportId = followed;
   const goals = Object.fromEntries(SPORT_IDS.map((id) => [id, new GoalWatch()])) as Record<SportId, GoalWatch>;
   /**
    * The status bar and collapsed-box text. The window running the game works
@@ -76,6 +90,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const updateOutside = () => {
     const live = outside();
+    onShow = live.sport ?? followed;
     const decisions = listed().filter((g) => g.career?.pending).length;
     // Starting a career and the summer choice show even with the score turned off: they're waiting on the player.
     const waiting = !listed().some((g) => g.career) || decisions > 0;
@@ -188,7 +203,8 @@ export function activate(context: vscode.ExtensionContext): void {
           if (DURATIONS.includes(message.duration)) {
             game.setDuration(message.duration);
             // The next new career starts from the same length.
-            void config().update('matchDuration', message.duration, vscode.ConfigurationTarget.Global);
+            storage.setLastDuration(message.duration);
+            for (const other of all()) if (!other.career) other.setDuration(duration());
           }
           const seed = (Date.now() ^ (Math.random() * 2 ** 31)) >>> 0;
           const tier = Math.min(sport.format.leagues, Math.max(1, Math.round(league)));
@@ -300,6 +316,11 @@ export function activate(context: vscode.ExtensionContext): void {
     { dispose: () => clearInterval(cycle) },
     vscode.window.registerWebviewViewProvider(SidebarProvider.viewId, sidebar),
     vscode.commands.registerCommand('sportsSimulator.open', () => vscode.commands.executeCommand(`${SidebarProvider.viewId}.focus`)),
+    // The status bar's click: not in the command list, as it depends on what's showing at that moment.
+    vscode.commands.registerCommand('sportsSimulator.openShown', () => {
+      openPanel(onShow);
+      void vscode.commands.executeCommand('sportsSimulator.open');
+    }),
     vscode.commands.registerCommand('sportsSimulator.switchSport', async () => {
       const items = sportRows(listed()).map((r) => ({ id: r.id, label: r.name, description: r.club ? `${r.club} · ${r.line ?? ''}` : 'Start a career' }));
       const picked = await vscode.window.showQuickPick(items, { placeHolder: 'Which sport? The others carry on.' });
@@ -327,7 +348,10 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     vscode.workspace.onDidChangeConfiguration((e) => {
       // The setting is the length new careers start from; a career under way keeps its own.
-      if (e.affectsConfiguration('sportsSimulator.matchDuration')) for (const game of all()) if (!game.career) game.setDuration(duration());
+      if (e.affectsConfiguration('sportsSimulator.matchDuration')) {
+        storage.setLastDuration(undefined);
+        for (const game of all()) if (!game.career) game.setDuration(duration());
+      }
       if (e.affectsConfiguration('sportsSimulator.sports')) holdHidden(owner.owning);
       if (e.affectsConfiguration('sportsSimulator')) refresh();
     }),

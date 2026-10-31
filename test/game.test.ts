@@ -65,6 +65,35 @@ describe('game clock', () => {
     expect(other.shownMatch!.match.minute).toBe(20);
   });
 
+  it('keeps playing when saving or redrawing fails', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    let failing = false;
+    const fail = () => {
+      if (failing) throw new Error('EPERM: rename');
+    };
+    const game = new Game({ save: fail, changed: fail });
+    game.start({ rating: 50, seed: 2 });
+    vi.advanceTimersByTime(minute * 5);
+    failing = true;
+    vi.advanceTimersByTime(minute * 95);
+    // Through every failed save and redraw, on to the next matchday and past it.
+    expect(game.career!.season.playerMatches.length).toBeGreaterThan(0);
+    expect(game.shownMatch).not.toBeNull();
+    vi.restoreAllMocks();
+  });
+
+  it('still shows where the career stands if restarted while paused between matches', () => {
+    const { game } = setup();
+    game.start({ rating: 50, seed: 2, team: 'SCO' });
+    while (game.phase !== 'fullTime') vi.advanceTimersByTime(minute);
+    game.togglePause();
+    const saved = JSON.parse(JSON.stringify(game.snapshot()));
+    const { game: restarted } = setup();
+    restarted.load(saved);
+    expect(restarted.shownMatch).toBeNull();
+    expect(statusText(restarted)).toMatch(/^⚽ {2}⏸ Wk 1\/38 · \d+(st|nd|rd|th) in L\d$/);
+  });
+
   it('pauses and resumes from the exact minute', () => {
     const { game } = setup();
     game.start({ rating: 50, seed: 2 });
@@ -157,7 +186,7 @@ describe('game clock', () => {
     expect(v.cups.cup.status).toMatch(/^Still in · Round of 64 v .+ \((home|away)\)$/);
     expect(v.cups.cup.next).toBe('After matchday 6');
     expect(v.match!.clock).toMatch(/^\d+'$/);
-    expect(statusText(game)).toMatch(/^⚽  [A-Z0-9]{3} \d+–\d+ [A-Z0-9]{3} \d+' · Wk \d+\/\d+ · \d+(st|nd|rd|th) in League \d$/);
+    expect(statusText(game)).toMatch(/^⚽  [A-Z0-9]{3} \d+–\d+ [A-Z0-9]{3} \d+' · Wk \d+\/\d+ · \d+(st|nd|rd|th) in L\d$/);
   });
 
   it('resets back to setup', () => {

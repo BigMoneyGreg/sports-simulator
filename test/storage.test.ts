@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -112,6 +112,30 @@ describe('storage', () => {
     expect(s.honoursFrom('cricket')).toBeUndefined();
     s.clearHonoursFrom('rugby');
     expect(s.honoursFrom('rugby')).toBeUndefined();
+  });
+
+  it('sets a damaged save aside instead of losing it, and says so', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ss-storage-'));
+    const damaged: string[] = [];
+    const s = new Storage(dir, memento(), { damagedSave: (sport, kept) => damaged.push(`${sport} ${kept}`) });
+    writeFileSync(join(dir, 'career.rugby.json'), '{"version":8,"career"');
+    expect(s.load('rugby')).toBeNull();
+    expect(damaged).toEqual([expect.stringMatching(/^rugby career\.rugby\.damaged-\d+\.json$/)]);
+    expect(readdirSync(dir)).not.toContain('career.rugby.json');
+    expect(readFileSync(join(dir, damaged[0].split(' ')[1]), 'utf8')).toBe('{"version":8,"career"');
+    // Deleting "no career" afterwards can't touch it.
+    s.save(null, 'rugby');
+    expect(readdirSync(dir).filter((f) => f.includes('damaged'))).toHaveLength(1);
+  });
+
+  it('never throws when the disk fails, and reports it', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ss-storage-'));
+    const failed: unknown[] = [];
+    const s = new Storage(dir, memento(), { writeFailed: (e) => failed.push(e) });
+    rmSync(dir, { recursive: true });
+    expect(() => s.save(save(1), 'football')).not.toThrow();
+    expect(() => s.writeLive({ at: 1, text: 'x', tooltip: 'y' })).not.toThrow();
+    expect(failed.length).toBe(2);
   });
 
   it('falls back to football if the sport file is damaged', () => {
