@@ -793,7 +793,7 @@ export function statusGame(games: Game[], followed: SportId): Game {
   return chosen.career ? chosen : (games.find((g) => g.career) ?? chosen);
 }
 
-export const STATUS_CYCLE_MS = 3000;
+export const STATUS_CYCLE_MS = 5000;
 
 /** The sport the status bar shows now: with several careers it takes each in turn, and worked out from the time, every window agrees. */
 export function cycledSport(games: Game[], followed: SportId, now = Date.now()): SportId {

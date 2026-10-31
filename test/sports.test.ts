@@ -848,7 +848,7 @@ describe('sports in the save', () => {
       expect(status.tooltip).not.toMatch(/Wales/);
     });
 
-    it('takes the status bar through every career, three seconds each, leaving the collapsed box where it was', () => {
+    it('takes the status bar through every career, five seconds each, leaving the collapsed box where it was', () => {
       const { games, game, clocks } = setUp();
       start(game('football'), 'SCO');
       expect(cycledSport(games, 'rugby', 0)).toBe('rugby');
@@ -856,7 +856,7 @@ describe('sports in the save', () => {
       start(game('cricket'), 'SRI');
       game('cricket').togglePause();
       for (const id of ['football', 'rugby'] as const) clocks.get(id)!.run(3);
-      expect([0, 2999, 3000, 6000, 9000].map((t) => cycledSport(games, 'football', t))).toEqual(['football', 'football', 'rugby', 'cricket', 'football']);
+      expect([0, 4999, 5000, 10000, 15000].map((t) => cycledSport(games, 'football', t))).toEqual(['football', 'football', 'rugby', 'cricket', 'football']);
       const status = boxStatus(games, 'football', false, 'rugby');
       expect(status.text).toMatch(/^\$\(trophy\) Rugby: /);
       expect(status.description).toBe(boxStatus(games, 'football').description);
