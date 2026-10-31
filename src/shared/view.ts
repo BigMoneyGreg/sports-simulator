@@ -38,6 +38,8 @@ export interface LiveMatchView {
   away: TeamBadge & { goals: number; isPlayer: boolean };
   /** Each side's score as shown: "2", "24", "156/4" (empty until a cricket side bats). */
   score: [string, string];
+  /** The player is up against the career's rival. */
+  rival: boolean;
   /** How many big moments went each side's way, for the flash: goals, tries, wickets taken. */
   alerts: [number, number];
   /** Under the scoreboard: "Need 34 from 18 balls". */
@@ -264,6 +266,8 @@ export interface SeasonEndView {
     worstRun: string;
     topScorer?: string;
     topWickets?: string;
+    /** This season against the rival, if they met: "England · 1W 1D 0L". */
+    rival?: string;
     cups: CupRunView[];
   };
   /** How the finish compared with expectation; the summer's points themselves stay in the host. */

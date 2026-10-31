@@ -1552,6 +1552,11 @@ details.fold[open] > summary::before {
   font-weight: 600;
 }
 
+.rival-tag {
+  color: var(--vscode-foreground);
+  white-space: nowrap;
+}
+
 /* The rival's row: a light red outline. */
 .league tr.rival td {
   box-shadow: inset 0 1px 0 var(--rival), inset 0 -1px 0 var(--rival);

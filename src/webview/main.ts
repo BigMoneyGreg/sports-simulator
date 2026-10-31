@@ -401,7 +401,7 @@ function scoreboard(m: LiveMatchView, terms: SportTerms): string {
   const team = (t: LiveMatchView['home'], town: string) =>
     `<div class="team ${t.isPlayer ? 'me' : ''}" title="${esc(t.name)}"${t.isPlayer ? ` data-accent="${esc(t.colours[0])}"` : ''}>${swatch(t, 'crest big')}<span class="code">${esc(t.short)}</span><span class="town">${esc(town)}</span></div>`;
   return `<div class="board card">
-      <div class="comp muted small">${esc(m.competition)}${m.round ? ` · ${esc(m.round)}` : ''}</div>
+      <div class="comp muted small">${esc(m.competition)}${m.round ? ` · ${esc(m.round)}` : ''}${m.rival ? ' · <span class="rival-tag">⚔ Rival match</span>' : ''}</div>
       <div class="score">${team(m.home, m.homeTown)}<div class="mid"><div class="goals${long ? ' long' : ''}">${esc(m.score[0] || '–')}<span>${esc(terms.scoreJoin.trim())}</span>${esc(m.score[1] || '–')}</div>
         <div class="clock-big ${m.finished ? 'ft' : 'live'}">${esc(m.clock)}</div></div>${team(m.away, m.awayTown)}</div>
       ${m.situation ? `<div class="small situation">${esc(m.situation)}</div>` : ''}
@@ -528,6 +528,7 @@ function seasonEndHtml(e: SeasonEndView, sport: SportId, terms: SportTerms): str
       <dt>Worst run</dt><dd>${esc(r.worstRun)}</dd>
       ${r.topScorer ? `<dt>${esc(terms.topScorer)}</dt><dd>${esc(r.topScorer)}</dd>` : ''}
       ${r.topWickets ? `<dt>Top wicket taker</dt><dd>${esc(r.topWickets)}</dd>` : ''}
+      ${r.rival ? `<dt>Your rival</dt><dd>${esc(r.rival)}</dd>` : ''}
       ${r.cups.map((x) => `<dt>${esc(x.name)}</dt><dd>${esc(x.run)}</dd>`).join('')}
     </dl>
     </div>

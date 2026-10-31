@@ -79,6 +79,12 @@ export function buildView(game: Game, options: ViewOptions = { fullTimeOverlay: 
   return view;
 }
 
+const RIVAL_MATCH = 'Rival match';
+
+function isRivalFixture(career: Career, fixture: Pick<Fixture, 'home' | 'away'>): boolean {
+  return career.rival !== null && (fixture.home === career.rival || fixture.away === career.rival);
+}
+
 function buildFullTime(game: Game): FullTimeView | null {
   if (game.phase !== 'fullTime' || !game.lastMatch) return null;
   const career = game.career!;
@@ -94,7 +100,7 @@ function buildFullTime(game: Game): FullTimeView | null {
   };
   const { note, scorers } = sport.present.fullTime(match, [shortName(career.clubs[fixture.home]), shortName(career.clubs[fixture.away])], name);
   return {
-    competition: competition(fixture, career),
+    competition: `${competition(fixture, career)}${isRivalFixture(career, fixture) ? ` · ${RIVAL_MATCH}` : ''}`,
     home: badge(career, fixture.home),
     away: badge(career, fixture.away),
     score: sport.present.score(match).join(sport.present.terms.scoreJoin),
@@ -296,6 +302,15 @@ export function seasonClue(career: Career, tier: number): string {
   return `${terms.scoredWord} ${text.scoredText} (${ordinal(ranks.scored)}), ${terms.concededWord} ${text.concededText} (${ordinal(ranks.conceded)}).`;
 }
 
+/** How the season went against the rival, if they met. */
+function rivalSeason(career: Career): { rival?: string } {
+  const met = career.season.playerMatches.filter((m) => m.opponentId === career.rival).map(matchResult);
+  if (!met.length) return {};
+  const count = (r: string) => met.filter((x) => x === r).length;
+  const record = recordText({ won: count('W'), drawn: count('D'), lost: count('L') }, sportOf(career).present.terms.draws);
+  return { rival: `${career.clubs[career.rival!].name} · ${record}` };
+}
+
 function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
   const end = career.pending!;
   const s = career.season;
@@ -364,6 +379,7 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
       worstRun,
       topScorer: scorer && scorer.goals > 0 ? `${scorer.name} (${scorer.goals})` : undefined,
       ...(bowler && bowler.wickets > 0 ? { topWickets: `${bowler.name} (${bowler.wickets})` } : {}),
+      ...rivalSeason(career),
       cups: [s.cup, s.championship].flatMap((cup) => (cup ? [seasonCupLine(career, cup)] : [])),
     },
     performance: end.performance > 0 ? 'above' : end.performance < 0 ? 'below' : 'expected',
@@ -468,6 +484,7 @@ function buildMatch(game: Game): LiveMatchView | null {
     round: fixture.kind === 'league' ? roundLabel(career) : undefined,
     homeTown: towns[0],
     awayTown: towns[1],
+    rival: isRivalFixture(career, fixture),
     home: { ...badge(career, fixture.home), goals: match.home.goals, isPlayer: fixture.home === career.playerClubId },
     away: { ...badge(career, fixture.away), goals: match.away.goals, isPlayer: fixture.away === career.playerClubId },
     score: present.score(match),
@@ -713,7 +730,8 @@ export function statusText(game: Game, goal = false, tag?: string): string | nul
   if (career.pending) return `$(bell) ${SEASON_OVER}`;
   const score = scoreLine(game);
   if (!score) return null;
-  return `${STATUS_ICON} ${tag ? `${tag}: ` : ''}${game.paused ? '⏸ ' : ''}${goal && !score.startsWith('FT') ? `${alert} ` : ''}${score}`;
+  const rival = game.shownMatch && isRivalFixture(career, game.shownMatch.fixture) ? '⚔ ' : '';
+  return `${STATUS_ICON} ${tag ? `${tag}: ` : ''}${rival}${game.paused ? '⏸ ' : ''}${goal && !score.startsWith('FT') ? `${alert} ` : ''}${score}`;
 }
 
 /** Where the player's club stands in its league table before the matchday in progress. */
@@ -739,7 +757,7 @@ function careerLines(game: Game): string[] {
   else {
     lines.push(`Expected to finish ${ordinal(career.season.expected[me.id])}`);
     const shown = game.shownMatch;
-    if (shown) lines.push(`${competition(shown.fixture, career)}: ${scoreLine(game)}${game.paused ? ' (paused)' : ''}`);
+    if (shown) lines.push(`${competition(shown.fixture, career)}${isRivalFixture(career, shown.fixture) ? ` · ${RIVAL_MATCH}` : ''}: ${scoreLine(game)}${game.paused ? ' (paused)' : ''}`);
   }
   return lines;
 }

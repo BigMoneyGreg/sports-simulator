@@ -608,6 +608,33 @@ describe('sports in the save', () => {
     expect(upgraded.career.sport).toBe('football');
   });
 
+  it('calls out a match against the rival, and reports the season against it', () => {
+    const clock = manual();
+    const game = new Game({ save: () => {}, changed: () => {} }, clock.scheduler);
+    game.selectSport('rugby');
+    game.start({ rating: 55, difficulty: 'medium', seed: 31, team: 'WAL' });
+    const career = game.career!;
+    // Next door in the league, so they meet this season.
+    const league = career.season.leagues.find((l) => l.clubIds.includes(career.playerClubId))!;
+    career.rival = league.clubIds.find((id) => id !== career.playerClubId)!;
+    let calledOut = false;
+    let others = false;
+    while (game.phase !== 'seasonOver') {
+      clock.run(1);
+      const view = game.career && buildView(game);
+      if (game.phase !== 'live' || view?.screen !== 'game' || !view.match) continue;
+      const against = game.shownMatch!.fixture.home === career.rival || game.shownMatch!.fixture.away === career.rival;
+      expect(view.match.rival).toBe(against);
+      expect(statusText(game)!.includes('⚔')).toBe(against);
+      if (against) calledOut = true;
+      else others = true;
+    }
+    expect(calledOut && others).toBe(true);
+    const end = buildView(game);
+    const report = end.screen === 'game' ? end.seasonEnd!.report : null;
+    expect(report!.rival).toMatch(new RegExp(`^${career.clubs[career.rival].name} · \d+W( \d+D)? \d+L$`));
+  });
+
   it('keeps each career\'s match length in its save', () => {
     const saves: SavedGame[] = [];
     const clock = manual();
@@ -710,7 +737,7 @@ describe('sports in the save', () => {
       start(game('cricket'), 'SRI');
       clocks.get('cricket')!.run(3);
       expect(boxStatus(games, 'rugby').text).toMatch(/^\$\(trophy\) Rugby: /);
-      expect(boxStatus(games, 'cricket', true).text).toMatch(/^\$\(trophy\) Cricket: WICKET! |^\$\(trophy\) Cricket: /);
+      expect(boxStatus(games, 'cricket', true).text).toMatch(/^\$\(trophy\) Cricket: WICKET! /);
     });
 
     it('lists every career on hover', () => {
