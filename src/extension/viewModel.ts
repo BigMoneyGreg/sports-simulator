@@ -402,7 +402,7 @@ function nationOptions(sport: SportId): NationOption[] {
 }
 
 function sportOptions(careers: ViewOptions['careers'] = {}): SportOption[] {
-  return SPORT_IDS.map((id) => ({ id, name: SPORTS[id].present.terms.name, icon: SPORTS[id].present.terms.icon, ...(careers[id] ? { career: careers[id] } : {}) }));
+  return SPORT_IDS.map((id) => ({ id, name: SPORTS[id].present.terms.name, ...(careers[id] ? { career: careers[id] } : {}) }));
 }
 
 /** VS Code display languages that point clearly to one country (plain English doesn't). */
@@ -470,6 +470,7 @@ function buildMatch(game: Game): LiveMatchView | null {
   };
   const towns: [string, string] = [shortName(career.clubs[fixture.home]), shortName(career.clubs[fixture.away])];
   const situation = present.situation?.(match, towns);
+  const details = present.details?.(match, { playerName }) ?? [];
   const view: LiveMatchView = {
     competition: competition(fixture, career),
     round: fixture.kind === 'league' ? roundLabel(career) : undefined,
@@ -480,6 +481,7 @@ function buildMatch(game: Game): LiveMatchView | null {
     score: present.score(match),
     alerts: module.alerts(match),
     ...(situation ? { situation } : {}),
+    ...(details.length ? { details } : {}),
     clock: present.clock(match),
     finished: module.isFinished(match),
     timeline: present.timeline(match, { playerName }),
@@ -706,17 +708,20 @@ function scoreLine(game: Game): string | null {
   return module.isFinished(match) ? `FT ${line}` : `${line} ${present.clock(match)}`;
 }
 
+/** One VS Code icon for every sport: the status bar can't show the box's own. */
+const STATUS_ICON = '$(trophy)';
+
 export const SEASON_OVER = 'Season over: one decision waiting';
 
 /** Text for the status bar; `goal` while a goal in the player's match is fresh. */
 export function statusText(game: Game, goal = false): string | null {
   const career = game.career;
-  const { icon, alert } = game.sport.present.terms;
-  if (!career) return `${icon} Start a career`;
+  const { alert } = game.sport.present.terms;
+  if (!career) return `${STATUS_ICON} Start a career`;
   if (career.pending) return `$(bell) ${SEASON_OVER}`;
   const score = scoreLine(game);
   if (!score) return null;
-  return `${icon} ${game.paused ? '⏸ ' : ''}${goal && !score.startsWith('FT') ? `${alert} ` : ''}${score}`;
+  return `${STATUS_ICON} ${game.paused ? '⏸ ' : ''}${goal && !score.startsWith('FT') ? `${alert} ` : ''}${score}`;
 }
 
 /** Where the player's club stands in its league table before the matchday in progress. */

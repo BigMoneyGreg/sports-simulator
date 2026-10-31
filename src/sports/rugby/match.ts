@@ -2,18 +2,18 @@ import type { Rng } from '../../core/rng';
 import type { MatchOptions, MatchOutcome, SportModule, TeamSheet } from '../../core/sport';
 import { effectiveStats } from '../football/match';
 
-/** Tuned by tools/balance-sports.ts: favourites win about 79% of decided games, as in real internationals. */
+/** Tuned by tools/balance-sports.ts: favourites win about 71% of decided games, so leagues stay close and unbeaten seasons rare. */
 export const TUNING = {
   baseTries: 2.8,
   basePenalties: 2.3,
   /** How much a small gap in overall strength moves try-scoring; penalties move by `penaltyGapShare` of that. */
-  slope: 1.0,
+  slope: 0.65,
   penaltyGapShare: 0.35,
   /**
    * The most that gap can multiply tries by, as a logarithm: a small edge counts
    * for a lot, as in real rugby, but a huge one levels off, or a mismatch ends 150–0.
    */
-  maxEffect: 0.6,
+  maxEffect: 0.45,
   /**
    * How much the sides' shapes move scoring on top: an attacking side scores more
    * and leaks more. Kept apart from strength, or two attacking sides trade tries
@@ -22,7 +22,7 @@ export const TUNING = {
   shapeSlope: 0.2,
   homeAdvantage: 1.1,
   awayFactor: 0.93,
-  formSpread: 0.15,
+  formSpread: 0.25,
   conversion: 0.72,
   dropGoalsPerTeam: 0.08,
   yellowsPerTeam: 1.1,

@@ -220,7 +220,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('sportsSimulator.open', () => vscode.commands.executeCommand(`${SidebarProvider.viewId}.focus`)),
     vscode.commands.registerCommand('sportsSimulator.switchSport', async () => {
       const careers = storage.careers();
-      const items = SPORT_IDS.map((id) => ({ id, label: `${SPORTS[id].present.terms.icon} ${SPORTS[id].present.terms.name}`, description: id === game.sportId ? 'Playing now' : (careers[id] ?? 'Start a career') }));
+      const items = SPORT_IDS.map((id) => ({ id, label: SPORTS[id].present.terms.name, description: id === game.sportId ? 'Playing now' : (careers[id] ?? 'Start a career') }));
       const picked = await vscode.window.showQuickPick(items, { placeHolder: 'Which sport? Your careers wait where you left them.' });
       if (picked) switchSport(picked.id);
     }),

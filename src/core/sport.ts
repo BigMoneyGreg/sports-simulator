@@ -96,7 +96,6 @@ export interface TimelineContext {
 /** The words a sport uses, shown as they are. */
 export interface SportTerms {
   name: string;
-  icon: string;
   /** What the summer's two answers strengthen. */
   attack: string;
   defence: string;
@@ -150,6 +149,8 @@ export interface SportPresenter<M> {
   score(match: M): [string, string];
   /** Under the scoreboard: "Need 34 from 18 balls". */
   situation?(match: M, names: [string, string]): string | undefined;
+  /** Smaller lines under that: who's in, this over. */
+  details?(match: M, ctx: TimelineContext): string[];
   /** The full-time card's note ("after extra time") and scorers line. */
   fullTime(match: M, names: [string, string], name: (id: number) => string): { note?: string; scorers: string };
   /** Under a leaver's name: "142 goals", "38 tries", "2,310 runs". */

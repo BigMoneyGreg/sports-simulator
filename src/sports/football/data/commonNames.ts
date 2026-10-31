@@ -10,6 +10,23 @@
  * national teams (Fiji's is mostly Indo-Fijian, Iceland's skips patronymics),
  * so those are judged by hand and are less certain.
  */
+/** How often a player's surname comes from a nearby country instead of his own. */
+export const BORROWED_SHARE = 0.15;
+
+/** The nearby countries whose most common surnames a nation sometimes has too. */
+export const BORROWS_FROM: Record<string, string[]> = {
+  ENG: ['WAL', 'SCO', 'IRL'], SCO: ['ENG', 'IRL', 'NIR'], WAL: ['ENG', 'IRL'], IRL: ['NIR', 'ENG', 'SCO'], NIR: ['IRL', 'SCO', 'ENG'], JER: ['ENG', 'FRA'],
+  FRA: ['BEL', 'ESP', 'ITA', 'GER'], GER: ['AUT', 'SUI', 'NED', 'POL'], AUT: ['GER', 'HUN', 'CZE'], SUI: ['GER', 'ITA', 'FRA'], NED: ['BEL', 'GER'], BEL: ['NED', 'FRA'], LUX: ['GER', 'FRA', 'BEL'],
+  ESP: ['POR'], AND: ['ESP', 'FRA'], POR: ['ESP'], ITA: ['SUI', 'FRA'], GRE: ['ALB', 'CYP'], CYP: ['GRE', 'TUR'], MLT: ['ITA'], SMR: ['ITA'],
+  DEN: ['SWE', 'NOR', 'GER'], NOR: ['SWE', 'DEN'], SWE: ['NOR', 'DEN', 'FIN'], FIN: ['SWE', 'EST'], ISL: ['DEN', 'NOR'], FRO: ['DEN', 'ISL'], EST: ['FIN', 'LVA'], LVA: ['LTU', 'EST'], LTU: ['LVA', 'POL'],
+  POL: ['CZE', 'SVK', 'LTU', 'UKR', 'GER'], CZE: ['SVK', 'POL', 'GER'], SVK: ['CZE', 'HUN', 'POL'], HUN: ['SVK', 'ROU'], SVN: ['CRO', 'AUT'], CRO: ['BIH', 'SRB', 'SVN'], SRB: ['BIH', 'MNE', 'CRO'], BIH: ['CRO', 'SRB'], MNE: ['SRB'], MKD: ['ALB', 'BUL', 'SRB'], ALB: ['GRE', 'MKD'], ROU: ['HUN', 'MDA', 'BUL'], MDA: ['ROU', 'UKR'], BUL: ['MKD', 'ROU'], UKR: ['POL', 'MDA'], TUR: ['GRE'], GEO: ['ARM', 'TUR'], ARM: ['GEO'],
+  ARG: ['URU', 'CHI', 'PAR'], BRA: ['POR'], URU: ['ARG'], CHI: ['ARG', 'PER'], COL: ['VEN', 'ECU'], ECU: ['COL', 'PER'], PAR: ['ARG', 'BOL'], PER: ['ECU', 'BOL', 'CHI'], BOL: ['PER', 'CHI'], VEN: ['COL'], MEX: ['SLV', 'HON'], CRC: ['PAN'], SLV: ['HON', 'MEX'], HON: ['SLV'], PAN: ['COL', 'CRC'], USA: ['CAN', 'MEX'], CAN: ['USA'], JAM: ['TRI'], TRI: ['JAM'], HAI: ['FRA'], WIN: ['JAM', 'TRI'],
+  NGA: ['GHA'], GHA: ['CIV', 'NGA'], SEN: ['MLI', 'GUI'], CMR: ['GAB', 'NGA'], CIV: ['BFA', 'MLI', 'GHA'], MLI: ['SEN', 'BFA', 'GUI'], BFA: ['MLI', 'CIV'], GUI: ['SEN', 'MLI'], COD: ['ANG'], GAB: ['CMR'], ALG: ['MAR', 'TUN'], MAR: ['ALG'], TUN: ['ALG'], EGY: ['JOR'], RSA: ['ZIM', 'NAM'], ZIM: ['ZAM', 'RSA'], ZAM: ['ZIM'], NAM: ['RSA'], ANG: ['POR'], CPV: ['POR'], KEN: ['UGA'], UGA: ['KEN'],
+  KSA: ['UAE', 'KUW'], UAE: ['OMA', 'QAT'], QAT: ['KSA', 'BHR'], OMA: ['UAE'], KUW: ['KSA', 'IRQ'], BHR: ['KSA', 'QAT'], IRQ: ['JOR'], JOR: ['IRQ', 'EGY'], IRN: ['AFG'], AFG: ['IRN', 'PAK'],
+  IND: ['NEP'], PAK: ['AFG', 'IND'], BAN: ['IND'], SRI: ['IND'], NEP: ['IND'], CHN: ['HKG'], HKG: ['CHN'],
+  AUS: ['ENG', 'SCO', 'IRL', 'NZL'], NZL: ['AUS', 'ENG', 'SCO'], FIJ: ['TGA', 'SAM'], SAM: ['TGA', 'FIJ'], TGA: ['SAM', 'FIJ'], PNG: ['AUS'],
+};
+
 export const COUNTRY_NAMES: Record<string, [surnames: string, firstNames?: string]> = {
   // Britain and Ireland
   ENG: ['Smith Jones Taylor Brown Williams Wilson Johnson Davies Robinson Wright Thompson Evans Walker White Roberts Green Hall Wood', 'James John David Michael Daniel Thomas Matthew Andrew Paul Mark Chris Ben Jack Luke Ryan Adam Sam Joe'],

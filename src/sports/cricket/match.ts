@@ -2,20 +2,20 @@ import type { Rng } from '../../core/rng';
 import type { MatchOptions, MatchOutcome, SportModule, TeamSheet } from '../../core/sport';
 import { effectiveStats } from '../football/match';
 
-/** T20: tuned by tools/balance-sports.ts so that favourites win about 75% of games and a typical total is about 160. */
+/** T20: tuned by tools/balance-sports.ts so that favourites win about 66% of games, close to the real format, and a typical total is about 155. */
 export const TUNING = {
   overs: 20,
   /** Runs per ball and chance of a wicket per ball between level sides. */
   baseRuns: 1.52,
   baseWicket: 0.057,
   /** How much a gap between batting and bowling moves runs and wickets. */
-  runSlope: 0.1,
-  wicketSlope: 0.12,
+  runSlope: 0.065,
+  wicketSlope: 0.08,
   gapKnee: 20,
   gapBeyond: 0.3,
   homeAdvantage: 1.03,
   awayFactor: 0.98,
-  formSpread: 0.1,
+  formSpread: 0.15,
   /** The batting order thins out from this position. */
   tailFrom: 7,
   tailRuns: 0.75,
@@ -59,6 +59,8 @@ export interface CricketMatch {
   nonStriker: number;
   nextIn: number;
   target?: number;
+  /** This over so far, as shown: 0–6 for runs, W for a wicket. */
+  thisOver?: string[];
   /** The super over's runs, home first, once it has been played. */
   penalties?: [number, number];
   events: CricketEvent[];
@@ -168,9 +170,11 @@ function bowl(m: CricketMatch, rng: Rng, bowler: number): void {
   const mean = side.runRate * p.runs * c.runs * (tail ? TUNING.tailRuns : 1);
   const wicketChance = side.wicketRate * p.wicket * c.wicket * (tail ? TUNING.tailWicket : 1);
   const batter = side.sheet.lineup[batterAt].id;
+  if (side.balls % 6 === 0) m.thisOver = [];
   side.balls++;
   if (rng.chance(wicketChance)) {
     side.wickets++;
+    (m.thisOver ??= []).push('W');
     const how = rng.weighted(['c', 'b', 'lbw', 'run out'] as const, (x) => ({ c: 6, b: 2, lbw: 1.5, 'run out': 0.5 })[x]);
     if (how !== 'run out') fielding.wicketsBy[bowler] = (fielding.wicketsBy[bowler] ?? 0) + 1;
     m.events.push({ type: 'wicket', over: overLabel(side.balls), side: other(key), batter, bowler, how, runs: side.runsBy[batter] ?? 0, score: side.wickets >= 10 ? String(side.goals) : `${side.goals}/${side.wickets}` });
@@ -178,6 +182,7 @@ function bowl(m: CricketMatch, rng: Rng, bowler: number): void {
     return;
   }
   const runs = runsOffBall(rng, mean);
+  (m.thisOver ??= []).push(String(runs));
   const before = side.runsBy[batter] ?? 0;
   side.goals += runs;
   side.runsBy[batter] = before + runs;
@@ -192,23 +197,23 @@ function inningsOver(m: CricketMatch): boolean {
   return side.wickets >= 10 || side.balls >= TUNING.overs * 6 || (m.target !== undefined && side.goals >= m.target);
 }
 
-/** One over, or what's left of the innings. */
-function playOver(m: CricketMatch, rng: Rng): void {
+/** One ball; the batters change ends at the end of each over. */
+function playBall(m: CricketMatch, rng: Rng): void {
   const side = m[m.batting];
   const attack = bowlers(m[other(m.batting)].sheet);
-  const bowler = attack[Math.floor(side.balls / 6) % attack.length];
-  for (let ball = 0; ball < 6 && !inningsOver(m); ball++) bowl(m, rng, bowler);
-  if (!inningsOver(m)) [m.striker, m.nonStriker] = [m.nonStriker, m.striker];
+  bowl(m, rng, attack[Math.floor(side.balls / 6) % attack.length]);
+  if (side.balls % 6 === 0 && !inningsOver(m)) [m.striker, m.nonStriker] = [m.nonStriker, m.striker];
 }
 
 export function step(m: CricketMatch, rng: Rng): void {
   switch (m.period) {
     case 'first':
-      playOver(m, rng);
+      playBall(m, rng);
       if (inningsOver(m)) {
         const side = m[m.batting];
         m.target = side.goals + 1;
         m.period = 'break';
+        m.thisOver = [];
         m.events.push({ type: 'inningsBreak', over: overLabel(side.balls), text: side.wickets >= 10 ? String(side.goals) : `${side.goals}/${side.wickets}` });
       }
       return;
@@ -220,7 +225,7 @@ export function step(m: CricketMatch, rng: Rng): void {
       m.period = 'second';
       return;
     case 'second':
-      playOver(m, rng);
+      playBall(m, rng);
       if (inningsOver(m)) {
         if (m.home.goals === m.away.goals) m.period = 'superOver';
         else finish(m);
@@ -309,7 +314,7 @@ export const cricket: SportModule<CricketMatch> = {
   step,
   isFinished,
   outcome,
-  ticks: 40,
+  ticks: 240,
   // Half a game of cricket says nothing about who's winning it, so only finished matches move the table.
   countsLive: (m) => m.period === 'done',
   alerts: (m) => [m.away.wickets, m.home.wickets],

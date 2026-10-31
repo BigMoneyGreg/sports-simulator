@@ -141,6 +141,18 @@ describe('world data', () => {
   });
 });
 
+describe('first seasons', () => {
+  it.each(NEW_SPORTS)('%s: a new career starts carrying the same shape penalty as an AI side', (id) => {
+    const c = newCareer({ rating: 50, difficulty: 'medium', seed: 3 }, SPORTS[id]);
+    expect(c.clubs[0].attack).toBe(c.clubs[0].defence);
+    expect(c.clubs[0].settledLean).toBe(14);
+  });
+
+  it('leaves football as it was', () => {
+    expect(newCareer({ rating: 50, difficulty: 'medium', seed: 3 }, SPORTS.football).clubs[0].settledLean).toBeUndefined();
+  });
+});
+
 describe('fictional players', () => {
   it.each(NEW_SPORTS)('%s never names a real star, however many squads it draws', (id) => {
     const sport = SPORTS[id];
@@ -280,6 +292,21 @@ describe('cricket', () => {
       }
     }
     expect(chases).toBeGreaterThan(0);
+  });
+
+  it('moves one ball at a time, showing who is in and this over', () => {
+    const rng = new Rng(4);
+    const m = createCricket(sheet('cricket', 1, 50), sheet('cricket', 2, 50), {}, rng);
+    const ctx = { playerName: (_side: 'home' | 'away', id: number) => `Test Player${id}` };
+    for (let ball = 1; ball <= 8; ball++) {
+      cricketStep(m, rng);
+      expect(m[m.batting].balls).toBe(ball);
+    }
+    expect(m.thisOver).toHaveLength(2);
+    const details = SPORTS.cricket.present.details!(m, ctx);
+    expect(details[0]).toContain('*');
+    expect(details[1]).toMatch(/^This over: /);
+    expect(SPORTS.cricket.present.clock(m)).toBe('Ov 1.2');
   });
 
   it('always has a winner, a tie going to a super over', () => {
@@ -485,13 +512,13 @@ describe.each(NEW_SPORTS)('%s in the game', (id) => {
     expect(during.match).not.toBeNull();
     expect(during.match!.score).toHaveLength(2);
     expect(during.header.durations).toEqual(SPORTS[id].present.durations);
-    expect(statusText(game)).toContain(SPORTS[id].present.terms.icon);
+    expect(statusText(game)).toContain('$(trophy)');
     expect(collapsedText(game)).toBeTruthy();
     while (phase() === 'live') clock.run();
     expect(phase()).toBe('fullTime');
     const ft = live(game).fullTime!;
     expect(ft.score).toBeTruthy();
-    for (let i = 0; i < 2000 && phase() !== 'seasonOver'; i++) clock.run();
+    for (let i = 0; i < 30000 && phase() !== 'seasonOver'; i++) clock.run();
     expect(phase()).toBe('seasonOver');
     const end = live(game).seasonEnd!;
     expect(end.report.scoredText).toBeTruthy();
@@ -510,13 +537,13 @@ describe.each(NEW_SPORTS)('%s in the game', (id) => {
       else if (Array.isArray(v)) v.forEach(words);
       else if (v && typeof v === 'object') Object.values(v).forEach(words);
     };
-    for (let i = 0; i < 3000 && (game.phase as string) !== 'seasonOver'; i++) {
+    for (let i = 0; i < 30000 && (game.phase as string) !== 'seasonOver'; i++) {
       clock.run();
-      if (i % 40 === 0) words(buildView(game));
+      if (i % 100 === 0) words(buildView(game));
     }
     words(buildView(game));
-    // The list of sports names football and its ball on purpose; `goal` here is the timeline's own code for a sport's main event.
-    for (const t of texts.filter((x) => !['⚽', 'Football', 'goal'].includes(x))) expect(t).not.toMatch(/(?<!drop )\bgoals?\b|⚽|penalties|striker|midfielder/i);
+    // The list of sports names football on purpose; `goal` here is the timeline's own code for a sport's main event.
+    for (const t of texts.filter((x) => !['Football', 'goal'].includes(x))) expect(t).not.toMatch(/(?<!drop )\bgoals?\b|⚽|penalties|striker|midfielder/i);
   });
 
   it('calls out its own big moment in the status bar', () => {
@@ -563,7 +590,7 @@ describe('match lengths', () => {
   it('runs a tick by the sport\'s own clock', () => {
     expect(tickMs(SPORTS.football, '2m')).toBeCloseTo(120000 / 90);
     expect(tickMs(SPORTS.rugby, '1m')).toBeCloseTo(60000 / 80);
-    expect(tickMs(SPORTS.cricket, '2m')).toBe(3000);
+    expect(tickMs(SPORTS.cricket, '2m')).toBe(500);
   });
 
   it('labels every length a sport offers with a season time', () => {

@@ -16,7 +16,6 @@ function total(m: CricketMatch, key: SideKey): string {
 export const cricketPresenter: SportPresenter<CricketMatch> = {
   terms: {
     name: 'Cricket',
-    icon: '🏏',
     attack: 'Batting',
     defence: 'Bowling',
     clueScored: 'for runs an over',
@@ -95,6 +94,17 @@ export const cricketPresenter: SportPresenter<CricketMatch> = {
     const toss = m.events[0];
     if (side.balls === 0 && toss?.type === 'toss') return `${names[index(toss.winner)]} won the toss and chose to ${toss.bat ? 'bat' : 'bowl'}`;
     return `${names[index(m.batting)]} batting first · ${((side.goals * 6) / Math.max(1, side.balls)).toFixed(1)} an over`;
+  },
+  details(m, ctx) {
+    if (m.period !== 'first' && m.period !== 'second') return [];
+    const side = m[m.batting];
+    const batter = (at: number) => {
+      const entry = side.sheet.lineup[at];
+      return entry ? `${surname(ctx.playerName(m.batting, entry.id))} ${side.runsBy[entry.id] ?? 0}` : undefined;
+    };
+    const lines = [[batter(m.striker)?.concat('*'), batter(m.nonStriker)].filter(Boolean).join(' · ')];
+    if (m.thisOver?.length) lines.push(`This over: ${m.thisOver.map((b) => (b === '0' ? '·' : b)).join(' ')}`);
+    return lines;
   },
   fullTime(m, names, name) {
     const best = (tally: Record<number, number>) => Object.entries(tally).reduce<[string, number] | null>((b, [id, n]) => (!b || n > b[1] ? [id, n] : b), null);

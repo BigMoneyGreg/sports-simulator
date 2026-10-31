@@ -5,7 +5,6 @@ import { outcome, type FootballMatch, type SideKey } from './match';
 export const footballPresenter: SportPresenter<FootballMatch> = {
   terms: {
     name: 'Football',
-    icon: '⚽',
     attack: 'Attack',
     defence: 'Defence',
     clueScored: 'for goals scored',

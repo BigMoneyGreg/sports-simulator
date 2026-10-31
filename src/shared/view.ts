@@ -42,6 +42,8 @@ export interface LiveMatchView {
   alerts: [number, number];
   /** Under the scoreboard: "Need 34 from 18 balls". */
   situation?: string;
+  /** Smaller lines under that: who's in, this over. */
+  details?: string[];
   clock: string;
   finished: boolean;
   aggregate?: string;
@@ -180,7 +182,6 @@ export interface HeaderView {
 export interface SportOption {
   id: SportId;
   name: string;
-  icon: string;
   career?: string;
 }
 

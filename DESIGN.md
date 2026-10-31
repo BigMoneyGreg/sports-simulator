@@ -442,7 +442,7 @@ The game uses real nations, not clubs: country names, flags and colours are free
 - **Badges:** two or three flag colours in diagonal bands (France, Italy, Germany… get three). The first colour tints the header, so it is never black or white.
 - **Rivals:** every nation has one real rival (`RIVALS` in `nations.ts`): Argentina–Brazil, Greece–Turkey, Honduras–El Salvador. Rivalries can be one-way: Scotland, Wales and Ireland all have England; England has Germany. If the rival isn't among the 100 in the world, the nearest nation that is (by capital, on the same continent where possible) stands in: Fiji gets New Zealand, Ethiopia gets Egypt.
 - **Codes and short names:** three-letter codes (BRA, ENG, JPN); long names have a short form for narrow spaces (*Bosnia*, *N. Ireland*, *USA*).
-- **Players:** generated from the most common names in each country (`data/commonNames.ts`), for every nation in any sport's world. Surnames follow Wikipedia's lists of most common surnames by country where one exists; Africa has no such list, and a few lists don't describe the national side (Fiji's is mostly Indo-Fijian, Iceland's skips patronymics), so those are judged by hand. First names are also judged by hand. A nation outside every world uses its region's list. There's no mixing between countries, because that let distinctive names such as Eze into England's squad and pointed at real players. This does flatten the diversity of real squads, most visibly France and England. Surnames don't repeat in a squad until the list runs out, as with Kims and Nguyens. Common names can still make a real star (James Rodriguez, Thomas Muller), so those are blocked in every sport (`src/sports/famous.ts`).
+- **Players:** generated from the most common names in each country (`data/commonNames.ts`), for every nation in any sport's world. Surnames follow Wikipedia's lists of most common surnames by country where one exists; Africa has no such list, and a few lists don't describe the national side (Fiji's is mostly Indo-Fijian, Iceland's skips patronymics), so those are judged by hand. First names are also judged by hand. A nation outside every world uses its region's list. About 15% of surnames come from a nation's neighbours (England from Wales, Scotland and Ireland: `BORROWS_FROM`), which replaced the old 25% mixed pools that let distinctive names such as Eze into England's squad. Surnames don't repeat in a squad until the list runs out, as with Kims and Nguyens. Common names can still make a real star (James Rodriguez, Thomas Muller), so those are blocked in every sport (`src/sports/famous.ts`).
 
 ---
 
@@ -539,9 +539,10 @@ Football's numbers and behaviour are unchanged: whole careers on fixed seeds has
 | World | 5 × 20 | 6 × 8 | 5 × 6 |
 | Movement | 2 up + play-off, 3 down | 2 up, 2 down | 1 up, 1 down |
 | League matches | 38 | 14 | 10 |
-| Rating per place | 1 | 2.5 | 3.5 |
+| Rating per place | 1 | 2.5 | 4.5 |
 | Top/bottom bonus | 6, 4, 2 / 2, 4, 6 | 6, 3, 0 / 0, 3, 6 | 6, 3, 0 / 0, 3, 6 |
-| Favourite wins (of decided games) | about 64% | about 78%, target 79 | about 74%, target 75 |
+| Favourite wins (of decided games) | about 64% | about 71% | about 66% |
+| Champions' losses a season | about 7.5 of 38 | about 2.6 of 14 | about 2.2 of 10 |
 | Match lengths | 30s, 2m, 5m | 1m, 2m, 5m | 2m, 5m |
 | Season, shortest length | 23 min | 18 min | 27 min |
 | Nations Cup | top 64 | top 32 | top 16 |
@@ -549,9 +550,11 @@ Football's numbers and behaviour are unchanged: whole careers on fixed seeds has
 
 **Why these values.** Fewer places mean each is worth more, or reading a season stops paying: rugby at football's value of 1 gave reader v guesser 154 v 139. The rugby and cricket movement rules came from measuring: 1 up in rugby made promoted sides too strong, 2 up in cricket made them yo-yo. Ratings are spaced evenly across 0–99 in every sport, so decline, boost and the AI ceiling carry over.
 
+**No first-season walkover.** AI sides lose strength to their fixed shape (§4), so a new side that started balanced played far above its rating: in League 1 of rugby it won the title in its first season 42% of the time and went unbeaten 6.5%. New rugby and cricket careers start with the same penalty, which settles over a few summers as in §4, and finish about where predicted. Football keeps its head start (mean 4.65 places above expected in a first League 1 season, 12% titles).
+
 **Rugby's engine.** Overall strength sets the margin and levels off for huge gaps; team shape only moves how open the game is. Letting attack v defence do both meant two attacking sides traded tries and the better one barely showed (favourites stalled at 74%, with thrashings).
 
-**Cricket's engine.** One tick is an over, simulated ball by ball; a chasing side takes risks when behind the rate and plays safe when ahead. The summer clue ranks run rates, not totals, because a side stops batting once it has won: measured over 720 seasons, ranks pointed the right way 89% of the time when not level, against 78% for totals (they are level more often, 58% v 32%, and then the leavers decide). A side bowled out counts its full 20 overs, the real rule. Favourites at 75% are by choice above real T20 (about 65% on the one, unverified, figure found).
+**Cricket's engine.** The ball-by-ball simulation: a chasing side takes risks when behind the rate and plays safe when ahead. The summer clue ranks run rates, not totals, because a side stops batting once it has won: measured over 720 seasons, ranks pointed the right way 89% of the time when not level, against 78% for totals (they are level more often, 58% v 32%, and then the leavers decide). A side bowled out counts its full 20 overs, the real rule. Every ball is its own tick, so it can be followed live: 0.5 sec a ball at 2-minute matches. Favourites at about 66% match the one, unverified, figure found for real T20.
 
 **Worlds** come from the rankings: men's rugby, July 2026 (an unofficial copy of the World Rugby table); men's T20I, October 2026. Lower down rugby's list some nations rarely play. Only nations in a sport's world can be chosen there, unlike football's 210. Players' names work as in every sport (§10).
 

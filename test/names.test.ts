@@ -7,7 +7,7 @@ import { Rng } from '../src/core/rng';
 import { SPORT_IDS } from '../src/core/format';
 import { SPORTS } from '../src/sports';
 import { FAMOUS_PLAYERS } from '../src/sports/famous';
-import { COUNTRY_NAMES } from '../src/sports/football/data/commonNames';
+import { BORROWS_FROM, COUNTRY_NAMES } from '../src/sports/football/data/commonNames';
 import { NAME_POOLS } from '../src/sports/football/data/names';
 import { LOCATIONS, NATIONS, RIVALS, WORLD_ORDER } from '../src/sports/football/data/nations';
 import { footballSport } from '../src/sports/football';
@@ -129,7 +129,7 @@ describe('player names', () => {
     const rng = new Rng(4);
     for (const code of ['ENG', 'FRA', 'NGA', 'SRI']) {
       const name = playerNamer(code);
-      const own = namesOf(code).last;
+      const own = [...namesOf(code).last, ...(namesOf(code).borrowed ?? [])];
       for (let i = 0; i < 200; i++) expect(own, code).toContain(surname(name(rng)));
     }
     expect(namesOf('ENG').last).not.toContain('Eze');
@@ -150,6 +150,21 @@ describe('player names', () => {
       expect(nation(code).code).toBe(code);
       for (const list of [last, first ?? ''].filter(Boolean).map((x) => x.split(' '))) expect(new Set(list).size, code).toBe(list.length);
     }
+  });
+
+  it('borrows surnames only from neighbours that exist, and only now and then', () => {
+    for (const [code, near] of Object.entries(BORROWS_FROM)) {
+      expect(COUNTRY_NAMES[code], code).toBeDefined();
+      for (const other of near) expect(COUNTRY_NAMES[other], `${code} from ${other}`).toBeDefined();
+    }
+    const rng = new Rng(8);
+    const name = playerNamer('ENG');
+    const own = namesOf('ENG').last;
+    let borrowed = 0;
+    for (let i = 0; i < 2000; i++) if (!own.includes(surname(name(rng)))) borrowed++;
+    expect(borrowed / 2000).toBeGreaterThan(0.05);
+    expect(borrowed / 2000).toBeLessThan(0.25);
+    expect(namesOf('ENG').borrowed).toContain('Campbell');
   });
 
   it('keeps surnames of two words whole', () => {

@@ -4,6 +4,8 @@
 export interface NamePool {
   first: string[];
   last: string[];
+  /** Surnames from nearby countries, drawn now and then. */
+  borrowed?: string[];
 }
 
 export const pool = (first: string, last: string): NamePool => ({ first: first.split(' '), last: last.split(' ').map((s) => s.replaceAll('_', ' ')) });

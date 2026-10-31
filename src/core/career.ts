@@ -264,6 +264,7 @@ export function newCareer(options: CareerOptions, sport: SportDefinition): Caree
       ...stats,
       squad: sport.generateSquad(rng, id * 100, identity),
       isPlayer,
+      ...(isPlayer && format.startingLean ? { settledLean: format.startingLean } : {}),
     };
   });
 

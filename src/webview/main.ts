@@ -94,13 +94,24 @@ function paintSwatches(root: ParentNode = app): void {
 // ---------------------------------------------------------------------------
 // Setup
 
-type Option = [value: string, label: string, sub?: string];
+type Option = [value: string, label: string, sub?: string, icon?: string];
+
+/** Plain line icons in the text colour, one per sport. */
+const SPORT_ICONS: Record<SportId, string> = {
+  football: '<circle cx="8" cy="8" r="6.5"/><path d="M8 5l2.9 2.1-1.1 3.4H6.2L5.1 7.1z"/><path d="M8 5V1.6M10.9 7.1l3.2-1M9.8 10.5l2 2.7M6.2 10.5l-2 2.7M5.1 7.1l-3.2-1"/>',
+  rugby: '<ellipse cx="8" cy="8" rx="7" ry="4.3" transform="rotate(-40 8 8)"/><path d="M5.6 10.4l4.8-4.8M6.6 7.4l2 2M7.8 6.2l2 2"/>',
+  cricket: '<path d="M13.6 1.4l1 1-3.1 3.1-1-1zM10.5 4.5l1 1L5.2 11.8a1.4 1.4 0 0 1-2-2z"/><circle cx="12.5" cy="12.5" r="1.9"/>',
+};
+
+function sportIcon(sport: SportId): string {
+  return `<svg class="sport-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SPORT_ICONS[sport]}</svg>`;
+}
 
 function seg(name: string, options: Option[], value: string, disabled = false): string {
   return `<div class="seg" role="radiogroup" data-name="${name}">${options
     .map(
-      ([val, label, sub]) =>
-        `<button type="button" role="radio" aria-checked="${val === value}" class="${val === value && !disabled ? 'on' : ''}" data-value="${val}"${disabled ? ' disabled' : ''}>${esc(label)}${
+      ([val, label, sub, icon]) =>
+        `<button type="button" role="radio" aria-checked="${val === value}" class="${val === value && !disabled ? 'on' : ''}" data-value="${val}"${disabled ? ' disabled' : ''}>${icon ?? ''}${esc(label)}${
           sub ? `<span class="sub-label">${esc(sub)}</span>` : ''
         }</button>`,
     )
@@ -138,7 +149,7 @@ function renderSetup(v: SetupView): void {
   app.innerHTML = `
   <div class="setup card">
     <h2>New career</h2>
-    <div class="field">Sport ${seg('sport', v.sports.map((s): Option => [s.id, `${s.icon} ${s.name}`, s.career]), v.sport)}</div>
+    <div class="field">Sport ${seg('sport', v.sports.map((s): Option => [s.id, s.name, s.career, sportIcon(s.id)]), v.sport)}</div>
     <p class="muted">Pick your country and where it starts. Every match plays on its own; each summer you make one decision that shapes your team.</p>
 
     <div class="field">Country
@@ -169,7 +180,7 @@ function renderOverlay(ft: FullTimeView | null): void {
   overlayKey = ft.key;
   overlay.innerHTML = `<div class="ft-card" role="status">
       <div class="muted small">Full time · ${esc(ft.competition)}${ft.note ? ` · ${esc(ft.note)}` : ''}</div>
-      <div class="ft-score">${swatch(ft.home)}<span>${esc(ft.home.name)}</span> <strong>${esc(ft.score)}</strong> <span>${esc(ft.away.name)}</span>${swatch(ft.away)}</div>
+      <div class="ft-score">${swatch(ft.home)}<span title="${esc(ft.home.name)}">${esc(ft.home.short)}</span> <strong>${esc(ft.score)}</strong> <span title="${esc(ft.away.name)}">${esc(ft.away.short)}</span>${swatch(ft.away)}</div>
       ${ft.scorers ? `<div class="small muted">${esc(ft.scorers)}</div>` : ''}
     </div>`;
   paintSwatches(overlay);
@@ -314,14 +325,18 @@ function matchParts(v: GameView): string[] {
   if (!m) return [`<p class="muted">Next match about to kick off…</p>`];
   // Newest first, so the latest event is always in view.
   const items = m.timeline;
-  const event = (t: TimelineView) => {
-    const icon = t.kind === 'goal' ? `<span class="ball" aria-label="${esc(v.terms.eventName)}">${v.terms.icon}</span>` : t.kind === 'minor' ? '<span class="minor" aria-hidden="true">•</span>' : `<span class="card ${t.kind}" aria-label="${t.kind === 'red' ? 'Red' : 'Yellow'} card"></span>`;
-    return `<span class="ev">${icon}<span class="who">${esc(t.text)}</span>${t.score ? `<span class="running">${esc(t.score)}</span>` : ''}</span>`;
+  const icon = (t: TimelineView) =>
+    t.kind === 'goal'
+      ? `<span class="ball" aria-label="${esc(v.terms.eventName)}">${sportIcon(v.sport)}</span>`
+      : t.kind === 'minor'
+        ? '<span class="dot-minor" aria-hidden="true">•</span>'
+        : `<span class="card ${t.kind}" aria-label="${t.kind === 'red' ? 'Red' : 'Yellow'} card"></span>`;
+  // One line each: when, what, who, whose, and the score. Only the score stands out.
+  const row = (t: TimelineView) => {
+    if (t.kind === 'break') return `<li class="break"><span>${esc(t.clock)}</span><span>${esc(t.text)}</span></li>`;
+    const team = t.side === 'home' ? m.home : m.away;
+    return `<li class="${t.kind}${team.isPlayer ? ' mine' : ''}"><span class="min">${esc(t.clock)}</span><span class="ev-icon">${icon(t)}</span><span class="who" title="${esc(t.text)}">${esc(t.text)}</span><span class="side-code">${esc(team.short)}</span><span class="running">${t.score ? esc(t.score) : ''}</span></li>`;
   };
-  const row = (t: TimelineView) =>
-    t.kind === 'break'
-      ? `<li class="break"><span>${esc(t.clock)}</span><span>${esc(t.text)}</span></li>`
-      : `<li class="${t.kind}"><span class="home">${t.side === 'home' ? event(t) : ''}</span><span class="min">${esc(t.clock)}</span><span class="away">${t.side === 'away' ? event(t) : ''}</span></li>`;
   return [scoreboard(m, v.terms), `<div class="card feed-card">${items.length ? `<ol class="report-feed">${[...items].reverse().map(row).join('')}</ol>` : `<p class="muted small center">${esc(v.terms.noEventsYet)}</p>`}</div>`];
 }
 
@@ -335,6 +350,7 @@ function scoreboard(m: LiveMatchView, terms: SportTerms): string {
       <div class="score">${team(m.home, m.homeTown)}<div class="mid"><div class="goals${long ? ' long' : ''}">${esc(m.score[0] || '–')}<span>${esc(terms.scoreJoin.trim())}</span>${esc(m.score[1] || '–')}</div>
         <div class="clock-big ${m.finished ? 'ft' : 'live'}">${esc(m.clock)}</div></div>${team(m.away, m.awayTown)}</div>
       ${m.situation ? `<div class="small situation">${esc(m.situation)}</div>` : ''}
+      ${(m.details ?? []).map((line) => `<div class="muted small detail">${esc(line)}</div>`).join('')}
       ${m.aggregate ? `<div class="muted small">${esc(m.aggregate)}</div>` : ''}
       ${m.penalties ? `<div class="pens small">${esc(m.penalties)}</div>` : ''}
       ${m.suspended ? `<div class="muted small">Suspended: ${m.suspended.map(esc).join(', ')}</div>` : ''}
@@ -345,8 +361,8 @@ function tableHtml(tables: TableView[], tier: number, terms: SportTerms): string
   const t = tables[tier - 1];
   const rows = t.rows
     .map(
-      (r) => `<tr class="${r.zone ?? ''} ${r.isPlayer ? 'me' : ''}">
-      <td class="pos">${r.pos}</td><td class="team" title="${esc(r.name)}${r.isRival ? ' · your rival' : ''}">${esc(r.town)}${r.isRival ? ' <span class="rival-mark" aria-label="Your rival">⚔</span>' : ''}${
+      (r) => `<tr class="${r.zone ?? ''} ${r.isPlayer ? 'me' : ''} ${r.isRival ? 'rival' : ''}">
+      <td class="pos">${r.pos}</td><td class="team" title="${esc(r.name)}${r.isRival ? ' · your rival' : ''}">${esc(r.town)}${
         r.move ? ` <span class="move ${r.move > 0 ? 'up' : 'down'}" title="${r.move > 0 ? 'Up' : 'Down'} ${Math.abs(r.move)} since kick-off">${r.move > 0 ? '▲' : '▼'}</span>` : ''
       }</td>
       <td>${r.played}</td><td>${r.won}</td>${terms.draws ? `<td>${r.drawn}</td>` : ''}<td>${r.lost}</td><td class="diff">${esc(r.gdText)}</td><td class="pts">${r.points}</td></tr>`,
@@ -361,7 +377,8 @@ function tableHtml(tables: TableView[], tier: number, terms: SportTerms): string
 function legendHtml(t: TableView): string {
   const labels: Record<string, string> = { champion: 'Champions', promotion: 'Promotion', playoff: 'Play-offs', relegation: 'Relegation' };
   const zones = [...new Set(t.rows.map((r) => r.zone).filter((z) => z !== null))];
-  return `<p class="legend small">${zones.map((z) => `<span class="key ${z}"></span>${labels[z]}`).join(' ')}</p>`;
+  const rival = t.rows.some((r) => r.isRival) ? ' <span class="key rival-key"></span>Your rival' : '';
+  return `<p class="legend small">${zones.map((z) => `<span class="key ${z}"></span>${labels[z]}`).join(' ')}${rival}</p>`;
 }
 
 function playoffHtml(p: PlayoffView): string {

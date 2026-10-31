@@ -5,7 +5,6 @@ import { outcome, type RugbyMatch, type SideKey } from './match';
 export const rugbyPresenter: SportPresenter<RugbyMatch> = {
   terms: {
     name: 'Rugby',
-    icon: '🏉',
     attack: 'Attack',
     defence: 'Defence',
     clueScored: 'for points scored',
@@ -52,16 +51,16 @@ export const rugbyPresenter: SportPresenter<RugbyMatch> = {
       const at = `${e.minute}'`;
       switch (e.type) {
         case 'try':
-          items.push({ clock: at, kind: 'goal', side: e.side, text: `${name(e.side, e.playerId)} try${e.converted ? ', converted' : ''}`, score: score(e.score) });
+          items.push({ clock: at, kind: 'goal', side: e.side, text: `${name(e.side, e.playerId)} try`, score: score(e.score) });
           break;
         case 'penalty':
-          items.push({ clock: at, kind: 'minor', side: e.side, text: `${name(e.side, e.playerId)} penalty`, score: score(e.score) });
+          items.push({ clock: at, kind: 'minor', side: e.side, text: `${name(e.side, e.playerId)} pen`, score: score(e.score) });
           break;
         case 'dropGoal':
-          items.push({ clock: at, kind: 'minor', side: e.side, text: `${name(e.side, e.playerId)} drop goal`, score: score(e.score) });
+          items.push({ clock: at, kind: 'minor', side: e.side, text: `${name(e.side, e.playerId)} drop`, score: score(e.score) });
           break;
         case 'yellow':
-          items.push({ clock: at, kind: 'yellow', side: e.side, text: `${name(e.side, e.playerId)} (sin bin)` });
+          items.push({ clock: at, kind: 'yellow', side: e.side, text: name(e.side, e.playerId) });
           break;
         case 'red':
           items.push({ clock: at, kind: 'red', side: e.side, text: name(e.side, e.playerId) });

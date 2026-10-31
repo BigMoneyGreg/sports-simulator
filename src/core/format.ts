@@ -22,6 +22,13 @@ export interface SportFormat {
    * value: at football's 1, reading a season barely paid in a league of eight.
    */
   performanceMultiplier: number;
+  /**
+   * How lopsided a new career's team plays at first, however balanced it looks.
+   * AI sides lose strength to their fixed shape; a new side that doesn't plays
+   * well above its rating, which in a small league means walking it. Absent in
+   * football, where the head start was tuned around.
+   */
+  startingLean?: number;
   /** Rating for finishing 1st, 2nd, 3rd; none in League 1. */
   topBonus: number[];
   /** Rating for finishing third-bottom, second-bottom, bottom; none in the bottom league. */
@@ -59,6 +66,7 @@ export const RUGBY: SportFormat = {
   relegated: 2,
   startingPots: [6, 10, 14, 18, 22, 26, 30, 34, 38, 42, 48],
   performanceMultiplier: 2.5,
+  startingLean: 14,
   topBonus: [6, 3, 0],
   bottomBonus: [0, -3, -6],
   cup: { entrants: 32, after: [1, 4, 6, 9, 11] },
@@ -73,7 +81,8 @@ export const CRICKET: SportFormat = {
   playoffs: false,
   relegated: 1,
   startingPots: [4, 8, 10, 14, 16, 20, 22, 26, 30],
-  performanceMultiplier: 3.5,
+  performanceMultiplier: 4.5,
+  startingLean: 14,
   topBonus: [6, 3, 0],
   bottomBonus: [0, -3, -6],
   cup: { entrants: 16, after: [1, 3, 5, 7] },

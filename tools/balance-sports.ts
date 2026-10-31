@@ -8,7 +8,7 @@
 import { allocatePoints, endSeason, focusAllocation, newCareer, nextRound, playRound, type Career, type Focus } from '../src/core/career';
 import { rating } from '../src/core/club';
 import { teamCount, type SportId } from '../src/core/format';
-import { goalRanks, sortTable } from '../src/core/league';
+import { goalRanks, sortTable, startRating } from '../src/core/league';
 import { Rng } from '../src/core/rng';
 import { tickMs, fullTimePause } from '../src/extension/game';
 import { SPORTS, type AnySport } from '../src/sports';
@@ -25,16 +25,19 @@ function check(name: string, pass: boolean, detail: string | number): void {
   console.log(`${pass ? 'PASS' : 'FAIL'}  ${name.padEnd(56)} ${detail}`);
 }
 
-/** Targets differ by sport: rugby's favourites win more, and its promoted sides bounce more with two going up. */
-const TARGETS: Record<'rugby' | 'cricket', { favourite: [number, number]; score: [number, number]; seasonMinutes: [number, number]; straightBack: [number, number] }> = {
-  rugby: { favourite: [76, 83], score: [20, 32], seasonMinutes: [15, 24], straightBack: [30, 55] },
-  cricket: { favourite: [72, 79], score: [140, 170], seasonMinutes: [20, 32], straightBack: [8, 30] },
+/** Targets differ by sport: rugby's favourites win more, and its promoted sides bounce more with two going up. Champions should still lose a few. */
+const TARGETS: Record<'rugby' | 'cricket', { favourite: [number, number]; score: [number, number]; seasonMinutes: [number, number]; straightBack: [number, number]; championLosses: number }> = {
+  rugby: { favourite: [68, 74], score: [20, 32], seasonMinutes: [15, 24], straightBack: [30, 55], championLosses: 2.2 },
+  cricket: { favourite: [63, 69], score: [140, 170], seasonMinutes: [20, 32], straightBack: [8, 30], championLosses: 1.9 },
 };
 
 function worldRun(id: 'rugby' | 'cricket', sport: AnySport): void {
   const t = TARGETS[id];
   const fav = { n: 0, won: 0, draws: 0 };
   const scores: number[] = [];
+  const championLosses: number[] = [];
+  let unbeaten = 0;
+  let teamSeasons = 0;
   let champion = new Map<number, number>();
   const topAI: number[] = [];
   let distinct = 0;
@@ -65,6 +68,13 @@ function worldRun(id: 'rugby' | 'cricket', sport: AnySport): void {
           if (!homeWon && !awayWon) fav.draws++;
         }
       }
+      for (const league of c.season.leagues) {
+        if (league.clubIds.includes(c.playerClubId)) continue;
+        const table = sortTable(league.table);
+        championLosses.push(table[0].lost);
+        teamSeasons += table.length;
+        unbeaten += table.filter((r) => r.lost === 0).length;
+      }
       cups++;
       if (c.season.cup.winner !== undefined && (!c.season.calendar.some((x) => x.kind === 'championship') || c.season.championship?.winner !== undefined)) cupsDone++;
       const end = endSeason(c, sport);
@@ -93,6 +103,8 @@ function worldRun(id: 'rugby' | 'cricket', sport: AnySport): void {
   check('Typical score per side', mean(scores) >= t.score[0] && mean(scores) <= t.score[1], `mean ${mean(scores).toFixed(1)}, p5 ${q(0.05)}, median ${q(0.5)}, p95 ${q(0.95)}, max ${scores[scores.length - 1]}`);
   check('Leagues stay the right size, every team in exactly one', sizesOk, sizesOk ? 'always' : 'BROKEN');
   check('Every cup is finished every season', cups === cupsDone, `${cupsDone}/${cups}`);
+  check('Leagues stay close: champions lose a few', mean(championLosses) >= t.championLosses, `${mean(championLosses).toFixed(1)} a season`);
+  check('Unbeaten seasons are rare (under 1 team-season in 100)', unbeaten / teamSeasons < 0.01, `${((100 * unbeaten) / teamSeasons).toFixed(2)}%`);
   const back = (100 * promotedBack) / promoted;
   check('Promoted sides finish bottom half most seasons', (100 * promotedBottom) / promoted >= 55, `${((100 * promotedBottom) / promoted).toFixed(0)}%`);
   check('Promoted sides go straight back at a fair rate', back >= t.straightBack[0] && back <= t.straightBack[1], `${back.toFixed(0)}%`);
@@ -117,6 +129,27 @@ function read(c: Career, sport: AnySport, rng: Rng, clue?: { n: number; tied: nu
     if (pick === (me.attack < me.defence ? 'attack' : 'defence')) clue.right++;
   }
   return pick;
+}
+
+/** A new career should finish about where it's predicted, not walk its first season. */
+function firstSeasonRun(sport: AnySport): void {
+  const f = sport.format;
+  const places: number[] = [];
+  let titles = 0;
+  let unbeaten = 0;
+  const careers = quick ? 60 : 200;
+  for (let seed = 1; seed <= careers; seed++) {
+    const c = newCareer({ rating: startRating(f, 1, new Rng(seed * 97)), difficulty: 'medium', seed }, sport);
+    while (nextRound(c)) playRound(c, sport);
+    const end = endSeason(c, sport);
+    places.push(end.expected - end.position);
+    if (end.position === 1) titles++;
+    if (c.season.leagues[0].table.find((r) => r.clubId === c.playerClubId)!.lost === 0) unbeaten++;
+  }
+  console.log('\n-- First season in League 1 --');
+  check('Finishes about where predicted (within half a place)', Math.abs(mean(places)) <= 0.5, `${mean(places).toFixed(2)} places`);
+  check('Rarely wins the league straight away (under 1 in 6)', titles / careers < 1 / 6, `${((100 * titles) / careers).toFixed(0)}%`);
+  check('Almost never goes unbeaten (2 in 100 at most)', unbeaten / careers <= 0.02, `${((100 * unbeaten) / careers).toFixed(1)}%`);
 }
 
 function careerRun(id: 'rugby' | 'cricket', sport: AnySport): void {
@@ -145,8 +178,10 @@ function careerRun(id: 'rugby' | 'cricket', sport: AnySport): void {
   const many = (start: number, s: 'reader' | 'guesser', base: number) => Array.from({ length: CAREERS }, (_, i) => run(start, s, base + i));
   const reader = many(50, 'reader', 100);
   const guesser = many(50, 'guesser', 100);
-  const lowReader = many(3, 'reader', 300);
-  const lowGuesser = many(3, 'guesser', 300);
+  // The climb varies a lot from career to career, so its median needs more of them.
+  const climb = (s: 'reader' | 'guesser') => Array.from({ length: CAREERS * 3 }, (_, i) => run(3, s, 300 + i));
+  const lowReader = climb('reader');
+  const lowGuesser = climb('guesser');
   console.log(`\n-- Careers (${CAREERS} × ${SEASONS} seasons) --`);
   const last = (xs: { last: number[] }[]) => mean(xs.flatMap((x) => x.last));
   const titles = (xs: { titles: number }[]) => mean(xs.map((x) => x.titles));
@@ -156,7 +191,8 @@ function careerRun(id: 'rugby' | 'cricket', sport: AnySport): void {
   check('From the bottom, a reader reaches League 1 in about 8–14 seasons', median(lowReader.map((x) => x.top)) >= 7 && median(lowReader.map((x) => x.top)) <= 15, median(lowReader.map((x) => x.top)));
   check('A guesser takes far longer', median(lowGuesser.map((x) => x.top)) >= 1.5 * median(lowReader.map((x) => x.top)), median(lowGuesser.map((x) => x.top)));
   console.log(`      first title from the bottom: reader ${median(lowReader.map((x) => x.title))}, guesser ${median(lowGuesser.map((x) => x.title))}`);
-  check('The summer clue points the right way 70%+ of the time', clue.right / clue.n >= 0.7, `${((100 * clue.right) / clue.n).toFixed(0)}%, ranks level ${((100 * clue.tied) / clue.n).toFixed(0)}%`);
+  // Closer leagues make the ranks a little noisier, so this sits lower than when favourites won more.
+  check('The summer clue points the right way 68%+ of the time', clue.right / clue.n >= 0.68, `${((100 * clue.right) / clue.n).toFixed(0)}%, ranks level ${((100 * clue.tied) / clue.n).toFixed(0)}%`);
 
   console.log(`\n-- Season length --`);
   // A match's full clock plus the full-time pause; a chase that ends early makes cricket's a little shorter.
@@ -173,6 +209,7 @@ const only = process.argv.slice(2).find((a) => a === 'rugby' || a === 'cricket')
 for (const id of (only ? [only] : ['rugby', 'cricket']) as Exclude<SportId, 'football'>[]) {
   console.log(`\n==== ${id} ====`);
   worldRun(id, SPORTS[id]);
+  firstSeasonRun(SPORTS[id]);
   careerRun(id, SPORTS[id]);
 }
 console.log(`\n${results.filter(Boolean).length}/${results.length} targets met`);

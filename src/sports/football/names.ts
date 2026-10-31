@@ -1,6 +1,6 @@
 import type { ClubIdentity } from '../../core/career';
 import type { Rng } from '../../core/rng';
-import { COUNTRY_NAMES } from './data/commonNames';
+import { BORROWED_SHARE, BORROWS_FROM, COUNTRY_NAMES } from './data/commonNames';
 import { NAME_POOLS, pool, type NamePool } from './data/names';
 import { FAMOUS_PLAYERS } from '../famous';
 import { EXTRA_LOCATIONS, EXTRA_NATIONS, LOCATIONS, NATIONS, RIVALS, WORLD_ORDER, type Nation } from './data/nations';
@@ -75,14 +75,17 @@ export function namesOf(code: string): NamePool {
     const regional = NAME_POOLS[nation(code).names];
     const own = COUNTRY_NAMES[code];
     names = own ? pool(own[1] ?? regional.first.join(' '), own[0]) : regional;
+    const near = (BORROWS_FROM[code] ?? []).flatMap((c) => pool('', COUNTRY_NAMES[c][0]).last.slice(0, 8));
+    if (near.length) names = { ...names, borrowed: [...new Set(near)].filter((s) => !names!.last.includes(s)) };
     POOLS.set(code, names);
   }
   return names;
 }
 
 /**
- * A name generator for one squad: surnames only repeat once the list runs out,
- * as with Kims and Nguyens. Nobody in a squad shares a whole name, and a real
+ * A name generator for one squad: mostly the country's own surnames, now and
+ * then a neighbour's; they only repeat once the list runs out, as with Kims and
+ * Nguyens. Nobody in a squad shares a whole name, and a real
  * star's name is never drawn: common names can still make one by chance.
  */
 export function playerNamer(code: string, squad: { name: string }[] = []): (rng: Rng) => string {
@@ -90,8 +93,9 @@ export function playerNamer(code: string, squad: { name: string }[] = []): (rng:
   const used = new Set(squad.map((p) => surname(p.name)));
   const taken = new Set(squad.map((p) => p.name));
   return (rng) => {
-    const fresh = names.last.filter((s) => !used.has(s));
-    const last = rng.pick(fresh.length ? fresh : names.last);
+    const list = names.borrowed?.length && rng.next() < BORROWED_SHARE ? names.borrowed : names.last;
+    const fresh = list.filter((s) => !used.has(s));
+    const last = rng.pick(fresh.length ? fresh : list);
     used.add(last);
     let full = `${rng.pick(names.first)} ${last}`;
     for (let tries = 0; tries < 50 && (FAMOUS_PLAYERS.has(full) || taken.has(full)); tries++) full = `${rng.pick(names.first)} ${last}`;
