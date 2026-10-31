@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { closeSync, mkdtempSync, openSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -126,6 +126,18 @@ describe('storage', () => {
     // Deleting "no career" afterwards can't touch it.
     s.save(null, 'rugby');
     expect(readdirSync(dir).filter((f) => f.includes('damaged'))).toHaveLength(1);
+  });
+
+  it('saves over a file another window has open, or reports that it could not', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ss-storage-'));
+    const s = new Storage(dir, memento());
+    s.save(save(1), 'football');
+    const held = openSync(join(dir, 'career.json'), 'r');
+    expect(() => s.save(save(2), 'football')).not.toThrow();
+    closeSync(held);
+    s.save(save(3), 'football');
+    expect(s.load('football')).toEqual(save(3));
+    expect(readdirSync(dir).filter((f) => f.endsWith('.tmp'))).toEqual([]);
   });
 
   it('never throws when the disk fails, and reports it', () => {

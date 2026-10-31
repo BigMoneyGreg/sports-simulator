@@ -1,0 +1,39 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, release-fixes]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, vscode: stable }
+          - { os: macos-latest, vscode: stable }
+          - { os: ubuntu-latest, vscode: stable }
+          # The oldest version package.json says it supports.
+          - { os: ubuntu-latest, vscode: 1.90.0 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npx @vscode/vsce package --no-dependencies --out test.vsix
+      - name: Start in a real VS Code
+        if: runner.os != 'Linux'
+        run: npm run test:integration
+        env:
+          VSCODE_VERSION: ${{ matrix.vscode }}
+      - name: Start in a real VS Code
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:integration
+        env:
+          VSCODE_VERSION: ${{ matrix.vscode }}

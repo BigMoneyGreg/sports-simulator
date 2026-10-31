@@ -306,13 +306,11 @@ League 1's top 3 get nothing (there's nowhere higher to go), and League 5's bott
 
 ### Rough time from 0 to 99, and beyond
 
-**Measured by the balance tool**, 4 careers each, from rating 0 (the standard game is *medium*; *easy* and *hard* are only measured, not offered):
+**Measured by the balance tool**, 4 careers each, from rating 0:
 
-| Engine setting | Reads the summer | Guesses |
-|---|---|---|
-| Easy (+10) | 6–8 seasons | far slower, or never |
-| **Medium (+7), the game** | **8–14 seasons** | far slower, or never |
-| Hard (no boost) | 63 seasons, or never | never |
+| Reads the summer | Guesses |
+|---|---|
+| **8–14 seasons** | far slower, or never |
 
 **Beyond 99** there's no ceiling (a technical bound of 250, where every season is already perfect). Measured over 40 seasons from 95, 8 careers each: a reader peaks at **~176** (161–190), a guesser at ~117 (108–130), and 54 of 320 seasons were unbeaten.
 
@@ -346,7 +344,7 @@ All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned wi
 - No more than 4 AI clubs above 95 at any time; none at 99 for long
 - Promoted AI clubs finish in the bottom half of their new league about 78% of the time
 - **Reading the ranks beats guessing by 2+ places a season**; a guesser drifts below expectation; a careless player sinks furthest
-- A reader reaches 99 in roughly the measured seasons for each difficulty; a guesser takes at least twice as long or never; a careless player on hard never climbs from 0 to 99
+- A reader reaches 99 in roughly the measured seasons; a guesser takes at least twice as long or never
 - A player club starting at 99 wins League 1 most seasons, but not every season
 - A good reader climbs well past 99 (peak 130+); a guesser peaks 20+ lower; nobody runs away (no peak above 220 in 40 seasons on medium); unbeaten seasons happen but not routinely
 
@@ -377,7 +375,7 @@ The box lists every sport, one row each. Only one opens fully at a time, beneath
 - **Pause:** a minimised row has its own ⏸/▶; the open sport's is in its header.
 - **Everything runs:** opening a sport only changes what you're looking at. Each sport's summer waits for its own answer while the others play on.
 
-**Choose sports…** under the list hides sports and the Honours row; a hidden sport's clock is held, its career kept, and it's left out of everything outside the box too. With several careers the status bar shows each in turn for 5 seconds, paused ones included, as its sport, week and place (*🏉 Rugby: Wk 7/14 · 2nd in League 3*), with no live score or goal call-out; a bell appears if another sport is waiting on you. With one career it shows the live score as below. The collapsed box follows the sport last opened, or if that has no career, the first that does. The hover lists every career, and the badge counts decisions waiting. When a season ends a short message says so and goes by itself after 10 seconds (*Rugby season 3 finished: 2nd in League 3, promoted. Decision waiting.*), unless that sport is open in view. The decision is only ever made in the box; the badge, bell and pinned line stay until it is.
+**Choose sports…** under the list hides sports and the Honours row; a hidden sport's clock is held, its career kept, and it's left out of everything outside the box too. With several careers the status bar shows each in turn for 5 seconds, paused ones included, as its sport, week and place (*🏉 Rugby: Wk 7/14 · 2nd in L3*), with no live score or goal call-out; a bell appears if another sport is waiting on you. With one career it shows the live score as below. The collapsed box follows the sport last opened, or if that has no career, the first that does. The hover lists every career, and the badge counts decisions waiting. When a season ends a short message says so and goes by itself after 10 seconds (*Rugby season 3 finished: 2nd in League 3, promoted. Decision waiting.*), unless that sport is open in view. The decision is only ever made in the box; the badge, bell and pinned line stay until it is.
 
 While something is open, a sport waiting on you is also pinned to the top of the box (*Cricket: season over, decision waiting*), because a long page can push its row out of sight. Clicking it opens that sport.
 
@@ -397,9 +395,9 @@ A match against your rival is marked ⚔ in the status bar, and *Rival match* on
 
 ### Status bar
 
-With one career, `⚽ SCO 2–1 RSA 67' · Wk 7/38 · 3rd in League 2`, using each sport's own emoji; with several, each sport's week and place in turn (§8). Click it to open the sidebar box.
+With one career, `⚽ SCO 2–1 RSA 67' · Wk 7/38 · 3rd in L2`, using each sport's own emoji; with several, each sport's week and place in turn (§8). Click it to open the sidebar box.
 
-- For about 4 seconds after a goal in your match: `⚽ GOAL! SCO 2–1 RSA 67' · Wk 7/38 · 3rd in League 2`.
+- For about 4 seconds after a goal in your match: `⚽ GOAL! SCO 2–1 RSA 67' · Wk 7/38 · 3rd in L2`.
 - Hovering shows the essentials without opening the box: club, league and position, games played, expected finish, and the match in progress.
 - Before a career starts: `🏆 Start a Sports Simulator career` (shown even with the score turned off, like the summer choice).
 
@@ -479,7 +477,7 @@ The game uses real nations, not clubs: country names, flags and colours are free
 
 ## 11. Settings 🟢 NOW
 
-- Match duration (30 seconds / 2 / 5 minutes): the length a new career starts from. Each career keeps its own, changed from the ⏱ button in the box
+- Match duration (30 seconds / 1 / 2 / 5 minutes): the length a new career starts from, 30 seconds by default, which gives a season of about 20 to 25 minutes in every sport as each sport rounds up to its shortest. Each career keeps its own, changed from the ⏱ button in the box. Starting a career at another length makes that the default, kept in the extension's own storage rather than the player's settings, until the setting is changed
 - Full-time overlay on/off
 - Status bar score on/off
 - Which sports show (a tick for each; none ticked counts as all). Also from **Choose sports…** under the list in the box, which asks in a tick-list that won't accept no sports at all
@@ -596,7 +594,7 @@ Football's numbers and behaviour are unchanged: whole careers on fixed seeds has
 
 **AI titles, re-measured (31 Oct 2026).** Most titles for one AI side in 40 seasons: rugby median 7, worst 13; cricket median 8, worst 16 (40 of 40 balance targets met). With 8 or 6 sides in a league, an even share of 40 titles is already 5 or nearly 7, so a typical top side is close to what chance alone gives, and the worst cases are rare. No change made.
 
-**Where it stands (31 Oct 2026).** Rugby, cricket, several sports at once, Honours, rival call-outs, the End… question and the visual polish are all on `main`. So are **Choose sports…** (hiding sports and Honours) and the status bar's new lines (emoji, week and league place, 5-second cycle). 228 tests pass and VS Code starts with it loaded; the box has been clicked through in headless Chrome with sample games, and the integration test drives the real Choose sports tick-list. The user has tried the status bar, Choose sports and ending a career in real VS Code. Before publishing: try a real Reset career and Reset honours, see the season-end message, and retake the README screenshots.
+**Where it stands (31 Oct 2026).** Everything is on `main`: three sports, several at once, Honours, **Choose sports…**, and the release fixes from the final review. `npm run test:e2e` clicks through a real VS Code in Restricted Mode: a real season end, End, Reset career, Reset honours and the game passing between two copies. Unit tests run on Windows, Linux and macOS on GitHub. Before publishing: retake screenshots if the look changes, then package and upload.
 
 **Worlds** come from the rankings: men's rugby, July 2026 (an unofficial copy of the World Rugby table); men's T20I, October 2026. Lower down rugby's list some nations rarely play. Only nations in a sport's world can be chosen there, unlike football's 210. Players' names work as in every sport (§10).
 
@@ -645,6 +643,11 @@ In rough priority order:
 | Several sports at once, as a list with one open at a time | The user's design. Careers no longer stop on switching; minimised rows keep it glanceable |
 | The status bar takes each career in turn, 5 seconds each | The user's choice over showing the latest action or all the scores together, with 5 seconds after 3 felt too quick, and standings rather than scores, which mean little in passing: it keeps one short score at a time and never leaves a sport out for long |
 | **Choose sports…** as a link under the list, opening VS Code's tick-list | The settings page alone was too hard to find. One link covers hiding and bringing back, which a Hide button on each row couldn't once the row had gone |
+| New careers default to 30 seconds a match | At 2 minutes a new football player waited about 95 minutes for their first decision, which is the game's whole hook |
+| The summer question comes before who's leaving | Otherwise its answers fall below the fold in a normal-sized box. The ranks sit above it, the leavers just below |
+| Nothing else stops the clock: a failed save or redraw is logged and warned about once | Losing a few seconds' progress is better than a game that silently freezes until VS Code reloads |
+| A damaged save is set aside, not treated as no career | "No career" would have deleted it at the next close |
+| Works in Restricted Mode, and prefers the local machine when remote | It never reads workspace files, and careers should follow the player rather than each server |
 | Hiding a sport holds its clock, without touching the career or its own pause | If it played on hidden, a season could end with a decision waiting on a sport the player can't see. A hold isn't saved, so the setting alone decides it and un-hiding can't undo a pause the player chose |
 | Reset honours leaves running careers alone | Honours are a side record: wiping them shouldn't cost seasons of play, and End and Reset already deal with careers one at a time |
 | One End… button instead of separate End and Reset; the Reset command removed | Two ways to stop a career needed explaining; asking at the moment makes the difference clear. VS Code's pop-ups can't be red, so these questions live in the box |
@@ -660,7 +663,7 @@ In rough priority order:
 | Pause when VS Code closes | You never miss matches; no catch-up simulation |
 | Status bar goal call-out, rich hover, collapsed-box score and a badge for the summer choice | Most of the time the box is closed: these keep the game noticeable at a glance without a single extra notification |
 | One summer question in four styles (call-ups, assistant coach, formation, training camp), always attack v defence underneath; leavers matched to the loss; loss split 10–90%; Medium boost 7 | Named people give a sense of power without more decisions. More levers (fitness, mentality, home/away…) were rejected: their clues come from half-seasons and would mostly be luck. Leavers alone were no clue at the old 25–75% split; at 10–90% they make the top readable (66% → 76% right). Medium needed +2 to keep its climb on target |
-| No difficulty choice: one standard game (the old Medium) | Extra options for the sake of it. Medium's tuning is the one measured hardest, and Easy's bigger boost pushed teams so high that the steep penalty above 99 made careers collapse |
+| No difficulty choice: one standard game (the old Medium), and the unused easy and hard settings removed before release | Extra options for the sake of it. Medium's tuning is the one measured hardest, and Easy's bigger boost pushed teams so high that the steep penalty above 99 made careers collapse |
 | The lopsidedness penalty follows a settled shape that moves half way each summer | One wrong summer at the top could take a 154 side to playing like a 68: champions to relegated in a season. Real teams decline and recover over a few seasons; now the slip shows, there's time to correct it, and collapses fell from 16 to 6 per ~370 top seasons. Slower settling (35%) made problems linger; a cap or a softer scale made guessing too safe |
 | Saves are upgraded, never silently dropped | History is the reward: once the game is public, one update that wiped careers would lose players for good |
 | One window runs the game; focusing another hands it over | Each window used to run its own clock on the shared save, so two windows played different matches and overwrote each other (a summer choice could be lost). Many people keep several windows open all day |

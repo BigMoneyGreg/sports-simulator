@@ -3,6 +3,7 @@
 International football, rugby and cricket sims that live in a small box in your VS Code sidebar. Pick a sport, your country and where it starts, and it plays every match, table, cup and season on its own while you code. Glance over when you like; once a season, you make one decision.
 
 <p>
+  <img src="media/screenshots/list.png" width="220" alt="The list of sports, with several careers playing at once">
   <img src="media/screenshots/match.png" width="220" alt="A live match: scoreboard and match report">
   <img src="media/screenshots/table.png" width="220" alt="The live league table, with teams moving as goals go in">
   <img src="media/screenshots/seasonOver.png" width="220" alt="The end of a season: who is leaving, the clues and the summer question">
@@ -48,10 +49,11 @@ To stop a career, press **End…** on its row. **End career** keeps it in Past c
 - Live match reports with each team's events on its own side, a real scorecard in cricket, and live tables, with your score, week and league place in the status bar (and a *GOAL!*, *TRY!* or *WICKET!* as it happens); with several careers it shows each sport's week and place in turn; hover it for your position and expected finish
 - Collapse the box and its title still shows your position and score
 - A flash in the box: green when it goes your way, red when it doesn't
+- Works by keyboard, with screen reader announcements and high contrast themes
 - Fits any size: shrink the box and it keeps just the essentials (club, league, position, form and controls)
 - Season reports, trophy cabinet, club history and records
 - Pauses when VS Code closes, so you never miss a match
-- With several VS Code windows open, the game runs in the one you're working in
+- With several VS Code windows open, the game runs in the one you're working in, and moves to another when that one closes
 
 Player names are generated and fictional. Competitions are the game's own, not official tournaments.
 
@@ -61,25 +63,19 @@ Player names are generated and fictional. Competitions are the game's own, not o
 |---|---|---|
 | `sportsSimulator.sports` | all on | The sports to show, also set from **Choose sports…** in the box. Hiding one with a career under way stops its clock and keeps the career, which carries on from the same moment when you show it again. |
 | `sportsSimulator.showHonours` | `true` | Show the Honours row and a notification for each honour earned. Honours and records still count while it's off. |
-| `sportsSimulator.matchDuration` | `2m` | Real time one match takes in a new career (see the table above); a career under way keeps its own, set from the ⏱ button. If your sport doesn't offer this length, the next longer one is used. Also on the ⏱ button. |
+| `sportsSimulator.matchDuration` | `30s` | Real time one match takes in a new career (see the table above); a career under way keeps its own, set from the ⏱ button. If your sport doesn't offer this length, the next longer one is used, so the default gives a season of about 20 to 25 minutes in every sport. Starting a career at another length makes that the default until you change this setting. |
 | `sportsSimulator.fullTimeOverlay` | `true` | Show the full-time result over the box for a few seconds after your match. |
-| `sportsSimulator.statusBarScore` | `true` | Show your live score in the status bar. With several careers it shows each sport's week and league place in turn instead, for 5 seconds each. Click it to open the box. |
+| `sportsSimulator.statusBarScore` | `true` | Show your live score in the status bar. With several careers it shows each sport's week and league place in turn instead, for 5 seconds each. Click it to open the box at the sport on show. |
 
 Commands: **Sports Simulator: Open**, **Pause / Play**, **Switch Sport** and **Choose Sports**.
 
-## Development
+## Feedback
 
-```sh
-npm install
-npm run build          # bundles dist/extension.js and dist/webview.js
-npm test               # unit tests (Vitest)
-npm run test:integration   # launches your installed VS Code with a throwaway profile
-npm run balance        # headless balance check against DESIGN.md §5 and §7
-npm run balance:sports # the same for rugby and cricket
-npm run preview        # renders the webview with sample states in dist/preview/
-```
+Found a bug or have an idea? [Open an issue](https://github.com/BigMoneyGreg/sports-simulator/issues).
 
-Press **F5** in VS Code ("Run Sports Simulator") to try it in an Extension Development Host; the Sports Simulator box appears in the Explorer.
+## Privacy
+
+Sports Simulator collects nothing and never connects to the internet. Your careers stay on your own machine.
 
 ## Licence
 

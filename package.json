@@ -14,6 +14,10 @@
     "type": "git",
     "url": "https://github.com/BigMoneyGreg/sports-simulator.git"
   },
+  "bugs": {
+    "url": "https://github.com/BigMoneyGreg/sports-simulator/issues"
+  },
+  "homepage": "https://github.com/BigMoneyGreg/sports-simulator#readme",
   "private": true,
   "engines": {
     "vscode": "^1.90.0"
@@ -159,7 +163,8 @@
   "devDependencies": {
     "@types/node": "22.20.5",
     "@types/vscode": "1.90.0",
-    "esbuild": "0.28.2",
+    "@vscode/test-electron": "^3.1.0",
+    "esbuild": "^0.28.2",
     "tsx": "4.20.6",
     "typescript": "5.9.3",
     "vitest": "^5.0.5"
