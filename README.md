@@ -40,6 +40,8 @@ To stop a career, press **End…** on its row. **End career** keeps it in Past c
 ## Features
 
 - Three sports, with promotion and relegation in each; big nations start near the top, shuffled a little every career
+- Play several sports at once, listed in the box with one open at a time
+- Honours, greatest teams and all-time records across every career
 - The Nations Cup every season and the World Championship every four, each with its own Cups tab (draws, groups, results and past winners)
 - Live match report and live tables, with your score in the status bar (and a *GOAL!*, *TRY!* or *WICKET!* as it happens); hover it for your position and expected finish
 - Collapse the box and its title still shows your position and score
@@ -55,7 +57,7 @@ Player names are generated and fictional. Competitions are the game's own, not o
 
 | Setting | Default | What it does |
 |---|---|---|
-| `sportsSimulator.matchDuration` | `2m` | Real time one match takes (see the table above). If your sport doesn't offer this length, the next longer one is used. Also on the ⏱ button. |
+| `sportsSimulator.matchDuration` | `2m` | Real time one match takes in a new career (see the table above); a career under way keeps its own, set from the ⏱ button. If your sport doesn't offer this length, the next longer one is used. Also on the ⏱ button. |
 | `sportsSimulator.fullTimeOverlay` | `true` | Show the full-time result over the box for a few seconds after your match. |
 | `sportsSimulator.statusBarScore` | `true` | Show your live score in the status bar. Click it to open the box. |
 

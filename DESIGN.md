@@ -586,6 +586,8 @@ Football's numbers and behaviour are unchanged: whole careers on fixed seeds has
 
 **AI titles, re-measured (31 Oct 2026).** Most titles for one AI side in 40 seasons: rugby median 7, worst 13; cricket median 8, worst 16 (40 of 40 balance targets met). With 8 or 6 sides in a league, an even share of 40 titles is already 5 or nearly 7, so a typical top side is close to what chance alone gives, and the worst cases are rare. No change made.
 
+**Where it stands (31 Oct 2026).** Several sports at once, Honours, rival call-outs and the End… question are on branch `multi-sport`, built from `rugby-and-cricket`. 218 tests pass and VS Code starts with it loaded; the box has been clicked through in headless Chrome with sample games, but not yet played in the real sidebar, so a real End, Reset career and Reset honours are still to try. `main` is still football only.
+
 **Worlds** come from the rankings: men's rugby, July 2026 (an unofficial copy of the World Rugby table); men's T20I, October 2026. Lower down rugby's list some nations rarely play. Only nations in a sport's world can be chosen there, unlike football's 210. Players' names work as in every sport (§10).
 
 **Saves.** One file per sport, football's still `career.json`, each written by its own game; `sport.json` holds the sport the corner follows. Every career with no pause on it runs; the window that owns the game runs all their clocks. Careers left waiting from before this were paused once on upgrade, so none started up on its own. A save's match length is an optional field, so the save version stayed at 8 and older saves still load. Refreshing for all three clocks at their fastest costs about 0.1% of one core (measured).
