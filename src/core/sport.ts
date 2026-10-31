@@ -15,6 +15,8 @@ export interface TeamSheet {
   clubId: number;
   attack: number;
   defence: number;
+  /** Attack minus defence as the side has settled into it; the lopsidedness penalty follows this. Defaults to the real gap. */
+  settledLean?: number;
   /** Starting line-up: player ids and positions. */
   lineup: { id: number; position: string }[];
 }

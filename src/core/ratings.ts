@@ -33,6 +33,12 @@ export const RATING_TUNING = {
   pointsPerRating: 2,
   /** Share of the summer's points that go to the side the player rebuilds; the rest go to the other. */
   focusShare: 0.65,
+  /**
+   * How much of the gap between the player's settled shape and its real one
+   * closes each summer: 1 settles at once; less makes a lopsided side's
+   * troubles, and their cure, build over a few seasons.
+   */
+  leanSettling: 0.5,
 };
 
 /** Rank by rating within a league: the highest-rated club is expected 1st. */

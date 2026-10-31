@@ -34,6 +34,8 @@ export const TUNING = {
    */
   weaknessScaleFrom: 99,
   weaknessTopGrowth: 0.12,
+  /** The most a lopsided side can lose to the penalty, however far it leans. */
+  weaknessCap: Infinity,
 };
 
 export type Period = 'first' | 'second' | 'et1' | 'et2' | 'done';
@@ -83,11 +85,11 @@ const CARD_WEIGHT: Record<string, number> = { GK: 0.4, DEF: 3, MID: 3, FWD: 1.5 
  * (score more, concede more), but lean too far and opponents exploit the
  * weak side, which drags both down.
  */
-export function effectiveStats(team: Pick<TeamSheet, 'attack' | 'defence'>): { attack: number; defence: number } {
-  const lean = Math.abs(team.attack - team.defence) / 2;
+export function effectiveStats(team: Pick<TeamSheet, 'attack' | 'defence' | 'settledLean'>): { attack: number; defence: number } {
+  const lean = Math.abs(team.settledLean ?? team.attack - team.defence) / 2;
   const level = (team.attack + team.defence) / 2;
   const perPoint = TUNING.weaknessPenalty + TUNING.weaknessTopGrowth * Math.max(0, level - TUNING.weaknessScaleFrom);
-  const penalty = perPoint * Math.max(0, lean - TUNING.weaknessTolerance);
+  const penalty = Math.min(TUNING.weaknessCap, perPoint * Math.max(0, lean - TUNING.weaknessTolerance));
   return { attack: team.attack - penalty, defence: team.defence - penalty };
 }
 

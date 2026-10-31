@@ -12,4 +12,5 @@ First release.
 - Setup: country (type to search), starting league and match length; one standard game, no difficulty settings
 - One decision a season, asked a different way each summer (call up a player, appoint a coach, change formation, set the training camp), read from where you ranked for goals scored and conceded and from who's retiring or being dropped
 - No ceiling at 99: a great manager can keep climbing and chase an unbeaten season
+- A lopsided team declines, and recovers, over a few seasons rather than overnight
 - Season reports, trophy cabinet, club history and records

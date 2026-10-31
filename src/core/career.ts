@@ -390,7 +390,7 @@ export function playerInRound(career: Career, fixtures: Fixture[]): Fixture | un
 
 export function teamSheet(career: Career, clubId: number, sport: SportDefinition): TeamSheet {
   const c = career.clubs[clubId];
-  return { clubId, attack: c.attack, defence: c.defence, lineup: sport.lineup(c.squad, new Set(career.suspended)) };
+  return { clubId, attack: c.attack, defence: c.defence, settledLean: c.settledLean, lineup: sport.lineup(c.squad, new Set(career.suspended)) };
 }
 
 export interface RoundResult {
@@ -757,6 +757,9 @@ export function allocatePoints(career: Career, allocation: Record<Stat, number>)
   }
   if (spent !== pending.points) throw new Error(`allocate exactly ${pending.points} points, got ${spent}`);
   for (const s of STATS) me[s] += allocation[s];
+  // The team settles into its new shape gradually (AI clubs keep a fixed shape, so only the player's moves).
+  const lean = me.attack - me.defence;
+  me.settledLean = me.settledLean === undefined ? lean : me.settledLean + RATING_TUNING.leanSettling * (lean - me.settledLean);
 
   normalise(career.clubs, career.totalRating);
   const record = seasonRecord(career, pending);

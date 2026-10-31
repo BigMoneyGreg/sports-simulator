@@ -4,6 +4,8 @@ import { Game } from '../src/extension/game';
 import { buildView, summerQuestion } from '../src/extension/viewModel';
 import { footballSport } from '../src/sports/football';
 import { role } from '../src/sports/football/squad';
+import { effectiveStats } from '../src/sports/football/match';
+import { RATING_TUNING } from '../src/core/ratings';
 
 /** Plays summers, answering each with `pick`, and hands every summer to `look` before it's answered. */
 function summers(seed: number, count: number, look: (c: Career) => void, pick: (c: Career) => Focus = () => 'attack'): Career {
@@ -117,5 +119,23 @@ describe('the summer question', () => {
     expect(summerQuestion(c).options.map((o) => o.title)).toEqual(['Three up front', 'A back five']);
     chooseFocus(c, 'attack');
     expect(c.history).toHaveLength(1);
+  });
+
+  it('settles into a new shape over a few summers, and the penalty follows the settled shape', () => {
+    expect(RATING_TUNING.leanSettling).toBe(0.5);
+    const c = newCareer({ rating: 50, difficulty: 'medium', seed: 11 }, footballSport);
+    const lean = () => c.clubs[c.playerClubId].attack - c.clubs[c.playerClubId].defence;
+    playSeason(c, footballSport);
+    chooseFocus(c, 'attack');
+    // The first summer starts from the real shape.
+    const first = c.clubs[c.playerClubId].settledLean!;
+    expect(first).toBeCloseTo(lean());
+    playSeason(c, footballSport);
+    chooseFocus(c, 'defence');
+    // After that, half the way each summer.
+    expect(c.clubs[c.playerClubId].settledLean!).toBeCloseTo(first + 0.5 * (lean() - first));
+    // A side that's just become lopsided is penalised for its settled lean, not yet the full one.
+    const lopsided = { attack: 130, defence: 100 };
+    expect(effectiveStats({ ...lopsided, settledLean: 10 }).attack).toBeGreaterThan(effectiveStats(lopsided).attack);
   });
 });

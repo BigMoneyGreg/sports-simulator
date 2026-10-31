@@ -23,6 +23,8 @@ export interface Club {
   /** Stats are stored with decimals and shown as whole numbers. */
   attack: number;
   defence: number;
+  /** Player only: attack minus defence as the team has settled into it, catching up with the real shape a little each summer. */
+  settledLean?: number;
   squad: Player[];
   isPlayer: boolean;
 }

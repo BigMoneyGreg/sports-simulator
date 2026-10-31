@@ -88,7 +88,7 @@ Each club has two stats. Every starting rating is 0–99; after that they can dr
 
 **Team rating = average of attack and defence.** This is what places a club within the rating bands (§6). Chemistry was removed in M8: two stats make the season's decision simple (score more, or concede less?) and readable from the season report.
 
-**Leaning costs, gradually.** A gap of up to 4 between attack and defence is free. Beyond that the weak side is exploited and it costs more the wider it gets: every extra point of lean costs **1.2** effective attack *and* defence, so a strong attack never makes up for a weak defence. **Above 99 it gets steeper**, by 0.12 per rating point, so a side at 150 needs near-perfect balance:
+**Leaning costs, gradually.** A gap of up to 4 between attack and defence is free. Beyond that the weak side is exploited and it costs more the wider it gets: every extra point of lean costs **1.2** effective attack *and* defence, so a strong attack never makes up for a weak defence. **Above 99 it gets steeper**, by 0.12 per rating point, so a side at 150 needs near-perfect balance (figures for a team that has settled into that gap; see below):
 
 | Gap | Rating 50 (League 3) | Rating 120 (League 1) | Rating 150 (League 1) |
 |---|---|---|---|
@@ -96,6 +96,8 @@ Each club has two stats. Every starting rating is 0–99; after that they can dr
 | 10 | ~7th | 90 pts, champions | 102 pts, champions |
 | 20 | ~12th | 65 pts, ~4th | 68 pts, ~4th |
 | 30 | ~17th | 34 pts, ~18th | 15 pts, bottom |
+
+**It builds up, and heals, over a few seasons.** The penalty follows the shape your team has *settled* into, not its shape on paper. Each summer the settled shape closes **half** the distance to the real one (`leanSettling` 0.5). So a wrong summer barely shows the next season and bites the one after, unless you fix it, and a fix takes a season or two to settle. Goals scored and conceded react straight away, so the clue stays readable; only the punishment phases in. Computer-run clubs keep their fixed shape. Measured (8 careers of 60 seasons, good reader): collapses at the top (99+, dropping 10+ places in two seasons) fell from 16 to 6 per ~370 top seasons, recovery about 2 seasons, while a guesser averages about 77th in the world.
 
 AI clubs have a "style", a fixed **shape** around their rating: attacking clubs are +7 attack / −7 defence, defensive clubs the reverse. So AI clubs of the same rating are equally strong but play differently, and they never fix their weak side. Their gap of 14 is about what a player who reads the season carries, so reading holds you level with expectation, and guessing sinks you.
 
@@ -275,11 +277,11 @@ The same style is never asked two summers running. A call-up joins the squad in 
 
 | Player | Places a season |
 |---|---|
-| Reads the ranks, then the leavers | **−1.0** |
-| Guesses (coin flip) | **−6.2** |
-| Always rebuilds attack | −10.0 |
+| Reads the ranks, then the leavers | **−0.2** |
+| Guesses (coin flip) | **−4.7** |
+| Always rebuilds attack | −10.4 |
 
-So reading the summer keeps you close to expectation, while guessing costs over 6 places a season and ignoring it sinks you. The wider split made Medium harder to climb (0→99 took 12–39 seasons), so Medium's boost went from 5 to 7; 0→99 is now 8–19 seasons for a reader and the reader's peak beyond 99 averages 161, against 132 for a guesser.
+So reading the summer keeps you level with expectation, while guessing costs nearly 5 places a season and ignoring it sinks you. The wider split made the climb slower (0→99 took 12–39 seasons), so the season boost went from 5 to 7; with the team settling over a few seasons (§4), 0→99 is now 8–14 seasons for a reader and the reader's peak beyond 99 averages 176, against 117 for a guesser.
 
 ### Season boost (one standard game) 🟢 NOW
 
@@ -304,20 +306,15 @@ League 1's top 3 get nothing (there's nowhere higher to go), and League 5's bott
 
 ### Rough time from 0 to 99, and beyond
 
-**Measured by the balance tool**, 4 careers each, from rating 0:
+**Measured by the balance tool**, 4 careers each, from rating 0 (the standard game is *medium*; *easy* and *hard* are only measured, not offered):
 
-| Difficulty | Reads the ranks | Guesses |
+| Engine setting | Reads the summer | Guesses |
 |---|---|---|
-| Easy (+10) | 7–9 seasons | far slower, or never |
-| Medium (+5) | 11–23 seasons | far slower, or never |
-| Hard (no boost) | 39–55 seasons, or never | never |
+| Easy (+10) | 6–8 seasons | far slower, or never |
+| **Medium (+7), the game** | **8–14 seasons** | far slower, or never |
+| Hard (no boost) | 63 seasons, or never | never |
 
-**Beyond 99** there's no ceiling (a technical bound of 250, where every season is already perfect). Measured over 40 seasons from 95, 12 careers each:
-
-| Difficulty | Reader's peak | Guesser's peak |
-|---|---|---|
-| Medium | **~148** (127–166) | ~119 (104–148) |
-| Easy | **~205** (181–234) | ~176 (142–206) |
+**Beyond 99** there's no ceiling (a technical bound of 250, where every season is already perfect). Measured over 40 seasons from 95, 8 careers each: a reader peaks at **~176** (161–190), a guesser at ~117 (108–130), and 54 of 320 seasons were unbeaten.
 
 What a rating means over a League 1 season (balanced): at **150** about half of seasons are unbeaten and 1 in 50 wins all 38; at **200**, 84% are unbeaten and about half win all 38; past 225 nearly every season is perfect.
 
@@ -345,13 +342,13 @@ All numbers here (multiplier 1.0, bonuses, boosts) are starting values, tuned wi
 
 - AI-only match realism (§5): home/draw/away shares, goals, scorelines, upsets, late goals, comebacks
 - The AI total and average never move, whatever the player does
-- No league's average drifts more than ±3.5 from its band average (a strong player holding a League 1 place pushes one AI club down)
+- No league's average drifts more than ±4 from its band average (a strong player holding a League 1 place pushes one AI club down; 3.65 measured once the team settles over a few seasons)
 - No more than 4 AI clubs above 95 at any time; none at 99 for long
 - Promoted AI clubs finish in the bottom half of their new league about 78% of the time
 - **Reading the ranks beats guessing by 2+ places a season**; a guesser drifts below expectation; a careless player sinks furthest
 - A reader reaches 99 in roughly the measured seasons for each difficulty; a guesser takes at least twice as long or never; a careless player on hard never climbs from 0 to 99
 - A player club starting at 99 wins League 1 most seasons, but not every season
-- A good reader climbs well past 99 (peak 130+); a guesser peaks 20+ lower; nobody runs away (no peak above 200 in 40 seasons on medium); unbeaten seasons happen but not routinely
+- A good reader climbs well past 99 (peak 130+); a guesser peaks 20+ lower; nobody runs away (no peak above 220 in 40 seasons on medium); unbeaten seasons happen but not routinely
 
 ---
 
@@ -527,6 +524,8 @@ Each milestone finishes in a working state.
 
 **Summer question (30 Oct 2026):** one question a summer in four styles (call-ups, assistant coach, formation, training camp), always attack or defence underneath; leavers matched to a 10–90% loss split as a second clue; Medium boost 5 → 7. 122 tests and all 30 balance targets pass.
 
+**Final review fixes (31 Oct 2026):** season length shown beside each match length; packaging always builds fresh; other windows follow the running one; both summer clues sit with the question, first when the box is narrow; darker answers in light themes; one standard game (no difficulty choice); a lopsided team declines and recovers over a few seasons (`leanSettling` 0.5). 124 tests and all 30 balance targets pass (two targets loosened with reasons: drift ±4, peak 220).
+
 **Before publishing (M9):** done: GitHub repo renamed to `sports-simulator`; Marketplace publisher **bigdevgreg** created and set in package.json; cleaned history force-pushed and the backup branch deleted. Still to do: try the build (fn+F5, ideally with two windows open; the current save carries over); make the GitHub repo public (README screenshots load from it); `npx @vscode/vsce package` (0.1.0 has never been published, so no bump for the first upload) and upload the `.vsix` by hand at marketplace.visualstudio.com/manage (no Azure DevOps token needed). Updates: bump the version, package, upload with **Update**.
 
 ---
@@ -580,6 +579,7 @@ In rough priority order:
 | Status bar goal call-out, rich hover, collapsed-box score and a badge for the summer choice | Most of the time the box is closed: these keep the game noticeable at a glance without a single extra notification |
 | One summer question in four styles (call-ups, assistant coach, formation, training camp), always attack v defence underneath; leavers matched to the loss; loss split 10–90%; Medium boost 7 | Named people give a sense of power without more decisions. More levers (fitness, mentality, home/away…) were rejected: their clues come from half-seasons and would mostly be luck. Leavers alone were no clue at the old 25–75% split; at 10–90% they make the top readable (66% → 76% right). Medium needed +2 to keep its climb on target |
 | No difficulty choice: one standard game (the old Medium) | Extra options for the sake of it. Medium's tuning is the one measured hardest, and Easy's bigger boost pushed teams so high that the steep penalty above 99 made careers collapse |
+| The lopsidedness penalty follows a settled shape that moves half way each summer | One wrong summer at the top could take a 154 side to playing like a 68: champions to relegated in a season. Real teams decline and recover over a few seasons; now the slip shows, there's time to correct it, and collapses fell from 16 to 6 per ~370 top seasons. Slower settling (35%) made problems linger; a cap or a softer scale made guessing too safe |
 | Saves are upgraded, never silently dropped | History is the reward: once the game is public, one update that wiped careers would lose players for good |
 | One window runs the game; focusing another hands it over | Each window used to run its own clock on the shared save, so two windows played different matches and overwrote each other (a summer choice could be lost). Many people keep several windows open all day |
 | Fictional club names only, checked against real club lists | Avoid trademark issues; renaming handled locally later |
