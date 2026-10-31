@@ -45,7 +45,7 @@ To stop a career, press **End…** on its row. **End career** keeps it in Past c
 - Play several sports at once, listed in the box with one open at a time
 - Honours, greatest teams and all-time records across every career
 - The Nations Cup every season and the World Championship every four, each with its own Cups tab (draws, groups, results and past winners)
-- Live match reports with each team's events on its own side, a real scorecard in cricket, and live tables, with your score in the status bar (and a *GOAL!*, *TRY!* or *WICKET!* as it happens); hover it for your position and expected finish
+- Live match reports with each team's events on its own side, a real scorecard in cricket, and live tables, with your score, week and league place in the status bar (and a *GOAL!*, *TRY!* or *WICKET!* as it happens); with several careers it shows each sport's week and place in turn; hover it for your position and expected finish
 - Collapse the box and its title still shows your position and score
 - A flash in the box: green when it goes your way, red when it doesn't
 - Fits any size: shrink the box and it keeps just the essentials (club, league, position, form and controls)
@@ -65,7 +65,7 @@ Player names are generated and fictional. Competitions are the game's own, not o
 | `sportsSimulator.fullTimeOverlay` | `true` | Show the full-time result over the box for a few seconds after your match. |
 | `sportsSimulator.statusBarScore` | `true` | Show your live score in the status bar. With several careers it shows each sport's week and league place in turn instead, for 5 seconds each. Click it to open the box. |
 
-Commands: **Sports Simulator: Open**, **Pause / Play** and **Switch Sport**.
+Commands: **Sports Simulator: Open**, **Pause / Play**, **Switch Sport** and **Choose Sports**.
 
 ## Development
 
