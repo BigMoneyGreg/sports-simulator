@@ -50,6 +50,10 @@ const ui: UiState = { tab: 'match', tableTier: null, cup: 'cup', ...((vscode.get
 let view: View | null = null;
 let rows: SportRowView[] = [];
 let honours: string | null = null;
+/** A question open in the box: red steps can't be done by VS Code's own pop-ups. */
+let ask: { kind: 'career'; step: 'choose' | 'reset' } | { kind: 'honours'; step: 'first' | 'final' } | null = null;
+const askBox = document.createElement('div');
+askBox.id = 'ask';
 let open: PanelId | null = null;
 /** What was last shown in full, so opening another sport starts on your own league. */
 let shownPanel: PanelId | null = null;
@@ -190,7 +194,7 @@ function renderSetup(v: SetupView): void {
 function rowHtml(r: SportRowView, isOpen: boolean): string {
   const control = isOpen
     ? r.club
-      ? `<button type="button" class="chip" data-end="${r.id}" title="End this career">End</button>`
+      ? `<button type="button" class="chip" data-ask-career title="End or reset this career">End…</button>`
       : ''
     : !r.club
       ? `<button type="button" class="chip" data-open="${r.id}">Start</button>`
@@ -229,16 +233,19 @@ function renderRows(): void {
     const section = app.querySelector<HTMLElement>(`:scope > [data-sport="${r.id}"]`)!;
     const isOpen = open === r.id;
     writeRow(section, rowHtml(r, isOpen), r.waiting ? 'Season over: one decision waiting' : isOpen ? '' : r.club ? (r.line ?? '') : 'Not started');
-    if (isOpen && panel.parentElement !== section) section.appendChild(panel);
+    if (isOpen && panel.parentElement !== section) section.append(askBox, panel);
   }
   if (honours) {
     const section = app.querySelector<HTMLElement>(':scope > [data-sport="honours"]')!;
     const isOpen = open === 'honours';
     const html = `<div class="sport-row${isOpen ? ' open' : ''}"><button type="button" class="row-main" data-open="honours" aria-expanded="${isOpen}"><span class="chevron" aria-hidden="true"></span>${lineIcon(TROPHY_ICON)}<span class="row-text"><span class="row-name">Honours</span><span class="row-line muted small"></span></span></button></div>`;
     writeRow(section, html, isOpen ? '' : honours);
-    if (isOpen && panel.parentElement !== section) section.appendChild(panel);
+    if (isOpen && panel.parentElement !== section) section.append(askBox, panel);
   }
-  if (!open) panel.remove();
+  if (!open) {
+    panel.remove();
+    askBox.remove();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -248,6 +255,41 @@ function careerRowHtml(c: HonoursView['past'][number]): string {
   return `<li><div>${sportIcon(c.sport)} <strong>${esc(c.club)}</strong> <span class="muted small">${esc(c.sportName)} · ${c.seasons} season${c.seasons === 1 ? '' : 's'}${c.live ? ' · playing' : ''}</span></div><div class="muted small">${esc(c.summary)}</div></li>`;
 }
 
+/** The question for what's open, one step at a time. Written only when it changes, so its buttons survive every tick. */
+function renderAsk(): void {
+  const row = rows.find((r) => r.id === open);
+  const v = view?.screen === 'honours' ? view : null;
+  if (ask && (ask.kind === 'career' ? !row?.club : !v)) ask = null;
+  const cancel = '<button type="button" class="link" data-ask-cancel>Cancel</button>';
+  let html = '';
+  if (ask?.kind === 'career' && row) {
+    const career = `your ${esc(row.name.toLowerCase())} career with ${esc(row.club!)}`;
+    html =
+      ask.step === 'choose'
+        ? `<div class="card ask"><p class="small strong">What should happen to ${career}?</p>
+            <button type="button" class="secondary" data-do-end>End career</button>
+            <p class="muted small">Stops here and keeps it in Past careers, where it still counts for greatest teams and records.</p>
+            <button type="button" class="danger-line" data-ask-reset>Reset career…</button>
+            <p class="muted small">Deletes it completely, as if it was never played.</p>${cancel}</div>`
+        : `<div class="card ask danger" role="alert"><p class="small strong">Delete ${career}?</p>
+            <p class="small">All its seasons, trophies and records go for good, and it won't appear in Past careers. This can't be undone. Honours already earned stay.</p>
+            <button type="button" class="danger-fill" data-do-reset>Yes, delete this career</button>${cancel}</div>`;
+  } else if (ask?.kind === 'honours' && v) {
+    const what = [v.feats.length && `${v.feats.length} honour${v.feats.length === 1 ? '' : 's'}`, v.past.length && `${v.past.length} past career${v.past.length === 1 ? '' : 's'}`].filter(Boolean).join(' and ');
+    html =
+      ask.step === 'first'
+        ? `<div class="card ask danger" role="alert"><p class="small strong">Reset honours?</p>
+            <p class="small">This deletes ${what}. Careers you're playing carry on, and earn honours only from the seasons still to come.</p>
+            <button type="button" class="danger-line" data-ask-final>Continue</button>${cancel}</div>`
+        : `<div class="card ask danger" role="alert"><p class="small strong">Are you sure? This can't be undone.</p>
+            <button type="button" class="danger-fill" data-do-honours>Yes, delete ${what}</button>${cancel}</div>`;
+  }
+  if (written.get(askBox) === html) return;
+  written.set(askBox, html);
+  askBox.innerHTML = html;
+  if (html) askBox.scrollIntoView({ block: 'nearest' });
+}
+
 function honoursHtml(v: HonoursView): string {
   const card = (title: string, body: string) => `<div class="card"><h3 class="sub first">${title}</h3>${body}</div>`;
   return [
@@ -255,6 +297,7 @@ function honoursHtml(v: HonoursView): string {
     v.greatest.length ? card('Greatest teams', `<ol class="career-list">${v.greatest.map(careerRowHtml).join('')}</ol>`) : '',
     ...v.records.map((r) => card(`${sportIcon(r.sport)} ${esc(r.name)} records`, `<dl class="report records">${r.rows.map((x) => `<dt>${esc(x.label)}</dt><dd>${esc(x.value)}</dd>`).join('')}</dl>`)),
     v.past.length ? card('Past careers', `<ul class="career-list">${v.past.map(careerRowHtml).join('')}</ul>`) : '',
+    v.feats.length || v.past.length ? '<p class="small"><button type="button" class="link danger-link" data-ask-honours>Reset honours…</button></p>' : '',
   ].join('');
 }
 
@@ -703,6 +746,11 @@ function clubHtml(v: GameView): string {
 
 function render(): void {
   renderRows();
+  renderPanel();
+  renderAsk();
+}
+
+function renderPanel(): void {
   if (!view) {
     renderOverlay(null);
     app.classList.remove('needs-choice');
@@ -710,6 +758,7 @@ function render(): void {
   }
   if (open !== shownPanel) {
     shownPanel = open;
+    ask = null;
     ui.tableTier = null;
     scrollFixtures = true;
   }
@@ -739,10 +788,35 @@ app.addEventListener('click', (e) => {
   if (button.dataset.open) {
     // Only one opens at a time; clicking the open one minimises it.
     send({ type: 'openPanel', panel: button.dataset.open === open ? null : (button.dataset.open as PanelId) });
+  } else if ('askCareer' in button.dataset) {
+    ask = ask?.kind === 'career' ? null : { kind: 'career', step: 'choose' };
+    render();
+  } else if ('askReset' in button.dataset) {
+    ask = { kind: 'career', step: 'reset' };
+    render();
+  } else if ('askHonours' in button.dataset) {
+    ask = { kind: 'honours', step: 'first' };
+    render();
+  } else if ('askFinal' in button.dataset) {
+    ask = { kind: 'honours', step: 'final' };
+    render();
+  } else if ('askCancel' in button.dataset) {
+    ask = null;
+    render();
+  } else if ('doEnd' in button.dataset) {
+    ask = null;
+    render();
+    send({ type: 'endCareer', sport: openSport() });
+  } else if ('doReset' in button.dataset) {
+    ask = null;
+    render();
+    send({ type: 'resetCareer', sport: openSport() });
+  } else if ('doHonours' in button.dataset) {
+    ask = null;
+    render();
+    send({ type: 'resetHonours' });
   } else if (button.dataset.pause) {
     send({ type: 'togglePause', sport: button.dataset.pause as SportId });
-  } else if (button.dataset.end) {
-    send({ type: 'endCareer', sport: button.dataset.end as SportId });
   } else if (button.dataset.tab) {
     ui.tab = button.dataset.tab as Tab;
     scrollFixtures = true;
@@ -766,7 +840,8 @@ app.addEventListener('click', (e) => {
   } else if (button.dataset.copy) {
     send({ type: 'copy', text: button.dataset.copy });
   } else if (button.id === 'newCareer') {
-    send({ type: 'endCareer', sport: openSport() });
+    ask = { kind: 'career', step: 'choose' };
+    render();
   } else if (button.id === 'speed') {
     send({ type: 'setDuration', sport: openSport(), duration: button.dataset.next as Duration });
   } else if (button.id === 'pause') {

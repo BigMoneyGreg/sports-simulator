@@ -35,6 +35,8 @@ Play one sport or all three at once. The box lists them: start or end each one w
 
 The **Honours** row keeps what lasts: your greatest teams and all-time records, past careers, and honours for doing well in more than one sport.
 
+To stop a career, press **End…** on its row. **End career** keeps it in Past careers; **Reset career** deletes it as if it was never played. **Reset honours**, at the bottom of the Honours page, deletes your honours and past careers. Both resets ask again in red, because they can't be undone.
+
 ## Features
 
 - Three sports, with promotion and relegation in each; big nations start near the top, shuffled a little every career
@@ -57,7 +59,7 @@ Player names are generated and fictional. Competitions are the game's own, not o
 | `sportsSimulator.fullTimeOverlay` | `true` | Show the full-time result over the box for a few seconds after your match. |
 | `sportsSimulator.statusBarScore` | `true` | Show your live score in the status bar. Click it to open the box. |
 
-Commands: **Sports Simulator: Open**, **Pause / Play**, **Switch Sport** and **Reset Career**.
+Commands: **Sports Simulator: Open**, **Pause / Play** and **Switch Sport**.
 
 ## Development
 

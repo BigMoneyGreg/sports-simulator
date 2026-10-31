@@ -18,6 +18,8 @@ export interface CareerSummary {
   sport: SportId;
   history: SeasonSummary[];
   records?: Records;
+  /** Seasons before this one came before the player reset their honours, so can't earn any. */
+  honoursFrom?: number;
 }
 
 export type FeatId = 'twoChampions' | 'threeChampions' | 'twoWorld' | 'threeWorld';
@@ -53,11 +55,12 @@ function isWorldChampion(s: SeasonSummary): boolean {
 export function newFeats(live: CareerSummary[], past: CareerSummary[], earned: Feat[], at: string, label: (sport: SportId) => string): Feat[] {
   const has = new Set(earned.map((f) => f.id));
   const detail = (who: CareerSummary[]) => who.map((c) => `${label(c.sport)} with ${c.club}`).join(' · ');
+  const counting = (c: CareerSummary) => c.history.slice(c.honoursFrom ?? 0);
   const holding = live.filter((c) => {
-    const last = c.history[c.history.length - 1];
+    const last = counting(c).at(-1);
     return last && isChampion(last);
   });
-  const worlds = SPORT_IDS.flatMap((sport) => [...live, ...past].filter((c) => c.sport === sport && c.history.some(isWorldChampion)).slice(0, 1));
+  const worlds = SPORT_IDS.flatMap((sport) => [...live, ...past].filter((c) => c.sport === sport && counting(c).some(isWorldChampion)).slice(0, 1));
   const out: Feat[] = [];
   const award = (id: FeatId, who: CareerSummary[], needed: number) => {
     if (who.length >= needed && !has.has(id)) out.push({ id, at, detail: detail(who) });

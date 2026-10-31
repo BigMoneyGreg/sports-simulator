@@ -12,6 +12,7 @@ const ARCHIVE_KEY = 'sportsSimulator.archive';
 /** Set once careers that were waiting from before sports ran together have been paused. */
 const WAITING_PAUSED_KEY = 'sportsSimulator.waitingPaused';
 const FEATS_KEY = 'sportsSimulator.feats';
+const HONOURS_FROM_KEY = 'sportsSimulator.honoursFrom';
 
 /** What the status bar and the collapsed box show, as worked out by the window running the game. */
 export interface LiveStatus {
@@ -30,6 +31,8 @@ export interface ArchivedCareer {
   seasons: number;
   history: SavedGame['career']['history'];
   records: SavedGame['career']['records'];
+  /** See `honoursFrom`: the seasons before this one can't earn honours. */
+  honoursFrom?: number;
 }
 
 /**
@@ -90,6 +93,24 @@ export class Storage implements LockStore {
 
   addFeats(feats: Feat[]): void {
     void this.memento.update(FEATS_KEY, [...this.feats(), ...feats]);
+  }
+
+  /** For each running career, the season honours count from since the player last reset them. */
+  honoursFrom(sport: SportId): number | undefined {
+    return this.memento.get<Partial<Record<SportId, number>>>(HONOURS_FROM_KEY, {})[sport];
+  }
+
+  /** That sport's career has gone: the next one starts with a clean slate. */
+  clearHonoursFrom(sport: SportId): void {
+    const { [sport]: _, ...rest } = this.memento.get<Partial<Record<SportId, number>>>(HONOURS_FROM_KEY, {});
+    void this.memento.update(HONOURS_FROM_KEY, rest);
+  }
+
+  /** Deletes honours and past careers. Running careers carry on, earning honours only from the seasons still to come. */
+  resetHonours(seasonsPlayed: Partial<Record<SportId, number>>): void {
+    void this.memento.update(FEATS_KEY, []);
+    void this.memento.update(ARCHIVE_KEY, []);
+    void this.memento.update(HONOURS_FROM_KEY, seasonsPlayed);
   }
 
   archive(entry: ArchivedCareer): Thenable<void> {

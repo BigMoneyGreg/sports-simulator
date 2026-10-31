@@ -149,6 +149,18 @@ describe('storage', () => {
     expect(s.feats().map((f) => f.id)).toEqual(['twoWorld', 'threeWorld']);
   });
 
+  it('resets honours and past careers, noting where running careers count from', () => {
+    const s = new Storage(mkdtempSync(join(tmpdir(), 'ss-storage-')), memento({ 'sportsSimulator.archive': [{ club: 'Scotland', sport: 'football' }] }));
+    s.addFeats([{ id: 'twoWorld', at: 'now', detail: 'x' }]);
+    s.resetHonours({ rugby: 4 });
+    expect(s.feats()).toEqual([]);
+    expect(s.archives()).toEqual([]);
+    expect(s.honoursFrom('rugby')).toBe(4);
+    expect(s.honoursFrom('cricket')).toBeUndefined();
+    s.clearHonoursFrom('rugby');
+    expect(s.honoursFrom('rugby')).toBeUndefined();
+  });
+
   it('falls back to football if the sport file is damaged', () => {
     const dir = mkdtempSync(join(tmpdir(), 'ss-storage-'));
     writeFileSync(join(dir, 'sport.json'), 'nonsense');

@@ -376,7 +376,11 @@ export type ToHost =
   | { type: 'openPanel'; panel: PanelId | null }
   | { type: 'chooseFocus'; sport: SportId; focus: Focus }
   | { type: 'copy'; text: string }
-  | { type: 'endCareer'; sport: SportId };
+  /** Ends it, keeping it in Past careers. */
+  | { type: 'endCareer'; sport: SportId }
+  /** Deletes it, as if it was never played. */
+  | { type: 'resetCareer'; sport: SportId }
+  | { type: 'resetHonours' };
 
 /**
  * Every sport's row, and the full view of what's open; without `view`, only a

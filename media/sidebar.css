@@ -1443,6 +1443,48 @@ body.vscode-light .focus.defence strong {
   border-top: 0;
 }
 
+.ask button.secondary,
+.ask .danger-line,
+.ask .danger-fill {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ask p {
+  margin: 4px 0;
+}
+
+.ask {
+  scroll-margin-top: 40px;
+}
+
+.ask.danger {
+  border: 1px solid var(--loss);
+  background: color-mix(in srgb, var(--loss) 12%, transparent);
+}
+
+.danger-line {
+  border: 1px solid var(--loss);
+  background: transparent;
+  color: var(--loss);
+}
+
+.danger-fill {
+  border: 1px solid var(--loss);
+  background: var(--loss);
+  color: #fff;
+  font-weight: 600;
+}
+
+.danger-link {
+  color: var(--loss);
+}
+
 #pins {
   position: sticky;
   top: 0;

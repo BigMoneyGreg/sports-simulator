@@ -80,7 +80,10 @@ export function activate(context: vscode.ExtensionContext): void {
   }
 
   function liveCareers(): CareerSummary[] {
-    return all().flatMap((g) => careerSummary(g) ?? []);
+    return all().flatMap((g) => {
+      const c = careerSummary(g);
+      return c ? [{ ...c, honoursFrom: storage.honoursFrom(g.sportId) }] : [];
+    });
   }
 
   /** A rare moment, so it gets a notification of its own, and it's kept even if the careers later end. */
@@ -205,7 +208,13 @@ export function activate(context: vscode.ExtensionContext): void {
         void vscode.env.clipboard.writeText(message.text).then(() => vscode.window.setStatusBarMessage('Sports Simulator: summary copied', 2000));
         return;
       case 'endCareer':
-        void endCareer(message.sport);
+        endCareer(message.sport);
+        return;
+      case 'resetCareer':
+        owner.whenOwner(() => clearCareer(games[message.sport]));
+        return;
+      case 'resetHonours':
+        resetHonours();
         return;
       case 'chooseFocus': {
         const { focus } = message;
@@ -230,23 +239,30 @@ export function activate(context: vscode.ExtensionContext): void {
     return open && open !== 'honours' && games[open].career ? games[open] : statusGame(all(), followed);
   }
 
-  async function endCareer(sport: SportId): Promise<void> {
+  /** The box has already asked. Keeps the career in Past careers. */
+  function endCareer(sport: SportId): void {
     const game = games[sport];
-    const c = game.career;
-    if (!c) return;
-    const answer = await vscode.window.showInformationMessage(
-      `End your ${game.sport.present.terms.name.toLowerCase()} career with ${c.clubs[c.playerClubId].name}? It will be archived with its history and records.`,
-      { modal: true },
-      'End career',
-    );
-    if (answer !== 'End career') return;
     owner.whenOwner(() => {
       const c = game.career;
       if (!c) return;
       const history = fullHistory(c);
-      void storage.archive({ club: c.clubs[c.playerClubId].name, sport, archivedAt: new Date().toISOString(), seasons: history.length, history, records: c.records });
-      game.reset();
-      game.setDuration(duration());
+      void storage.archive({ club: c.clubs[c.playerClubId].name, sport, archivedAt: new Date().toISOString(), seasons: history.length, history, records: c.records, honoursFrom: storage.honoursFrom(sport) });
+      clearCareer(game);
+    });
+  }
+
+  function clearCareer(game: Game): void {
+    storage.clearHonoursFrom(game.sportId);
+    game.reset();
+    game.setDuration(duration());
+  }
+
+  /** The box has already asked, in red, twice. Running careers carry on, but what they've already won can't earn an honour again. */
+  function resetHonours(): void {
+    owner.whenOwner(() => {
+      storage.resetHonours(Object.fromEntries(all().flatMap((g) => (g.career ? [[g.sportId, fullHistory(g.career).length]] : []))));
+      if (open === 'honours' && !honoursLine(all(), 0, 0)) open = null;
+      refresh();
     });
   }
 
@@ -279,11 +295,6 @@ export function activate(context: vscode.ExtensionContext): void {
       void vscode.commands.executeCommand('sportsSimulator.open');
     }),
     vscode.commands.registerCommand('sportsSimulator.togglePause', () => owner.whenOwner(() => currentGame().togglePause())),
-    vscode.commands.registerCommand('sportsSimulator.resetCareer', async () => {
-      const game = currentGame();
-      const answer = await vscode.window.showWarningMessage(`Reset your ${game.sport.present.terms.name.toLowerCase()} career? Its history and trophies will be lost.`, { modal: true }, 'Reset career');
-      if (answer === 'Reset career') owner.whenOwner(() => game.reset());
-    }),
     // The window you're working in runs the game; the others stand by.
     vscode.window.onDidChangeWindowState((state) => {
       if (state.focused) owner.claim();

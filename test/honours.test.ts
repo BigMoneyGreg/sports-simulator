@@ -30,6 +30,17 @@ describe('honours', () => {
     expect(earn([], [career('football', 'A', world), career('rugby', 'B', world), career('cricket', 'C', world)]).map((f) => f.id)).toEqual(['twoWorld', 'threeWorld']);
   });
 
+  it('after a reset, only seasons still to come can earn honours', () => {
+    const world = season(3, 4, { championship: 'Winners' });
+    const champs = season(1, 1);
+    const before = [career('football', 'A', world, champs), career('rugby', 'B', world, champs)].map((c) => ({ ...c, honoursFrom: 2 }));
+    expect(earn(before)).toEqual([]);
+    // A career that ends carries the same line with it.
+    expect(earn([], before)).toEqual([]);
+    const after = before.map((c) => ({ ...c, history: [...c.history, season(1, 1, { championship: 'Winners' })] }));
+    expect(earn(after).map((f) => f.id)).toEqual(['twoChampions', 'twoWorld']);
+  });
+
   it('awards each honour once', () => {
     const world = season(3, 4, { championship: 'Winners' });
     const c = [career('football', 'A', world), career('rugby', 'B', world)];

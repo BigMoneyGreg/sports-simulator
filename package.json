@@ -61,10 +61,6 @@
         "title": "Sports Simulator: Open"
       },
       {
-        "command": "sportsSimulator.resetCareer",
-        "title": "Sports Simulator: Reset Career"
-      },
-      {
         "command": "sportsSimulator.switchSport",
         "title": "Sports Simulator: Switch Sport"
       }
