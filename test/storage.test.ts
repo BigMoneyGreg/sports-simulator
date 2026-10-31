@@ -140,6 +140,15 @@ describe('storage', () => {
     expect(s.load('rugby')!.paused).toBe(false);
   });
 
+  it('reads past careers back, treating ones from before other sports as football, and keeps honours', () => {
+    const s = new Storage(mkdtempSync(join(tmpdir(), 'ss-storage-')), memento({ 'sportsSimulator.archive': [{ club: 'Scotland', seasons: 3 }] }));
+    expect(s.archives()).toEqual([{ club: 'Scotland', seasons: 3, sport: 'football', history: [] }]);
+    expect(s.feats()).toEqual([]);
+    s.addFeats([{ id: 'twoWorld', at: 'now', detail: 'x' }]);
+    s.addFeats([{ id: 'threeWorld', at: 'now', detail: 'y' }]);
+    expect(s.feats().map((f) => f.id)).toEqual(['twoWorld', 'threeWorld']);
+  });
+
   it('falls back to football if the sport file is damaged', () => {
     const dir = mkdtempSync(join(tmpdir(), 'ss-storage-'));
     writeFileSync(join(dir, 'sport.json'), 'nonsense');

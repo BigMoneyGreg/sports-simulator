@@ -79,7 +79,7 @@ function bump(run: Records['unbeaten'], continues: boolean, season: number): voi
 }
 
 /** Bigger margin wins; on equal margins, more goals scored. */
-function better(a: MatchRecord, b: MatchRecord): boolean {
+export function better(a: MatchRecord, b: MatchRecord): boolean {
   const da = a.goalsFor - a.goalsAgainst;
   const db = b.goalsFor - b.goalsAgainst;
   return da > db || (da === db && a.goalsFor > b.goalsFor);

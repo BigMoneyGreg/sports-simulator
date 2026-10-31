@@ -8,6 +8,8 @@
 - A nation's players now and then take a surname from a neighbour: England from Wales, Scotland and Ireland, and so on
 - Each sport has its own career, cups, summer questions and records
 - Play several sports at once: the box lists them, one open in full and the others minimised to one line. Start, pause or end each on its own, and each keeps its own match length
+- **Honours:** past careers, greatest teams, all-time records for each sport, and honours for success across sports
+- Matches against your rival are called out in the status bar, on the scoreboard and at full time, and the season report shows how you did against them
 
 ## 0.1.0
 

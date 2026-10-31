@@ -632,7 +632,7 @@ describe('sports in the save', () => {
     expect(calledOut && others).toBe(true);
     const end = buildView(game);
     const report = end.screen === 'game' ? end.seasonEnd!.report : null;
-    expect(report!.rival).toMatch(new RegExp(`^${career.clubs[career.rival].name} · \d+W( \d+D)? \d+L$`));
+    expect(report!.rival).toMatch(new RegExp(`^${career.clubs[career.rival!].name} · \\d+W( \\d+D)? \\d+L$`));
   });
 
   it('keeps each career\'s match length in its save', () => {

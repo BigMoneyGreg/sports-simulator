@@ -33,6 +33,8 @@ International football, rugby and cricket sims that live in a small box in your 
 
 Play one sport or all three at once. The box lists them: start or end each one whenever you like, and open one to see it in full while the others show one line and carry on. Pause any of them from its row. Each career keeps its own match length.
 
+The **Honours** row keeps what lasts: your greatest teams and all-time records, past careers, and honours for doing well in more than one sport.
+
 ## Features
 
 - Three sports, with promotion and relegation in each; big nations start near the top, shuffled a little every career

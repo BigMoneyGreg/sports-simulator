@@ -1,12 +1,13 @@
-import { currentSlot, FOCUSES, formatOf, leagueRounds, type Career, type Focus, type Playoff, type SeasonRecord, type Slot } from '../core/career';
-import type { SportId } from '../core/format';
+import { currentSlot, FOCUSES, formatOf, fullHistory, leagueRounds, type Career, type Focus, type Playoff, type SeasonRecord, type Slot } from '../core/career';
+import { SPORT_IDS, type SportId } from '../core/format';
 import { CHAMPIONSHIP_EVERY, CUP_NAMES, cupFixtures, cupRun, cupStages, stageLabel, stillIn, type Cup, type CupId, type CupTie } from '../core/cups';
-import { emptyRecords, topScorers } from '../core/records';
+import { better, emptyRecords, topScorers, type MatchRecord } from '../core/records';
+import { FEAT_TITLES, greatest, trophies, type CareerSummary, type Feat } from '../core/honours';
 import { difference, goalRanks, recordResult, runRateAgainst, runRateFor, sortTable, zone, type Fixture, type TableRow } from '../core/league';
 import { SPORTS, sportOf, type AnySport } from '../sports';
 import { shortName, surname } from '../sports/football/names';
 import { ordinal } from '../shared/format';
-import type { SportRowView, CupRunView, CupsView, CupTieView, CupView, NationOption, CabinetView, QuestionView, ClubView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, TableView, TeamBadge, View } from '../shared/view';
+import type { CareerRowView, HonoursView, SportRowView, CupRunView, CupsView, CupTieView, CupView, NationOption, CabinetView, QuestionView, ClubView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, TableView, TeamBadge, View } from '../shared/view';
 import { fullTimePause } from './game';
 import type { Game } from './game';
 
@@ -785,6 +786,72 @@ export function sportRows(games: Game[]): SportRowView[] {
 export function statusGame(games: Game[], followed: SportId): Game {
   const chosen = games.find((g) => g.sportId === followed)!;
   return chosen.career ? chosen : (games.find((g) => g.career) ?? chosen);
+}
+
+/** A running career, in the form the honours rules read. */
+export function careerSummary(game: Game): CareerSummary | null {
+  const c = game.career;
+  return c && { club: c.clubs[c.playerClubId].name, sport: game.sportId, history: fullHistory(c), records: c.records };
+}
+
+const sportName = (sport: SportId) => SPORTS[sport].present.terms.name;
+
+function plural(n: number, one: string, many = `${one}s`): string {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
+function careerRow(c: CareerSummary, live: boolean): CareerRowView {
+  const t = trophies(c);
+  const won = [t.worlds && plural(t.worlds, 'world title'), t.titles && plural(t.titles, 'League 1 title'), t.cups && plural(t.cups, 'Nations Cup')].filter(Boolean);
+  const summary = won.length ? won.join(' · ') : t.best ? `Best: ${ordinal(t.best.position)} in League ${t.best.tier}` : 'First season';
+  return { club: c.club, sport: c.sport, sportName: sportName(c.sport), seasons: c.history.length, summary, live };
+}
+
+/** The best of every career in one sport; nothing to list until a record exists. */
+function sportRecords(sport: SportId, careers: CareerSummary[]): HonoursView['records'][number] {
+  const { terms } = SPORTS[sport].present;
+  const mine = careers.filter((c) => c.sport === sport && c.records);
+  const rows: { label: string; value: string }[] = [];
+  let win: { match: MatchRecord; club: string } | undefined;
+  for (const c of mine) {
+    const m = c.records!.biggestWin;
+    if (m && (!win || better(m, win.match))) win = { match: m, club: c.club };
+  }
+  if (win) rows.push({ label: 'Biggest win', value: `${win.club} ${win.match.goalsFor}–${win.match.goalsAgainst} v ${win.match.opponent}` });
+  const longest = (label: string, of: (c: CareerSummary) => number, one: string, many: string) => {
+    const best = mine.reduce<CareerSummary | undefined>((b, c) => (of(c) > (b ? of(b) : 0) ? c : b), undefined);
+    if (best) rows.push({ label, value: `${best.club}, ${plural(of(best), one, many)}` });
+  };
+  longest('Unbeaten run', (c) => c.records!.unbeaten.best, 'match', 'matches');
+  longest('Winning run', (c) => c.records!.winning.best, 'win', 'wins');
+  const top = (label: string, tally: (c: CareerSummary) => Record<number, { name: string; goals: number }> | undefined) => {
+    const all = mine.flatMap((c) => topScorers(c.records!, 1, tally(c) ?? {}).map((s) => ({ ...s, club: c.club })));
+    const best = all.reduce<(typeof all)[number] | undefined>((b, s) => (!b || s.goals > b.goals ? s : b), undefined);
+    if (best) rows.push({ label, value: `${best.name} (${best.club}), ${best.goals}` });
+  };
+  top(terms.topScorer, (c) => c.records!.scorers);
+  top('Top wicket taker', (c) => c.records!.wicketTakers);
+  return { sport, name: terms.name, rows };
+}
+
+/** The Honours page: what's been earned, and how every career, running or ended, compares. */
+export function buildHonours(live: CareerSummary[], past: CareerSummary[], feats: Feat[]): HonoursView {
+  const everyone = [...live, ...past];
+  const ranked = greatest(everyone).slice(0, 5);
+  return {
+    screen: 'honours',
+    feats: feats.map((f) => ({ title: FEAT_TITLES[f.id], detail: f.detail })),
+    greatest: everyone.length > 1 ? ranked.map((c) => careerRow(c, live.includes(c))) : [],
+    records: SPORT_IDS.map((sport) => sportRecords(sport, everyone)).filter((r) => r.rows.length),
+    past: [...past].reverse().map((c) => careerRow(c, false)),
+  };
+}
+
+/** The Honours row's line; null until there's anything to look at: an honour, an ended career or a finished season. */
+export function honoursLine(games: Game[], pastCareers: number, feats: number): string | null {
+  const parts = [feats && plural(feats, 'honour'), pastCareers && plural(pastCareers, 'past career')].filter(Boolean);
+  if (parts.length) return parts.join(' · ');
+  return games.some((g) => g.career && (g.career.history.length || g.career.pending)) ? 'Records and greatest teams' : null;
 }
 
 /** Another sport is already waiting on the player: its badge and bell say enough, so a second season's end stays quiet. */

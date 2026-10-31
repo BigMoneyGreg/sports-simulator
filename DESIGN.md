@@ -375,7 +375,22 @@ The box lists every sport, one row each. Only one opens fully at a time, beneath
 - **Pause:** a minimised row has its own ⏸/▶; the open sport's is in its header.
 - **Everything runs:** opening a sport only changes what you're looking at. Each sport's summer waits for its own answer while the others play on.
 
-The status bar and collapsed box follow the sport last opened, or if that has no career, the first that does; a bell appears if another sport is waiting on you. The hover lists every career, and the badge counts decisions waiting. A season's notification comes unless that sport is open in view.
+The status bar and collapsed box follow the sport last opened, or if that has no career, the first that does; a bell appears if another sport is waiting on you. With several careers the score names its sport (*Rugby: WAL 12–7 ENG 54'*). The hover lists every career, and the badge counts decisions waiting. A season's notification comes unless that sport is open in view, or another sport is already waiting: at the fastest speeds three sports would otherwise bring one about every 8 minutes.
+
+While something is open, a sport waiting on you is also pinned to the top of the box (*Cricket: one decision waiting*), because a long page can push its row out of sight. Clicking it opens that sport.
+
+### Honours
+
+A row under the sports, appearing once there's something to show. Only what exists is listed, so nothing is greyed out and nothing gives away what can be earned.
+
+- **Honours:** League 1 champions in two sports at once, then all three; world champions in two sports, then all three. A League 1 title is held until that sport's next season ends, and only running careers count for "at once"; a world title stands for good, whichever career won it. Earning one gets its own notification, and it's kept even after the careers end.
+- **Greatest teams:** the top five careers, running or ended, once there are two to compare. World titles, then League 1 titles, Nations Cups, best finish and length. No invented score.
+- **Records:** the best across all careers, sport by sport, since scores can't be compared between sports.
+- **Past careers:** ended careers, latest first.
+
+### Rivals
+
+A match against your rival is marked ⚔ in the status bar, and *Rival match* on the scoreboard, in the hover and on the full-time card. The season report shows the record against them if you met. It adds drama without adding a decision.
 
 ### Status bar
 
@@ -569,6 +584,8 @@ Football's numbers and behaviour are unchanged: whole careers on fixed seeds has
 
 **Cricket's engine.** The ball-by-ball simulation: a chasing side takes risks when behind the rate and plays safe when ahead. The summer clue ranks run rates, not totals, because a side stops batting once it has won: measured over 720 seasons, ranks pointed the right way 89% of the time when not level, against 78% for totals (they are level more often, 58% v 32%, and then the leavers decide). A side bowled out counts its full 20 overs, the real rule. Every ball is its own tick, so it can be followed live: 0.5 sec a ball at 2-minute matches. Favourites at about 66% match the one, unverified, figure found for real T20.
 
+**AI titles, re-measured (31 Oct 2026).** Most titles for one AI side in 40 seasons: rugby median 7, worst 13; cricket median 8, worst 16 (40 of 40 balance targets met). With 8 or 6 sides in a league, an even share of 40 titles is already 5 or nearly 7, so a typical top side is close to what chance alone gives, and the worst cases are rare. No change made.
+
 **Worlds** come from the rankings: men's rugby, July 2026 (an unofficial copy of the World Rugby table); men's T20I, October 2026. Lower down rugby's list some nations rarely play. Only nations in a sport's world can be chosen there, unlike football's 210. Players' names work as in every sport (§10).
 
 **Saves.** One file per sport, football's still `career.json`, each written by its own game; `sport.json` holds the sport the corner follows. Every career with no pause on it runs; the window that owns the game runs all their clocks. Careers left waiting from before this were paused once on upgrade, so none started up on its own. A save's match length is an optional field, so the save version stayed at 8 and older saves still load. Refreshing for all three clocks at their fastest costs about 0.1% of one core (measured).
@@ -614,6 +631,7 @@ In rough priority order:
 | Football first; other sports only after it's finished | Keeps version 1 small |
 | Rugby 6 × 8, 2 up 2 down, no play-offs; cricket T20 only, 5 × 6, 1 up 1 down; cups fitted to the team count | The user's choices after measuring (§13b). Favourites win more than in football because seasons are short |
 | Several sports at once, as a list with one open at a time | The user's design. Careers no longer stop on switching; minimised rows keep it glanceable, and the corner still shows one score rather than three |
+| Honours list only what's been earned | Players work things out; no greyed-out goals or checklist |
 | No format choice in cricket | T20 fits a 2-minute match, has no draws and is the only format with 30 real nations; a choice would be options for the sake of it |
 | Unbeaten-run tracker in status bar: **rejected** | Unnecessary; records page covers it |
 | League picker with a random, mid-weighted start instead of a 0–99 rating | Simpler: choose where to start, not a number; a little uncertainty about how good you are |

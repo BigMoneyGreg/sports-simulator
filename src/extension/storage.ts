@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type * as vscode from 'vscode';
 import { SPORT_IDS, type SportId } from '../core/format';
+import type { Feat } from '../core/honours';
 import type { SavedGame } from './game';
 import type { Lock, LockStore } from './ownership';
 
@@ -10,6 +11,7 @@ const LEGACY_KEY = 'sportsSimulator.career';
 const ARCHIVE_KEY = 'sportsSimulator.archive';
 /** Set once careers that were waiting from before sports ran together have been paused. */
 const WAITING_PAUSED_KEY = 'sportsSimulator.waitingPaused';
+const FEATS_KEY = 'sportsSimulator.feats';
 
 /** What the status bar and the collapsed box show, as worked out by the window running the game. */
 export interface LiveStatus {
@@ -75,6 +77,19 @@ export class Storage implements LockStore {
     } catch {
       return null;
     }
+  }
+
+  /** Ended careers, oldest first. Careers archived before there were other sports have no sport: they're football. */
+  archives(): ArchivedCareer[] {
+    return this.memento.get<ArchivedCareer[]>(ARCHIVE_KEY, []).map((c) => ({ ...c, sport: c.sport ?? 'football', history: c.history ?? [] }));
+  }
+
+  feats(): Feat[] {
+    return this.memento.get<Feat[]>(FEATS_KEY, []);
+  }
+
+  addFeats(feats: Feat[]): void {
+    void this.memento.update(FEATS_KEY, [...this.feats(), ...feats]);
   }
 
   archive(entry: ArchivedCareer): Thenable<void> {

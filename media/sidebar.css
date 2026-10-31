@@ -1427,6 +1427,22 @@ body.vscode-light .focus.defence strong {
   margin-bottom: 8px;
 }
 
+.career-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.career-list li {
+  padding: 5px 0;
+  border-top: 1px solid var(--line);
+}
+
+.career-list li:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
 #pins {
   position: sticky;
   top: 0;

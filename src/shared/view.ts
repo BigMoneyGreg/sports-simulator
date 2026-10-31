@@ -339,18 +339,47 @@ export interface CupsView {
   championship: CupView;
 }
 
-export type View = { screen: 'setup'; setup: SetupView } | GameView;
+/** What's kept across every career and sport. Only what exists so far is listed. */
+export interface HonoursView {
+  screen: 'honours';
+  feats: { title: string; detail: string }[];
+  /** Best first; only once there's more than one career to compare. */
+  greatest: CareerRowView[];
+  /** The best of all careers, sport by sport. */
+  records: { sport: SportId; name: string; rows: { label: string; value: string }[] }[];
+  /** Ended careers, latest first. */
+  past: CareerRowView[];
+}
+
+export interface CareerRowView {
+  club: string;
+  sport: SportId;
+  sportName: string;
+  seasons: number;
+  /** "2 world titles · 1 League 1 title", or the best finish if there are none: "Best: 3rd in League 2". */
+  summary: string;
+  /** Still being played. */
+  live: boolean;
+}
+
+export type View = { screen: 'setup'; setup: SetupView } | GameView | HonoursView;
+
+/** What can open in the box's list: a sport, or the honours everything adds up to. */
+export type PanelId = SportId | 'honours';
 
 export type ToHost =
   | { type: 'ready' }
   | { type: 'startCareer'; sport: SportId; team: string; league: number; duration: Duration }
   | { type: 'togglePause'; sport: SportId }
   | { type: 'setDuration'; sport: SportId; duration: Duration }
-  /** Opens this sport in the list, closing whichever was open; null minimises them all. */
-  | { type: 'openSport'; sport: SportId | null }
+  /** Opens this in the list, closing whichever was open; null minimises them all. */
+  | { type: 'openPanel'; panel: PanelId | null }
   | { type: 'chooseFocus'; sport: SportId; focus: Focus }
   | { type: 'copy'; text: string }
   | { type: 'endCareer'; sport: SportId };
 
-/** Every sport's row, and the full view of the one open; without `view`, only a minimised sport changed. */
-export type ToWebview = { type: 'view'; rows: SportRowView[]; open: SportId | null; view?: View | null };
+/**
+ * Every sport's row, and the full view of what's open; without `view`, only a
+ * minimised sport changed. `honours` is the Honours row's line, with no row until there's something to show.
+ */
+export type ToWebview = { type: 'view'; rows: SportRowView[]; honours: string | null; open: PanelId | null; view?: View | null };

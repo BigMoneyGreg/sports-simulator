@@ -12,7 +12,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fillAllocation } from '../src/core/career';
 import { Game, type Scheduler } from '../src/extension/game';
-import { buildView, sportRows } from '../src/extension/viewModel';
+import { buildHonours, buildView, careerSummary, honoursLine, sportRows } from '../src/extension/viewModel';
 import type { SportRowView, View } from '../src/shared/view';
 
 const root = resolve(process.cwd());
@@ -38,6 +38,7 @@ const game = new Game({ save: () => {}, changed: () => {} }, manual);
 const phase = () => game.phase;
 const views: Record<string, { view: View | null; tab?: string; cup?: string; rows?: SportRowView[]; open?: string | null }> = {};
 const sampleRows: Partial<Record<string, SportRowView>> = {};
+const later: Partial<Record<string, Game>> = {};
 views.setup = { view: buildView(game) };
 
 game.start({ rating: 55, difficulty: 'medium', seed: 11, team: 'SCO' });
@@ -113,16 +114,24 @@ for (const [sport, team, seed] of [['rugby', 'WAL', 7], ['cricket', 'SRI', 7]] a
   run(3);
   views[`${sport}_club`] = { view: buildView(g), tab: 'club' };
   views[`${sport}_championshipLater`] = { view: buildView(g), tab: 'cups', cup: 'championship' };
+  later[sport] = g;
 }
 // Every screen sits in the list: its own sport open, the others minimised.
 const { football, rugby, rugbyNone, cricketWaiting } = sampleRows as Record<string, SportRowView>;
 for (const entry of Object.values(views)) {
-  const v = entry.view!;
+  const v = entry.view as Exclude<View, { screen: 'honours' }>;
   const sport = v.screen === 'setup' ? v.setup.sport : v.sport;
   entry.open = sport;
   entry.rows = [football, sport === 'rugby' && v.screen === 'setup' ? rugbyNone : rugby, cricketWaiting];
 }
 views.list = { view: null, open: null, rows: [{ ...football, paused: true }, rugbyNone, cricketWaiting] };
+// Honours: the football career still running, the other two ended, one honour earned.
+const summary = (g: Game) => careerSummary(g)!;
+const past = [summary(later.rugby!), summary(later.cricket!)];
+const feats = [{ id: 'twoWorld' as const, at: '2026-10-31T00:00:00Z', detail: 'Football with Scotland · Rugby with Wales' }];
+views.honours = { view: buildHonours([summary(game)], past, feats), open: 'honours', rows: [football, rugbyNone, cricketWaiting] };
+const line = honoursLine([game], past.length, feats.length);
+for (const entry of Object.values(views)) (entry as { honours?: string | null }).honours = line;
 writeFileSync(join(out, 'views.js'), `window.__views = ${JSON.stringify(views)};`);
 
 const dark = {
@@ -180,7 +189,7 @@ writeFileSync(
   window.acquireVsCodeApi = () => ({ postMessage() {}, getState: () => ({ tab: entry.tab || 'match', cup: entry.cup || 'cup' }), setState() {} });
 </script>
 <script src="../webview.js"></script>
-<script>window.postMessage({ type: 'view', rows: entry.rows, open: entry.open, view: entry.view }, '*');</script>
+<script>window.postMessage({ type: 'view', rows: entry.rows, honours: entry.honours, open: entry.open, view: entry.view }, '*');</script>
 </body></html>`,
 );
 console.log(`Wrote ${join(out, 'index.html')} (${Object.keys(views).join(', ')})`);

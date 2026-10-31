@@ -6,8 +6,10 @@ import {
   type Focus,
   type FullTimeView,
   type GameView,
+  type HonoursView,
   type LiveMatchView,
   type NationOption,
+  type PanelId,
   type PlayoffView,
   type SeasonEndView,
   type SetupView,
@@ -47,9 +49,10 @@ interface UiState {
 const ui: UiState = { tab: 'match', tableTier: null, cup: 'cup', ...((vscode.getState() as Partial<UiState>) ?? {}) };
 let view: View | null = null;
 let rows: SportRowView[] = [];
-let open: SportId | null = null;
-/** The sport last shown in full, so opening another starts on your own league. */
-let shownSport: SportId | null = null;
+let honours: string | null = null;
+let open: PanelId | null = null;
+/** What was last shown in full, so opening another sport starts on your own league. */
+let shownPanel: PanelId | null = null;
 /** The side to rebuild, picked but not yet confirmed, and the sport and season it belongs to. */
 const summer = { sport: null as SportId | null, season: 0, focus: null as Focus | null, sent: false };
 
@@ -111,8 +114,14 @@ const SPORT_ICONS: Record<SportId, string> = {
   cricket: '<path d="M13.6 1.4l1 1-3.1 3.1-1-1zM10.5 4.5l1 1L5.2 11.8a1.4 1.4 0 0 1-2-2z"/><circle cx="12.5" cy="12.5" r="1.9"/>',
 };
 
+const TROPHY_ICON = '<path d="M5 2h6v4a3 3 0 0 1-6 0zM5 3H2.5c0 2 1 3.2 2.6 3.5M11 3h2.5c0 2-1 3.2-2.6 3.5M8 9v3M5.5 14h5M6.5 12h3"/>';
+
+function lineIcon(paths: string): string {
+  return `<svg class="sport-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+}
+
 function sportIcon(sport: SportId): string {
-  return `<svg class="sport-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SPORT_ICONS[sport]}</svg>`;
+  return lineIcon(SPORT_ICONS[sport]);
 }
 
 function seg(name: string, options: Option[], value: string, disabled = false): string {
@@ -196,13 +205,20 @@ function rowHtml(r: SportRowView, isOpen: boolean): string {
   </div>`;
 }
 
+function writeRow(section: HTMLElement, html: string, line: string): void {
+  patch(section.querySelector<HTMLElement>('.row-slot')!, [html]);
+  const lineEl = section.querySelector<HTMLElement>('.row-line')!;
+  if (lineEl.textContent !== line) lineEl.textContent = line;
+}
+
 /**
  * The rows stay in place and only their lines change: a button replaced between
  * mouse-down and mouse-up would swallow the click.
  */
 function renderRows(): void {
-  if (app.querySelectorAll(':scope > .sport').length !== rows.length) {
-    app.innerHTML = `<div id="pins"></div>${rows.map((r) => `<section class="sport" data-sport="${r.id}"><div class="row-slot"></div></section>`).join('')}`;
+  const panels: PanelId[] = [...rows.map((r) => r.id), ...(honours ? (['honours'] as const) : [])];
+  if (app.querySelectorAll(':scope > .sport').length !== panels.length) {
+    app.innerHTML = `<div id="pins"></div>${panels.map((id) => `<section class="sport" data-sport="${id}"><div class="row-slot"></div></section>`).join('')}`;
   }
   // A long open page can push the other rows out of sight, so a decision waiting stays pinned at the top.
   const pins = document.getElementById('pins')!;
@@ -212,13 +228,44 @@ function renderRows(): void {
   for (const r of rows) {
     const section = app.querySelector<HTMLElement>(`:scope > [data-sport="${r.id}"]`)!;
     const isOpen = open === r.id;
-    patch(section.querySelector<HTMLElement>('.row-slot')!, [rowHtml(r, isOpen)]);
-    const line = r.waiting ? 'Season over: one decision waiting' : isOpen ? '' : r.club ? (r.line ?? '') : 'Not started';
-    const lineEl = section.querySelector<HTMLElement>('.row-line')!;
-    if (lineEl.textContent !== line) lineEl.textContent = line;
+    writeRow(section, rowHtml(r, isOpen), r.waiting ? 'Season over: one decision waiting' : isOpen ? '' : r.club ? (r.line ?? '') : 'Not started');
+    if (isOpen && panel.parentElement !== section) section.appendChild(panel);
+  }
+  if (honours) {
+    const section = app.querySelector<HTMLElement>(':scope > [data-sport="honours"]')!;
+    const isOpen = open === 'honours';
+    const html = `<div class="sport-row${isOpen ? ' open' : ''}"><button type="button" class="row-main" data-open="honours" aria-expanded="${isOpen}"><span class="chevron" aria-hidden="true"></span>${lineIcon(TROPHY_ICON)}<span class="row-text"><span class="row-name">Honours</span><span class="row-line muted small"></span></span></button></div>`;
+    writeRow(section, html, isOpen ? '' : honours);
     if (isOpen && panel.parentElement !== section) section.appendChild(panel);
   }
   if (!open) panel.remove();
+}
+
+// ---------------------------------------------------------------------------
+// Honours
+
+function careerRowHtml(c: HonoursView['past'][number]): string {
+  return `<li><div>${sportIcon(c.sport)} <strong>${esc(c.club)}</strong> <span class="muted small">${esc(c.sportName)} · ${c.seasons} season${c.seasons === 1 ? '' : 's'}${c.live ? ' · playing' : ''}</span></div><div class="muted small">${esc(c.summary)}</div></li>`;
+}
+
+function honoursHtml(v: HonoursView): string {
+  const card = (title: string, body: string) => `<div class="card"><h3 class="sub first">${title}</h3>${body}</div>`;
+  return [
+    v.feats.length ? card('Honours', `<ul class="career-list">${v.feats.map((f) => `<li><div>🏆 <strong>${esc(f.title)}</strong></div><div class="muted small">${esc(f.detail)}</div></li>`).join('')}</ul>`) : '',
+    v.greatest.length ? card('Greatest teams', `<ol class="career-list">${v.greatest.map(careerRowHtml).join('')}</ol>`) : '',
+    ...v.records.map((r) => card(`${sportIcon(r.sport)} ${esc(r.name)} records`, `<dl class="report records">${r.rows.map((x) => `<dt>${esc(x.label)}</dt><dd>${esc(x.value)}</dd>`).join('')}</dl>`)),
+    v.past.length ? card('Past careers', `<ul class="career-list">${v.past.map(careerRowHtml).join('')}</ul>`) : '',
+  ].join('');
+}
+
+function renderHonours(v: HonoursView): void {
+  renderOverlay(null);
+  app.classList.remove('needs-choice');
+  const html = honoursHtml(v);
+  if (panel.dataset.mode === 'honours' && written.get(panel) === html) return;
+  panel.dataset.mode = 'honours';
+  panel.innerHTML = html;
+  written.set(panel, html);
 }
 
 // ---------------------------------------------------------------------------
@@ -661,10 +708,14 @@ function render(): void {
     app.classList.remove('needs-choice');
     return;
   }
-  if (open !== shownSport) {
-    shownSport = open;
+  if (open !== shownPanel) {
+    shownPanel = open;
     ui.tableTier = null;
     scrollFixtures = true;
+  }
+  if (view.screen === 'honours') {
+    renderHonours(view);
+    return;
   }
   if (view.screen === 'setup') {
     renderOverlay(null);
@@ -678,7 +729,7 @@ function render(): void {
 
 /** The sport the open panel belongs to. */
 function openSport(): SportId {
-  return open!;
+  return open as SportId;
 }
 
 app.addEventListener('click', (e) => {
@@ -687,7 +738,7 @@ app.addEventListener('click', (e) => {
   if (!button) return;
   if (button.dataset.open) {
     // Only one opens at a time; clicking the open one minimises it.
-    send({ type: 'openSport', sport: button.dataset.open === open ? null : (button.dataset.open as SportId) });
+    send({ type: 'openPanel', panel: button.dataset.open === open ? null : (button.dataset.open as PanelId) });
   } else if (button.dataset.pause) {
     send({ type: 'togglePause', sport: button.dataset.pause as SportId });
   } else if (button.dataset.end) {
@@ -747,7 +798,7 @@ app.addEventListener('input', (e) => {
 window.addEventListener('message', (event: MessageEvent<ToWebview>) => {
   const message = event.data;
   if (message.type === 'view') {
-    ({ rows, open } = message);
+    ({ rows, honours, open } = message);
     if (message.view !== undefined) view = message.view;
     render();
   }
