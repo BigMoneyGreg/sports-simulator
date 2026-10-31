@@ -58,12 +58,14 @@ let open: PanelId | null = null;
 /** What was last shown in full, so opening another sport starts on your own league. */
 let shownPanel: PanelId | null = null;
 /** The side to rebuild, picked but not yet confirmed, and the sport and season it belongs to. */
-const summer = { sport: null as SportId | null, season: 0, focus: null as Focus | null, sent: false };
+const summer = { sport: null as SportId | null, season: 0, focus: null as Focus | null, sent: false, howTo: false };
 
 const setup = {
   sport: null as SportId | null,
   team: '',
   search: '',
+  /** The whole list shows until a country is picked, and again when the search box is clicked to change it. */
+  browsing: false,
   league: 3,
   duration: '2m' as Duration,
   /** Defaults are taken from the host once; option clicks must not reset them. */
@@ -132,28 +134,26 @@ function seg(name: string, options: Option[], value: string): string {
   return `<div class="seg" role="radiogroup" data-name="${name}">${options
     .map(
       ([val, label, sub]) =>
-        `<button type="button" role="radio" aria-checked="${val === value}" class="${val === value ? 'on' : ''}" data-value="${val}">${esc(label)}${
+        `<button type="button" role="radio" aria-checked="${val === value}" tabindex="${val === value ? 0 : -1}" class="${val === value ? 'on' : ''}" data-value="${val}">${esc(label)}${
           sub ? `<span class="sub-label">${esc(sub)}</span>` : ''
         }</button>`,
     )
     .join('')}</div>`;
 }
 
-const NATION_LIMIT = 40;
-
 function nationMatches(nations: NationOption[]): NationOption[] {
   const q = setup.search.trim().toLowerCase();
   return q ? nations.filter((n) => n.name.toLowerCase().includes(q) || n.code.toLowerCase() === q) : nations;
 }
 
-/** The search results; redrawn on its own while typing so the search box keeps focus. */
+/** The countries to pick from; redrawn on its own while typing so the search box keeps focus. */
 function nationList(nations: NationOption[]): string {
-  if (!setup.search.trim()) return '';
+  if (!setup.search.trim() && setup.team && !setup.browsing) return '';
   const matches = nationMatches(nations);
   if (!matches.length) return '<p class="muted small">No country matches.</p>';
   const option = (n: NationOption) =>
     `<button type="button" role="option" class="nation ${n.code === setup.team ? 'on' : ''}" aria-selected="${n.code === setup.team}" data-team="${n.code}">${swatch(n)}<span class="grow">${esc(n.name)}</span><span class="muted small">L${n.tier}</span></button>`;
-  return matches.slice(0, NATION_LIMIT).map(option).join('') + (matches.length > NATION_LIMIT ? `<p class="muted small">${matches.length - NATION_LIMIT} more: keep typing.</p>` : '');
+  return matches.map(option).join('');
 }
 
 function renderSetup(v: SetupView): void {
@@ -174,7 +174,7 @@ function renderSetup(v: SetupView): void {
 
     <div class="field">Country
       ${chosen ? `<div class="chosen">${swatch(chosen, 'crest big')}<strong>${esc(chosen.name)}</strong></div>` : ''}
-      <input id="search" type="search" placeholder="Type your country" aria-label="Type your country" value="${esc(setup.search)}" autocomplete="off">
+      <input id="search" type="search" placeholder="Pick or type your country" aria-label="Pick or type your country" value="${esc(setup.search)}" autocomplete="off">
       <div id="nations" class="nation-list" role="listbox" aria-label="Countries">${nationList(v.nations)}</div>
     </div>
 
@@ -374,10 +374,20 @@ function patch(container: HTMLElement, parts: string[]): void {
   parts.forEach((html, i) => {
     const region = container.children[i];
     if (written.get(region) !== html) {
+      // Someone using the keyboard stays on the same button when it's redrawn.
+      const focused = region.contains(document.activeElement) ? focusKey(document.activeElement!) : null;
       region.innerHTML = html;
       written.set(region, html);
+      if (focused) region.querySelector<HTMLElement>(focused)?.focus();
     }
   });
+}
+
+/** How to find this button again after its region is redrawn. */
+function focusKey(el: Element): string | null {
+  if (el.id) return `#${el.id}`;
+  const data = Array.from(el.attributes).find((a) => a.name.startsWith('data-'));
+  return data ? `[${data.name}=${JSON.stringify(data.value)}]` : null;
 }
 
 function renderGame(v: GameView): void {
@@ -397,7 +407,7 @@ function renderGame(v: GameView): void {
     ['club', 'Team'],
   ];
   const nav = `<nav class="tabs" role="tablist">${tabs
-    .map(([id, label]) => `<button type="button" role="tab" aria-selected="${ui.tab === id}" class="${ui.tab === id ? 'on' : ''}" data-tab="${id}">${label}</button>`)
+    .map(([id, label]) => `<button type="button" role="tab" aria-selected="${ui.tab === id}" tabindex="${ui.tab === id ? 0 : -1}" class="${ui.tab === id ? 'on' : ''}" data-tab="${id}">${label}</button>`)
     .join('')}</nav>`;
   patch(document.getElementById('main')!, v.seasonEnd ? [seasonEndHtml(v.seasonEnd, v.sport, v.terms)] : [nav, ...panelParts(v)]);
   paintSwatches();
@@ -411,6 +421,12 @@ function renderGame(v: GameView): void {
 
 /** Set when the fixtures tab opens, so the list starts at the current match rather than MD 1. */
 let scrollFixtures = true;
+
+/** Read out by screen readers when something big happens in the player's match, and invisible otherwise. */
+const announcer = document.createElement('div');
+announcer.className = 'sr-only';
+announcer.setAttribute('aria-live', 'polite');
+document.body.appendChild(announcer);
 
 const FLASH_MS = 1600;
 const lastScore = { key: '', home: 0, away: 0 };
@@ -427,6 +443,7 @@ function trackGoals(v: GameView): void {
     if (homeScored || awayScored) {
       const mine = (homeScored && m.home.isPlayer) || (awayScored && m.away.isPlayer);
       Object.assign(flash, { cls: mine ? 'goal-for' : 'goal-against', at: Date.now(), id: flash.id + 1 });
+      announcer.textContent = `${v.terms.alert} ${m.home.name} ${m.score[0]}, ${m.away.name} ${m.score[1]}, ${m.clock}`;
     }
   }
   Object.assign(lastScore, { key, home: m.alerts[0], away: m.alerts[1] });
@@ -451,10 +468,10 @@ function showFlash(): void {
 
 function headerHtml(v: GameView): string {
   const h = v.header;
-  const dots = h.form.map((f) => `<span class="dot ${f.result}" title="${esc(f.title)}"></span>`).join('');
+  const dots = h.form.map((f) => `<span class="dot ${f.result}" title="${esc(f.title)}">${f.result}</span>`).join('');
   const next = h.durations[(h.durations.indexOf(h.duration) + 1) % h.durations.length];
   return `<header class="head card" data-accent="${esc(h.club.colours[0])}">
-    <div class="head-line"><div class="club">${swatch(h.club, 'crest')}<div class="name">${esc(h.club.name)}</div></div><span class="form" aria-label="Form">${dots}</span></div>
+    <div class="head-line"><div class="club">${swatch(h.club, 'crest')}<div class="name">${esc(h.club.name)}</div></div><span class="form" role="group" aria-label="Form, latest last">${dots}</span></div>
     <div class="head-line"><div class="muted small where">${ordinal(h.position)} · L${h.tier} · <span title="League games played">played ${h.played}/${h.games}</span></div>
       <span class="controls">
         <button type="button" id="speed" class="chip" data-next="${next}" title="Match length: ${DURATION_LABELS[h.duration]} (${(v.terms.seasonLabels[h.duration] ?? '').toLowerCase()}). Click for ${DURATION_LABELS[next]}." aria-label="Match length ${DURATION_LABELS[h.duration]}"><span>⏱</span><span class="wide"> ${DURATION_LABELS[h.duration]}</span></button>
@@ -643,8 +660,8 @@ function seasonEndHtml(e: SeasonEndView, sport: SportId, terms: SportTerms): str
       : e.performance === 'below'
         ? `You fell short: expected ${ordinal(e.expected)}, finished ${ordinal(e.position)}. Less to build with this summer.`
         : `You finished where you were expected: ${ordinal(e.position)}.`;
-  if (summer.sport !== sport || summer.season !== e.season) Object.assign(summer, { sport, season: e.season, focus: null, sent: false });
-  const option = (o: SeasonEndView['question']['options'][number]) => `<button type="button" role="radio" aria-checked="${summer.focus === o.focus}" class="focus ${o.focus} ${summer.focus === o.focus ? 'on' : ''}" data-focus="${o.focus}"${summer.sent ? ' disabled' : ''}>
+  if (summer.sport !== sport || summer.season !== e.season) Object.assign(summer, { sport, season: e.season, focus: null, sent: false, howTo: false });
+  const option = (o: SeasonEndView['question']['options'][number]) => `<button type="button" role="radio" aria-checked="${summer.focus === o.focus}" tabindex="${!summer.focus || summer.focus === o.focus ? 0 : -1}" class="focus ${o.focus} ${summer.focus === o.focus ? 'on' : ''}" data-focus="${o.focus}"${summer.sent ? ' disabled' : ''}>
       <strong>${esc(o.title)}</strong>${o.line ? `<span class="muted small">${esc(o.line)}</span>` : ''}
     </button>`;
   return `<div class="season-end">
@@ -656,25 +673,25 @@ function seasonEndHtml(e: SeasonEndView, sport: SportId, terms: SportTerms): str
     <div class="card accent-card">
     <h3 class="sub first">Summer</h3>
     <p class="small">${esc(verdict)}</p>
-    ${
-      // Both clues sit with the question: who's leaving, then where the season ranked.
-      e.squad.leaving.length
-        ? `<h3 class="sub">Leaving the squad</h3><ul class="plain small">${e.squad.leaving.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
-           ${e.squad.arriving.length ? `<p class="muted small">Joining: ${e.squad.arriving.map(esc).join(', ')}</p>` : ''}`
-        : ''
-    }
     <div class="clue">
       <div class="clue-row"><span>${esc(terms.attack)}</span><strong>${ordinal(r.scoredRank)}</strong><span class="muted small">${esc(terms.clueScored)}</span></div>
       <div class="clue-row"><span>${esc(terms.defence)}</span><strong>${ordinal(r.concededRank)}</strong><span class="muted small">${esc(terms.clueConceded)}</span></div>
     </div>
-    <details class="howto small"><summary>How does summer work?</summary>
-      ${terms.howTo.map((line) => `<p class="muted">${esc(line)}</p>`).join('')}
-    </details>
     <p class="small strong">${esc(e.question.prompt)}</p>
     <div class="focus-row" role="radiogroup">${e.question.options.map(option).join('')}</div>
     <button type="button" id="nextSeason" class="primary"${summer.focus && !summer.sent ? '' : ' disabled'}>${summer.focus ? 'Start next season' : 'Pick one to carry on'}</button>
     ${e.canRetire ? '<p class="muted small center">Start next season to defend the title.</p>' : ''}
     ${e.canRetire ? `<button type="button" id="newCareer" class="secondary">Start a new career</button>` : ''}
+    ${
+      // The question comes first, so it's in view in a small box; the other clue is just below it.
+      e.squad.leaving.length
+        ? `<h3 class="sub">Leaving the squad</h3><ul class="plain small">${e.squad.leaving.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+           ${e.squad.arriving.length ? `<p class="muted small">Joining: ${e.squad.arriving.map(esc).join(', ')}</p>` : ''}`
+        : ''
+    }
+    <details class="howto small"${summer.howTo ? ' open' : ''}><summary>How does summer work?</summary>
+      ${terms.howTo.map((line) => `<p class="muted">${esc(line)}</p>`).join('')}
+    </details>
     </div>
 
     <div class="card">
@@ -898,8 +915,10 @@ app.addEventListener('click', (e) => {
   } else if (button.dataset.team && view?.screen === 'setup') {
     setup.team = button.dataset.team;
     setup.search = '';
+    setup.browsing = false;
     setup.league = view.setup.nations.find((n) => n.code === setup.team)!.tier;
     renderSetup(view.setup);
+    document.getElementById('start')?.focus();
   } else if (button.closest('.seg')?.getAttribute('data-name')) {
     const group = button.closest('.seg')!.getAttribute('data-name')!;
     const value = button.dataset.value!;
@@ -909,13 +928,49 @@ app.addEventListener('click', (e) => {
   }
 });
 
-app.addEventListener('input', (e) => {
-  const input = e.target as HTMLInputElement;
-  if (input.id !== 'search' || view?.screen !== 'setup') return;
-  setup.search = input.value;
+function redrawNations(): void {
+  if (view?.screen !== 'setup') return;
   const list = document.getElementById('nations')!;
   list.innerHTML = nationList(view.setup.nations);
   paintSwatches(list);
+}
+
+app.addEventListener('input', (e) => {
+  const input = e.target as HTMLInputElement;
+  if (input.id !== 'search') return;
+  setup.search = input.value;
+  redrawNations();
+});
+
+app.addEventListener('focusin', (e) => {
+  if ((e.target as HTMLElement).id !== 'search' || setup.browsing) return;
+  setup.browsing = true;
+  redrawNations();
+});
+
+// The how-to stays open when picking an answer rewrites the card around it. The event doesn't bubble, so it's caught on the way down.
+app.addEventListener(
+  'toggle',
+  (e) => {
+    if ((e.target as HTMLElement).classList.contains('howto')) summer.howTo = (e.target as HTMLDetailsElement).open;
+  },
+  true,
+);
+
+/** Arrow keys move along tabs and options, the way they do everywhere else. */
+app.addEventListener('keydown', (e) => {
+  const step = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[e.key];
+  if (!step && e.key !== 'Home' && e.key !== 'End') return;
+  const button = (e.target as HTMLElement).closest('button');
+  const group = button?.closest('[role="tablist"], [role="radiogroup"]');
+  if (!button || !group) return;
+  const items = Array.from(group.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));
+  const at = items.indexOf(button);
+  const next = items[e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : (at + step! + items.length) % items.length];
+  e.preventDefault();
+  const key = focusKey(next);
+  next.click();
+  if (key) app.querySelector<HTMLElement>(key)?.focus();
 });
 
 window.addEventListener('message', (event: MessageEvent<ToWebview>) => {

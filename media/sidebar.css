@@ -366,10 +366,15 @@ input:focus-visible {
 }
 
 .dot {
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: var(--draw);
+  color: var(--vscode-editor-background, #1e1e1e);
+  font-size: 8.5px;
+  font-weight: 700;
+  line-height: 12px;
+  text-align: center;
 }
 
 .dot.W {
@@ -1842,4 +1847,36 @@ ul.plain li + li {
 .ft-score {
   white-space: nowrap;
   overflow: hidden;
+}
+
+/* Heard but not seen. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* High contrast themes: solid lines rather than tints, and selection marked by a border, not a shade. */
+body.vscode-high-contrast {
+  --line: var(--vscode-contrastBorder, currentColor);
+  --surface: transparent;
+  --surface-2: transparent;
+  --muted: var(--vscode-foreground);
+}
+
+body.vscode-high-contrast .tabs button.on,
+body.vscode-high-contrast .seg button.on,
+body.vscode-high-contrast .focus.on,
+body.vscode-high-contrast .nation.on,
+body.vscode-high-contrast tr.me {
+  outline: 1px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+  outline-offset: -1px;
+}
+
+body.vscode-high-contrast .chip,
+body.vscode-high-contrast .pin {
+  border-color: var(--vscode-contrastBorder, currentColor);
 }

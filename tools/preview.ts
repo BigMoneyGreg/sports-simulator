@@ -2,7 +2,7 @@
  * Renders the real webview bundle outside VS Code with sample game states,
  * for eyeballing the UI and taking screenshots.
  *
- *   npm run build && npx tsx tools/preview.ts [--light]
+ *   npm run build && npx tsx tools/preview.ts [--light | --contrast]
  *   open dist/preview/index.html?screen=match
  *
  * Screens: list (every sport minimised), setup, match, table, fixtures, club, cups, fullTime, seasonOver, championship, clubLater, championshipLater,
@@ -167,7 +167,26 @@ const light = {
   'editorWidget-background': '#f8f8f8',
   'editorWidget-foreground': '#3b3b3b',
 };
-const theme = process.argv.includes('--light') ? light : dark;
+const highContrast: Record<string, string> = {
+  background: '#000000',
+  foreground: '#ffffff',
+  descriptionForeground: '#ffffff',
+  focusBorder: '#f38518',
+  contrastBorder: '#6fc3df',
+  contrastActiveBorder: '#f38518',
+  'button-background': '#000000',
+  'button-foreground': '#ffffff',
+  'editor-background': '#000000',
+  'input-background': '#000000',
+  'input-foreground': '#ffffff',
+  'input-border': '#6fc3df',
+  'textLink-foreground': '#21a6ff',
+  'list-activeSelectionBackground': '#000000',
+  'list-activeSelectionForeground': '#ffffff',
+  'editorWidget-background': '#000000',
+  'editorWidget-foreground': '#ffffff',
+};
+const theme = process.argv.includes('--light') ? light : process.argv.includes('--contrast') ? highContrast : dark;
 const vars = Object.entries(theme)
   .map(([k, v]) => `--vscode-${k}: ${v};`)
   .join(' ');
@@ -177,7 +196,7 @@ writeFileSync(
   `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>html { ${vars} --vscode-font-family: -apple-system, BlinkMacSystemFont, sans-serif; --vscode-font-size: 13px; background: ${theme.background}; } body { width: 280px; } .ft-card { animation: none !important; } .ft-layer { width: 284px; right: auto; }</style>
 <link rel="stylesheet" href="../../media/sidebar.css"></head>
-<body${theme === light ? ' class="vscode-light"' : ''}><div id="app"></div>
+<body${theme === light ? ' class="vscode-light"' : theme === highContrast ? ' class="vscode-high-contrast"' : ''}><div id="app"></div>
 <script src="views.js"></script>
 <script>
   const screen = new URLSearchParams(location.search).get('screen') || 'match';
