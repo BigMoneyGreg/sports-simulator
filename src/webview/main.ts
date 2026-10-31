@@ -202,8 +202,13 @@ function rowHtml(r: SportRowView, isOpen: boolean): string {
  */
 function renderRows(): void {
   if (app.querySelectorAll(':scope > .sport').length !== rows.length) {
-    app.innerHTML = rows.map((r) => `<section class="sport" data-sport="${r.id}"><div class="row-slot"></div></section>`).join('');
+    app.innerHTML = `<div id="pins"></div>${rows.map((r) => `<section class="sport" data-sport="${r.id}"><div class="row-slot"></div></section>`).join('')}`;
   }
+  // A long open page can push the other rows out of sight, so a decision waiting stays pinned at the top.
+  const pins = document.getElementById('pins')!;
+  const waiting = open ? rows.filter((r) => r.waiting && r.id !== open) : [];
+  patch(pins, waiting.map((r) => `<button type="button" class="pin" data-open="${r.id}">${esc(r.name)}: one decision waiting</button>`));
+  app.style.setProperty('--pin-h', `${pins.offsetHeight}px`);
   for (const r of rows) {
     const section = app.querySelector<HTMLElement>(`:scope > [data-sport="${r.id}"]`)!;
     const isOpen = open === r.id;
@@ -741,7 +746,8 @@ app.addEventListener('input', (e) => {
 window.addEventListener('message', (event: MessageEvent<ToWebview>) => {
   const message = event.data;
   if (message.type === 'view') {
-    ({ rows, open, view } = message);
+    ({ rows, open } = message);
+    if (message.view !== undefined) view = message.view;
     render();
   }
 });

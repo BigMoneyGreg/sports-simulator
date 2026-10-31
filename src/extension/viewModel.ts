@@ -706,14 +706,14 @@ const STATUS_ICON = '$(trophy)';
 export const SEASON_OVER = 'Season over: one decision waiting';
 
 /** Text for the status bar; `goal` while a goal in the player's match is fresh. */
-export function statusText(game: Game, goal = false): string | null {
+export function statusText(game: Game, goal = false, tag?: string): string | null {
   const career = game.career;
   const { alert } = game.sport.present.terms;
   if (!career) return `${STATUS_ICON} Start a career`;
   if (career.pending) return `$(bell) ${SEASON_OVER}`;
   const score = scoreLine(game);
   if (!score) return null;
-  return `${STATUS_ICON} ${game.paused ? '⏸ ' : ''}${goal && !score.startsWith('FT') ? `${alert} ` : ''}${score}`;
+  return `${STATUS_ICON} ${tag ? `${tag}: ` : ''}${game.paused ? '⏸ ' : ''}${goal && !score.startsWith('FT') ? `${alert} ` : ''}${score}`;
 }
 
 /** Where the player's club stands in its league table before the matchday in progress. */
@@ -769,13 +769,19 @@ export function statusGame(games: Game[], followed: SportId): Game {
   return chosen.career ? chosen : (games.find((g) => g.career) ?? chosen);
 }
 
+/** Another sport is already waiting on the player: its badge and bell say enough, so a second season's end stays quiet. */
+export function anotherDecisionWaiting(games: Game[], sport: SportId): boolean {
+  return games.some((g) => g.sportId !== sport && g.career?.pending);
+}
+
 /** The status bar and collapsed box: one sport's score, a bell if another is waiting on the player, and every career on hover. */
 export function boxStatus(games: Game[], followed: SportId, goal = false): { text: string | null; tooltip: string; description?: string } {
   const game = statusGame(games, followed);
   const careers = games.filter((g) => g.career);
   const name = (g: Game) => g.sport.present.terms.name;
   const waitingElsewhere = careers.some((g) => g !== game && g.career!.pending);
-  let text = statusText(game, goal);
+  // With several careers going, the score says which sport it's from.
+  let text = statusText(game, goal, careers.length > 1 ? name(game) : undefined);
   if (careers.length > 1 && game.career?.pending) text = `$(bell) ${name(game)}: season over`;
   if (waitingElsewhere) text = text ? `${text} $(bell)` : `$(bell) ${SEASON_OVER}`;
   const tooltip = careers.length > 1 ? `${careers.map((g) => `${name(g)}: ${careerLines(g).join('\n\n')}`).join('\n\n---\n\n')}\n\nClick to open` : statusTooltip(game);

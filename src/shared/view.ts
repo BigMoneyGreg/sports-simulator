@@ -348,5 +348,5 @@ export type ToHost =
   | { type: 'copy'; text: string }
   | { type: 'endCareer'; sport: SportId };
 
-/** Every sport's row, and the full view of the one open. */
-export type ToWebview = { type: 'view'; rows: SportRowView[]; open: SportId | null; view: View | null };
+/** Every sport's row, and the full view of the one open; without `view`, only a minimised sport changed. */
+export type ToWebview = { type: 'view'; rows: SportRowView[]; open: SportId | null; view?: View | null };

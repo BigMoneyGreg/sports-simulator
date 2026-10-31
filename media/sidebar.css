@@ -1427,10 +1427,34 @@ body.vscode-light .focus.defence strong {
   margin-bottom: 8px;
 }
 
+#pins {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  margin: 0 calc(-1 * var(--pad-x));
+  padding: 0 var(--pad-x);
+  background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+}
+
+.pin {
+  display: block;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: inherit;
+  font: inherit;
+  font-size: 0.9em;
+  text-align: left;
+  cursor: pointer;
+}
+
 /* Header stays in view while the table or fixtures scroll underneath. */
 #top {
   position: sticky;
-  top: 0;
+  top: var(--pin-h, 0);
   z-index: 5;
   /* Own block so the header's bottom margin stays inside; bleeds over the body padding. */
   display: flow-root;

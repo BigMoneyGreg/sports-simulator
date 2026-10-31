@@ -8,7 +8,7 @@ import { totalRating } from '../src/core/ratings';
 import { Rng } from '../src/core/rng';
 import type { TeamSheet } from '../src/core/sport';
 import { fitDuration, Game, migrate, SAVE_VERSION, tickMs, type SavedGame, type Scheduler } from '../src/extension/game';
-import { boxStatus, buildView, collapsedText, GoalWatch, seasonClue, sportRows, statusGame, statusText, summerQuestion } from '../src/extension/viewModel';
+import { anotherDecisionWaiting, boxStatus, buildView, collapsedText, GoalWatch, seasonClue, sportRows, statusGame, statusText, summerQuestion } from '../src/extension/viewModel';
 import { SPORTS } from '../src/sports';
 import { CRICKET_ORDER, CRICKET_RIVALS } from '../src/sports/cricket/data';
 import { createMatch as createCricket, isFinished as cricketDone, outcome as cricketOutcome, step as cricketStep, TUNING as CRICKET_TUNING, type CricketMatch } from '../src/sports/cricket/match';
@@ -687,6 +687,9 @@ describe('sports in the save', () => {
       const status = boxStatus(games, 'cricket');
       expect(status.text).toMatch(/\$\(bell\)$/);
       expect(boxStatus(games, 'rugby').text).toBe('$(bell) Rugby: season over');
+      // Rugby is waiting, so another sport's season end keeps quiet; rugby's own doesn't count.
+      expect(anotherDecisionWaiting(games, 'cricket')).toBe(true);
+      expect(anotherDecisionWaiting(games, 'rugby')).toBe(false);
     });
 
     it('follows the sport last opened, or the first with a career if that has none', () => {
@@ -697,6 +700,17 @@ describe('sports in the save', () => {
       expect(statusGame(games, 'rugby')).toBe(game('cricket'));
       start(game('rugby'), 'WAL');
       expect(statusGame(games, 'rugby')).toBe(game('rugby'));
+    });
+
+    it('names the sport beside the score only once there are several careers', () => {
+      const { games, game, clocks } = setUp();
+      start(game('rugby'), 'WAL');
+      clocks.get('rugby')!.run(3);
+      expect(boxStatus(games, 'rugby').text).not.toMatch(/Rugby/);
+      start(game('cricket'), 'SRI');
+      clocks.get('cricket')!.run(3);
+      expect(boxStatus(games, 'rugby').text).toMatch(/^\$\(trophy\) Rugby: /);
+      expect(boxStatus(games, 'cricket', true).text).toMatch(/^\$\(trophy\) Cricket: WICKET! |^\$\(trophy\) Cricket: /);
     });
 
     it('lists every career on hover', () => {

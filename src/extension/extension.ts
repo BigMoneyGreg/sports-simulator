@@ -10,7 +10,7 @@ import { Ownership, POLL_MS } from './ownership';
 import { SidebarProvider } from './sidebar';
 import { StatusBar } from './statusBar';
 import { Storage, type LiveStatus } from './storage';
-import { boxStatus, buildView, GoalWatch, leaversLine, SEASON_OVER, seasonClue, sportRows, statusGame, summerQuestion } from './viewModel';
+import { anotherDecisionWaiting, boxStatus, buildView, GoalWatch, leaversLine, SEASON_OVER, seasonClue, sportRows, statusGame, summerQuestion } from './viewModel';
 
 let ownership: Ownership | undefined;
 
@@ -58,10 +58,12 @@ export function activate(context: vscode.ExtensionContext): void {
     return { at: 0, ...boxStatus(all(), followed) };
   };
 
-  const refresh = () => {
+  /** `from`: the sport that changed. A minimised sport's tick only needs the rows, not the open sport's whole view again. */
+  const refresh = (from?: SportId) => {
     if (sidebar.visible) {
-      const view = open && buildView(games[open], { fullTimeOverlay: config().get('fullTimeOverlay', true), language: vscode.env.language });
-      sidebar.post({ type: 'view', rows: sportRows(all()), open, view });
+      const full = !from || from === open;
+      const view = full ? { view: open && buildView(games[open], { fullTimeOverlay: config().get('fullTimeOverlay', true), language: vscode.env.language }) } : {};
+      sidebar.post({ type: 'view', rows: sportRows(all()), open, ...view });
     }
     const live = outside();
     const decisions = all().filter((g) => g.career?.pending).length;
@@ -77,9 +79,9 @@ export function activate(context: vscode.ExtensionContext): void {
       save: (g) => {
         if (owner.owning) storage.save(g, sport);
       },
-      changed: refresh,
+      changed: () => refresh(sport),
       seasonOver: (end) => {
-        if (sidebar.visible && open === sport) return;
+        if ((sidebar.visible && open === sport) || anotherDecisionWaiting(all(), sport)) return;
         // The one notification: the result, the clues (goal ranks and who's leaving) and the summer's question.
         const career = game.career!;
         const question = summerQuestion(career);
