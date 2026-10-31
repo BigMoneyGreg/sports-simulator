@@ -1364,6 +1364,10 @@ body.vscode-light .focus.defence strong {
   background: var(--surface);
 }
 
+.sport.needs-you {
+  background: color-mix(in srgb, var(--sport) 22%, transparent);
+}
+
 .sport-row {
   position: relative;
   display: flex;

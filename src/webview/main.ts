@@ -236,6 +236,7 @@ function renderRows(): void {
   for (const r of rows) {
     const section = app.querySelector<HTMLElement>(`:scope > [data-sport="${r.id}"]`)!;
     const isOpen = open === r.id;
+    section.classList.toggle('needs-you', r.waiting && !isOpen);
     writeRow(section, rowHtml(r, isOpen), isOpen ? '' : r.waiting ? 'Season over: decision waiting' : r.club ? (r.line ?? '') : 'Not started');
     // Inline styles are blocked by the CSP, so the width goes through the CSSOM.
     const bar = section.querySelector<HTMLElement>('.row-progress span');

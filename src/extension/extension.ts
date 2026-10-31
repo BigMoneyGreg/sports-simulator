@@ -16,7 +16,7 @@ let ownership: Ownership | undefined;
 
 /** How long another window's shared status text counts as current (it's rewritten every match-minute while a match is on). */
 const LIVE_FRESH_MS = 30_000;
-const TOAST_MS = 6000;
+const TOAST_MS = 10_000;
 
 export function activate(context: vscode.ExtensionContext): void {
   const storage = new Storage(context.globalStorageUri.fsPath, context.globalState);
