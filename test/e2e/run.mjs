@@ -185,6 +185,7 @@ try {
   await click('#nations .nation');
   await click('#start');
   await until('the football career', async () => /Scotland/.test(await rowText('football')));
+  passed('Starting a career brings its header into view, in a short box', await until('the header in view', () => box.run(inBox(`const r = d.querySelector('.head')?.getBoundingClientRect(); return !!r && r.top >= 0 && r.top < d.defaultView.innerHeight;`)), 5000).catch(() => false));
   const cycling = new Set();
   const seen = await until(
     'both sports in the status bar',

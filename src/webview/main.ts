@@ -400,6 +400,8 @@ function focusKey(el: Element): string | null {
 function renderGame(v: GameView): void {
   renderOverlay(v.seasonEnd ? null : v.fullTime);
   if (panel.dataset.mode !== 'game') {
+    // A career has just started, from further down the setup screen.
+    scrollToOpen = true;
     panel.innerHTML = '<div id="top"></div><div id="main"></div>';
     panel.dataset.mode = 'game';
   }
@@ -825,10 +827,15 @@ function clubHtml(v: GameView): string {
 // ---------------------------------------------------------------------------
 // Rendering and events
 
+/** Set when something new opens: the box is often short, and its top is what should be in view. */
+let scrollToOpen = false;
+
 function render(): void {
   renderRows();
   renderPanel();
   renderAsk();
+  if (scrollToOpen && open) app.querySelector(`:scope > [data-sport="${open}"]`)?.scrollIntoView({ block: 'start' });
+  scrollToOpen = false;
 }
 
 function renderPanel(): void {
@@ -839,6 +846,7 @@ function renderPanel(): void {
   }
   if (open !== shownPanel) {
     shownPanel = open;
+    scrollToOpen = true;
     ask = null;
     ui.tableTier = null;
     scrollFixtures = true;

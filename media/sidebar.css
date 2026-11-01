@@ -1394,6 +1394,7 @@ body.vscode-light .focus.defence strong {
 }
 
 .sport {
+  scroll-margin-top: var(--pin-h, 0);
   margin-bottom: 5px;
   border: 1px solid color-mix(in srgb, var(--sport) 60%, transparent);
   border-left: 3px solid var(--sport);
