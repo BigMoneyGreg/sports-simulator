@@ -655,7 +655,7 @@ In rough priority order:
 | Reset honours leaves running careers alone | Honours are a side record: wiping them shouldn't cost seasons of play, and End and Reset already deal with careers one at a time |
 | One End… button instead of separate End and Reset; the Reset command removed | Two ways to stop a career needed explaining; asking at the moment makes the difference clear. VS Code's pop-ups can't be red, so these questions live in the box |
 | Season-end message is one short line that goes by itself; no answering from it | A big pop-up with the decision in it was too much. See it, then go and act in the box |
-| Times shown with ~ (*~2 min*, *Season ~25 min*) | A season's length is an estimate, and a chase or a knockout changes a match's |
+| Match lengths shown plainly (*2 min*); season lengths with ~ (*Season ~25 min*) | A match takes about what it says, give or take extra time or a chase ending early, and the ~ was clutter. A season's length really is an estimate, as a cup run changes it |
 | Honours list only what's been earned | Players work things out; no greyed-out goals or checklist |
 | No format choice in cricket | T20 fits a 2-minute match, has no draws and is the only format with 30 real nations; a choice would be options for the sake of it |
 | Unbeaten-run tracker in status bar: **rejected** | Unnecessary; records page covers it |

@@ -7,7 +7,7 @@ import type { InningsCard, SportTerms } from '../core/sport';
 export type Duration = '30s' | '90s' | '2m' | '5m' | '10m' | '15m' | '20m' | '30m' | '40m';
 /** Every match length in any sport; each sport offers its own few. */
 export const DURATIONS: Duration[] = ['30s', '90s', '2m', '5m', '10m', '15m', '20m', '30m', '40m'];
-export const DURATION_LABELS: Record<Duration, string> = { '30s': '~30 sec', '90s': '~1½ min', '2m': '~2 min', '5m': '~5 min', '10m': '~10 min', '15m': '~15 min', '20m': '~20 min', '30m': '~30 min', '40m': '~40 min' };
+export const DURATION_LABELS: Record<Duration, string> = { '30s': '30 sec', '90s': '1½ min', '2m': '2 min', '5m': '5 min', '10m': '10 min', '15m': '15 min', '20m': '20 min', '30m': '30 min', '40m': '40 min' };
 export type Focus = 'attack' | 'defence';
 export type Zone = 'champion' | 'promotion' | 'playoff' | 'relegation' | null;
 
