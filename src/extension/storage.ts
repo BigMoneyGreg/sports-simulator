@@ -3,7 +3,7 @@ import * as path from 'node:path';
 import type * as vscode from 'vscode';
 import { SPORT_IDS, type SportId } from '../core/format';
 import type { Feat } from '../core/honours';
-import type { SeasonLength } from '../shared/view';
+import type { Duration } from '../shared/view';
 import type { SavedGame } from './game';
 import type { Lock, LockStore } from './ownership';
 
@@ -186,11 +186,11 @@ export class Storage implements LockStore {
     }
   }
 
-  lastDuration(): SeasonLength | undefined {
-    return this.memento.get<SeasonLength>(LAST_DURATION_KEY);
+  lastDuration(): Duration | undefined {
+    return this.memento.get<Duration>(LAST_DURATION_KEY);
   }
 
-  setLastDuration(duration: SeasonLength | undefined): void {
+  setLastDuration(duration: Duration | undefined): void {
     void this.memento.update(LAST_DURATION_KEY, duration);
   }
 

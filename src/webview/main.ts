@@ -1,8 +1,7 @@
 import {
-  SEASON_LABELS,
-  SEASON_LENGTHS,
+  DURATION_LABELS,
   type CupView,
-  type SeasonLength,
+  type Duration,
   type FixtureView,
   type Focus,
   type FullTimeView,
@@ -68,7 +67,7 @@ const setup = {
   /** The whole list shows until a country is picked, and again when the search box is clicked to change it. */
   browsing: false,
   league: 3,
-  duration: '25m' as SeasonLength,
+  duration: '2m' as Duration,
   /** Defaults are taken from the host once; option clicks must not reset them. */
   initialised: false,
 };
@@ -181,7 +180,7 @@ function renderSetup(v: SetupView): void {
 
     ${chosen ? `<div class="field">Starting league ${seg('league', leagueOptions, String(setup.league))}</div>` : ''}
 
-    <div class="field">Season length ${seg('duration', SEASON_LENGTHS.map((d): Option => [d, SEASON_LABELS[d]]), setup.duration)}</div>
+    <div class="field">Match length ${seg('duration', v.durations.map((d): Option => [d, DURATION_LABELS[d], v.terms.seasonLabels[d]]), setup.duration)}</div>
 
     ${chosen ? '<button type="button" id="start" class="primary">Start career</button>' : ''}
   </div>`;
@@ -470,12 +469,12 @@ function showFlash(): void {
 function headerHtml(v: GameView): string {
   const h = v.header;
   const dots = h.form.map((f) => `<span class="dot ${f.result}" title="${esc(f.title)}">${f.result}</span>`).join('');
-  const next = SEASON_LENGTHS[(SEASON_LENGTHS.indexOf(h.duration) + 1) % SEASON_LENGTHS.length];
+  const next = h.durations[(h.durations.indexOf(h.duration) + 1) % h.durations.length];
   return `<header class="head card" data-accent="${esc(h.club.colours[0])}">
     <div class="head-line"><div class="club">${swatch(h.club, 'crest')}<div class="name">${esc(h.club.name)}</div></div><span class="form" role="group" aria-label="Form, latest last">${dots}</span></div>
     <div class="head-line"><div class="muted small where">${ordinal(h.position)} · L${h.tier} · <span title="League games played">played ${h.played}/${h.games}</span></div>
       <span class="controls">
-        <button type="button" id="speed" class="chip" data-next="${next}" title="Season length: ${SEASON_LABELS[h.duration]}. Click for ${SEASON_LABELS[next]}." aria-label="Season length ${SEASON_LABELS[h.duration]}"><span>⏱</span><span class="wide"> ${SEASON_LABELS[h.duration]}</span></button>
+        <button type="button" id="speed" class="chip" data-next="${next}" title="Match length: ${DURATION_LABELS[h.duration]} (${(v.terms.seasonLabels[h.duration] ?? '').toLowerCase()}). Click for ${DURATION_LABELS[next]}." aria-label="Match length ${DURATION_LABELS[h.duration]}"><span>⏱</span><span class="wide"> ${DURATION_LABELS[h.duration]}</span></button>
         <button type="button" id="pause" class="chip icon" title="${h.paused ? 'Play' : 'Pause'}" aria-label="${h.paused ? 'Play' : 'Pause'}">${h.paused ? '▶' : '⏸'}</button>
       </span></div>
   </header>`;
@@ -908,7 +907,7 @@ app.addEventListener('click', (e) => {
     ask = { kind: 'career', step: 'choose' };
     render();
   } else if (button.id === 'speed') {
-    send({ type: 'setDuration', sport: openSport(), duration: button.dataset.next as SeasonLength });
+    send({ type: 'setDuration', sport: openSport(), duration: button.dataset.next as Duration });
   } else if (button.id === 'pause') {
     send({ type: 'togglePause', sport: openSport() });
   } else if (button.id === 'start' && setup.team) {
@@ -924,7 +923,7 @@ app.addEventListener('click', (e) => {
     const group = button.closest('.seg')!.getAttribute('data-name')!;
     const value = button.dataset.value!;
     if (group === 'league') setup.league = Number(value);
-    if (group === 'duration') setup.duration = value as SeasonLength;
+    if (group === 'duration') setup.duration = value as Duration;
     if (view?.screen === 'setup') renderSetup(view.setup);
   }
 });

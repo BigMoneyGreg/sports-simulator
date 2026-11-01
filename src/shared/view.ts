@@ -4,10 +4,10 @@
 import type { SportId } from '../core/format';
 import type { InningsCard, SportTerms } from '../core/sport';
 
-/** How long a season takes, the same choices in every sport; each sport works out its own match length from it. */
-export type SeasonLength = '25m' | '90m' | '4h' | '8h';
-export const SEASON_LENGTHS: SeasonLength[] = ['25m', '90m', '4h', '8h'];
-export const SEASON_LABELS: Record<SeasonLength, string> = { '25m': '~25 min', '90m': '~1½ hr', '4h': '~4 hr', '8h': '~8 hr' };
+export type Duration = '30s' | '1m' | '2m' | '5m';
+/** Every match length in any sport; each sport offers its own few. */
+export const DURATIONS: Duration[] = ['30s', '1m', '2m', '5m'];
+export const DURATION_LABELS: Record<Duration, string> = { '30s': '~30 sec', '1m': '~1 min', '2m': '~2 min', '5m': '~5 min' };
 export type Focus = 'attack' | 'defence';
 export type Zone = 'champion' | 'promotion' | 'playoff' | 'relegation' | null;
 
@@ -177,8 +177,9 @@ export interface HeaderView {
   paused: boolean;
   season: number;
   round: string;
-  duration: SeasonLength;
+  duration: Duration;
   /** Speeds the header button cycles through. */
+  durations: Duration[];
 }
 
 /** One sport in the box's list: the least worth knowing while it's minimised. */
@@ -213,7 +214,8 @@ export interface SetupView {
   nations: NationOption[];
   /** Picked to start with, from VS Code's display language. */
   suggested?: string;
-  duration: SeasonLength;
+  duration: Duration;
+  durations: Duration[];
 }
 
 export interface PlayoffTieView {
@@ -371,9 +373,9 @@ export type PanelId = SportId | 'honours';
 
 export type ToHost =
   | { type: 'ready' }
-  | { type: 'startCareer'; sport: SportId; team: string; league: number; duration: SeasonLength }
+  | { type: 'startCareer'; sport: SportId; team: string; league: number; duration: Duration }
   | { type: 'togglePause'; sport: SportId }
-  | { type: 'setDuration'; sport: SportId; duration: SeasonLength }
+  | { type: 'setDuration'; sport: SportId; duration: Duration }
   /** Opens this in the list, closing whichever was open; null minimises them all. */
   | { type: 'openPanel'; panel: PanelId | null }
   | { type: 'chooseFocus'; sport: SportId; focus: Focus }

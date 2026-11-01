@@ -8,7 +8,7 @@ First release.
 - **Rugby:** 48 nations in 6 leagues of 8. Tries, conversions, penalties, drop goals and sin bins; bonus points; kicking contests in knockouts; matches from 1 minute
 - **Cricket (T20):** 30 nations in 5 leagues of 6, including the West Indies. Follow it ball by ball on a real scorecard, with this over; wickets and the chase ("need 34 from 18 balls"); net run rate; super overs; run scorers and wicket takers; matches from 2 minutes
 - Each sport has its own career, cups, summer questions and records
-- Play several sports at once: the box lists them, one open in full and the others minimised to one line. Start, pause or end each on its own, and each keeps its own season length
+- Play several sports at once: the box lists them, one open in full and the others minimised to one line. Start, pause or end each on its own, and each keeps its own match length
 - **Honours:** past careers, greatest teams, all-time records for each sport, and honours for success across sports
 - Only want one sport? Press **Choose sports…** in the box and untick the rest, Honours too if you like. A hidden career waits where it was
 - End a career to keep it in Past careers, or reset it to delete it completely, both from one button that explains the difference. **Reset honours** clears the Honours page. Both resets ask again in red
@@ -23,9 +23,8 @@ First release.
 - A lopsided team declines, and recovers, over a few seasons rather than overnight
 - Season reports, trophy cabinet, club history and records
 - Players get the most common names in their own country, now and then borrowing a surname from a neighbour, and real stars' names are blocked
-- Seasons of about 25 minutes, 1½ hours, 4 hours or 8 hours in every sport, with match lengths set to suit
 - Status bar: your live score, week and league place, with *GOAL!*, *TRY!* or *WICKET!* as it happens. With several careers it shows each sport's week and place in turn, 5 seconds each, and a click opens the one on show
-- Setup: pick or type your country, then its starting league and season length
+- Setup: pick or type your country, then its starting league and match length. The default gives a season of about 20 to 25 minutes in every sport
 - With several VS Code windows open, the game runs in the one you're working in, and moves to another when that one closes
 - Works in Restricted Mode, and on your own machine when you're connected to a remote one
 - Works by keyboard, with screen reader announcements and high contrast themes

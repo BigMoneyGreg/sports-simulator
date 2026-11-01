@@ -38,7 +38,7 @@ Everything else runs by itself: fixtures, matches, commentary, tables, scorers, 
 ```
 New career
   └─ choose a country, and the league it starts in (1–5) → somewhere around mid-table
-  └─ choose season length; every team starts balanced
+  └─ choose match duration; every team starts balanced
         │
         ▼
 Season (runs automatically, 38 matchdays)
@@ -68,7 +68,7 @@ Next season … (won league 1? → carry on, or start a new career)
 | Option | Values | Notes |
 |---|---|---|
 | League | 1–5 (buttons) | Where you start. Your rating is random within the league, weighted to mid-table: 50% chance of 40–60% of the way up the league's band, 25% of 20–40%, 25% of 60–80% (never the very top or bottom). Not shown; you find out from the table |
-| Season length | ~25 min · ~1½ hr · ~4 hr · ~8 hr | The same choices in every sport, which each sets its own match length from; can be changed any time from the ⏱ button in the box. Default ~25 min |
+| Match duration | 30 sec · 2 min · 5 min | Length of one 90-minute match; can be changed any time from the ⏱ button in the box. Default 2 min |
 | Country | Type to search; matches appear as you type | Sets the league picker to its usual level (marked *Usual*); any league can be picked, but only once a country is chosen. Preselected from VS Code's display language when it points to one country (German → Germany; plain English doesn't). See §10 |
 
 ### Starting position
@@ -477,7 +477,7 @@ The game uses real nations, not clubs: country names, flags and colours are free
 
 ## 11. Settings 🟢 NOW
 
-- Season length (~25 min / ~1½ hr / ~4 hr / ~8 hr), the same in every sport: the length a new career starts from, ~25 min by default. Each career keeps its own, changed from the ⏱ button in the box. Starting a career at another length makes that the default, kept in the extension's own storage rather than the player's settings, until the setting is changed
+- Match duration (30 seconds / 1 / 2 / 5 minutes): the length a new career starts from, 30 seconds by default, which gives a season of about 20 to 25 minutes in every sport as each sport rounds up to its shortest. Each career keeps its own, changed from the ⏱ button in the box. Starting a career at another length makes that the default, kept in the extension's own storage rather than the player's settings, until the setting is changed
 - Full-time overlay on/off
 - Status bar score on/off
 - Which sports show (a tick for each; none ticked counts as all). Also from **Choose sports…** under the list in the box, which asks in a tick-list that won't accept no sports at all
@@ -575,7 +575,7 @@ Football's numbers and behaviour are unchanged: whole careers on fixed seeds has
 | Top/bottom bonus | 6, 4, 2 / 2, 4, 6 | 6, 3, 0 / 0, 3, 6 | 6, 3, 0 / 0, 3, 6 |
 | Favourite wins (of decided games) | about 64% | about 71% | about 66% |
 | Champions' losses a season | about 7.5 of 38 | about 2.6 of 14 | about 2.2 of 10 |
-| Match length at each season length (~25 min, ~1½ hr, ~4 hr, ~8 hr) | 30s, 2m, 5m, 10m | 1½m, 5½m, 13½m, 27m | 2m 10s, 8m 20s, 20m 40s, 41m |
+| Match lengths | 30s, 2m, 5m | 1m, 2m, 5m | 2m, 5m |
 | Season, shortest length | 23 min | 18 min | 27 min |
 | Nations Cup | top 64 | top 32 | top 16 |
 | World Championship | 40: 8 groups of 5 | 16: 4 groups of 4 | 12: 4 groups of 3 |
@@ -643,8 +643,7 @@ In rough priority order:
 | Several sports at once, as a list with one open at a time | The user's design. Careers no longer stop on switching; minimised rows keep it glanceable |
 | The status bar takes each career in turn, 5 seconds each | The user's choice over showing the latest action or all the scores together, with 5 seconds after 3 felt too quick, and standings rather than scores, which mean little in passing: it keeps one short score at a time and never leaves a sport out for long |
 | **Choose sports…** as a link under the list, opening VS Code's tick-list | The settings page alone was too hard to find. One link covers hiding and bringing back, which a Hide button on each row couldn't once the row had gone |
-| Players choose a season length, not a match length | What players care about is how often the summer decision comes, and the sports play different numbers of matches. The user's choice: all three now offer the same four seasons, with match lengths measured over 288 seasons a sport to match on average. A cup run moves a short season more, so rugby and cricket vary more around the same average |
-| New careers default to the shortest season | At 2 minutes a new football player waited about 95 minutes for their first decision, which is the game's whole hook |
+| New careers default to 30 seconds a match | At 2 minutes a new football player waited about 95 minutes for their first decision, which is the game's whole hook |
 | The summer question comes before who's leaving | Otherwise its answers fall below the fold in a normal-sized box. The ranks sit above it, the leavers just below |
 | Nothing else stops the clock: a failed save or redraw is logged and warned about once | Losing a few seconds' progress is better than a game that silently freezes until VS Code reloads |
 | A damaged save is set aside, not treated as no career | "No career" would have deleted it at the next close |

@@ -117,22 +117,22 @@
           "default": true,
           "description": "Show the Honours row in the box and a notification for each honour earned. Honours and records still count while this is off."
         },
-        "sportsSimulator.seasonLength": {
+        "sportsSimulator.matchDuration": {
           "type": "string",
           "enum": [
-            "25m",
-            "90m",
-            "4h",
-            "8h"
+            "30s",
+            "1m",
+            "2m",
+            "5m"
           ],
           "enumDescriptions": [
-            "About 25 minutes",
-            "About 1½ hours",
-            "About 4 hours",
-            "About 8 hours"
+            "30 seconds (football only: a season takes about 25 minutes)",
+            "1 minute (rugby only: a season takes about 20 minutes)",
+            "2 minutes (a season takes about 1½ hours in football, 35 minutes in rugby, 25 minutes in cricket)",
+            "5 minutes (a season takes about 3¾ hours in football, 1½ hours in rugby, 1 hour in cricket)"
           ],
-          "default": "25m",
-          "description": "Roughly how long a season takes in a new career, in every sport; a career under way keeps its own, set from the ⏱ button. Starting a career at another length makes that the default until you change this setting."
+          "default": "30s",
+          "description": "Real time one match takes in a new career; a career under way keeps its own, set from the ⏱ button. If the sport doesn't offer this length, the next longer one is used, so the default gives a season of about 20 to 25 minutes in every sport. Starting a career at another length makes that the default until you change this setting."
         },
         "sportsSimulator.fullTimeOverlay": {
           "type": "boolean",

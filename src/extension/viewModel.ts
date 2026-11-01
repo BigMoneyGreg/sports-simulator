@@ -20,10 +20,10 @@ export interface ViewOptions {
 export function buildView(game: Game, options: ViewOptions = { fullTimeOverlay: true }): View {
   const career = game.career;
   if (!career) {
-    const { terms } = game.sport.present;
+    const { terms, durations } = game.sport.present;
     return {
       screen: 'setup',
-      setup: { sport: game.sportId, terms, leagues: game.sport.format.leagues, nations: nationOptions(game.sportId), suggested: suggestNation(options.language), duration: game.duration },
+      setup: { sport: game.sportId, terms, leagues: game.sport.format.leagues, nations: nationOptions(game.sportId), suggested: suggestNation(options.language), duration: game.duration, durations },
     };
   }
   const sport = sportOf(career);
@@ -54,6 +54,7 @@ export function buildView(game: Game, options: ViewOptions = { fullTimeOverlay: 
       season: season.number,
       round: roundLabel(career),
       duration: game.duration,
+      durations: sport.present.durations,
     },
     match: buildMatch(game),
     tables,

@@ -12,7 +12,7 @@ function setup() {
   return { game, saves, seasonOver, fullTime, changed };
 }
 
-const minute = tickMs(footballSport, '90m');
+const minute = tickMs(footballSport, '2m');
 
 describe('game clock', () => {
   beforeEach(() => vi.useFakeTimers());
@@ -139,7 +139,7 @@ describe('game clock', () => {
 
   it('plays a whole season, waits at the end, and moves on after allocation', () => {
     const { game, seasonOver } = setup();
-    game.duration = '25m';
+    game.duration = '30s';
     game.start({ rating: 50, seed: 5 });
     vi.advanceTimersByTime(60 * 60 * 1000);
     expect(game.phase).toBe('seasonOver');
@@ -206,7 +206,7 @@ describe('season end view', () => {
 
   it('reports the season and carries on once the player answers', () => {
     const { game } = setup();
-    game.duration = '25m';
+    game.duration = '30s';
     game.start({ rating: 30, seed: 9 });
     vi.advanceTimersByTime(60 * 60 * 1000);
     const v = buildView(game);
@@ -233,7 +233,7 @@ describe('season end view', () => {
 
 describe('match length', () => {
   it('never changes results: 30 sec, 2 min and 5 min play identically', () => {
-    const play = (duration: '25m' | '90m' | '4h') => {
+    const play = (duration: '30s' | '2m' | '5m') => {
       let pending: (() => void) | null = null;
       const game = new Game({ save: () => {}, changed: () => {} }, { setTimeout: (fn) => ((pending = fn), 1), clearTimeout: () => (pending = null) });
       game.duration = duration;
@@ -245,9 +245,9 @@ describe('match length', () => {
       }
       return JSON.stringify(game.career!.season.leagues.map((l) => l.table));
     };
-    const short = play('25m');
-    expect(play('90m')).toBe(short);
-    expect(play('4h')).toBe(short);
+    const short = play('30s');
+    expect(play('2m')).toBe(short);
+    expect(play('5m')).toBe(short);
   });
 });
 

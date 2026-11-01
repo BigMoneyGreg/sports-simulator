@@ -20,7 +20,7 @@ import type { Fixture } from '../core/league';
 import { Rng } from '../core/rng';
 import type { SportId } from '../core/format';
 import { SPORTS, type AnySport } from '../sports';
-import { SEASON_LENGTHS, type SeasonLength } from '../shared/view';
+import type { Duration } from '../shared/view';
 
 export const SAVE_VERSION = 8;
 
@@ -42,15 +42,23 @@ export function migrate(saved: SavedGame, migrations = MIGRATIONS): SavedGame | 
   return s.version === SAVE_VERSION ? s : null;
 }
 
+const DURATION_MS: Record<Duration, number> = { '30s': 30_000, '1m': 60_000, '2m': 120_000, '5m': 300_000 };
 
 /** Real milliseconds per tick of a match: a match-minute, or in cricket an over. */
-export function tickMs(sport: AnySport, duration: SeasonLength): number {
-  return (sport.present.matchSeconds[duration] * 1000) / sport.module.ticks;
+export function tickMs(sport: AnySport, duration: Duration): number {
+  return DURATION_MS[duration] / sport.module.ticks;
+}
+
+/** The match length to use when this one isn't offered in the sport: the next longer, or else its longest. */
+export function fitDuration(sport: AnySport, duration: Duration): Duration {
+  const offered = sport.present.durations;
+  if (offered.includes(duration)) return duration;
+  return offered.find((d) => DURATION_MS[d] >= DURATION_MS[duration]) ?? offered[offered.length - 1];
 }
 
 /** How long the full-time result stays up before the next matchday. */
-export function fullTimePause(duration: SeasonLength): number {
-  return duration === '25m' ? 3000 : 5000;
+export function fullTimePause(duration: Duration): number {
+  return duration === '30s' ? 3000 : 5000;
 }
 
 export interface LiveRound {
@@ -67,8 +75,8 @@ export interface SavedGame {
   career: Career;
   live: LiveRound | null;
   paused: boolean;
-  /** This career's season length; older saves go without and take the default. */
-  duration?: SeasonLength;
+  /** This career's match length; older saves go without and take the default. */
+  duration?: Duration;
 }
 
 export interface Scheduler {
@@ -95,7 +103,7 @@ export class Game {
   lastMatch: { match: any; fixture: Fixture } | null = null;
   paused = false;
   phase: Phase = 'idle';
-  duration: SeasonLength = '90m';
+  duration: Duration = '2m';
   /** The sport being played, or chosen for the next career. */
   sportId: SportId = 'football';
   /** Hidden in the settings: the clock stands still, and `paused` stays as the player left it. Not saved. */
@@ -117,6 +125,7 @@ export class Game {
   selectSport(sport: SportId): void {
     this.stop();
     this.sportId = sport;
+    this.duration = fitDuration(this.sport, this.duration);
   }
 
   /** Loads a save; with `run` false it's only shown (another window is running the game). */
@@ -134,8 +143,7 @@ export class Game {
     }
     this.career = saved.career;
     this.sportId = saved.career.sport;
-    // A length from before seasons were what's chosen falls back to the default.
-    if (saved.duration && SEASON_LENGTHS.includes(saved.duration)) this.duration = saved.duration;
+    this.duration = fitDuration(this.sport, saved.duration ?? this.duration);
     this.live = saved.live;
     this.paused = saved.paused;
     this.phase = this.career.pending ? 'seasonOver' : this.live ? 'live' : 'idle';
@@ -169,9 +177,9 @@ export class Game {
     this.save();
   }
 
-  setDuration(duration: SeasonLength): void {
+  setDuration(duration: Duration): void {
     const before = this.duration;
-    this.duration = duration;
+    this.duration = fitDuration(this.sport, duration);
     if (this.career && this.duration !== before) this.save();
     // Only a running clock is rescheduled: a window that's just showing the game must not start one.
     if (this.phase === 'live' && this.timer !== null) {

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Game, tickMs, type SavedGame } from '../src/extension/game';
 import { HANDOVER_TIMEOUT_MS, Ownership, POLL_MS, type Lock } from '../src/extension/ownership';
 
-const minute = tickMs(footballSport, '90m');
+const minute = tickMs(footballSport, '2m');
 
 /** VS Code windows sharing one save and one lock, as they share the global storage folder. */
 function world() {
@@ -86,7 +86,7 @@ describe('one game across several windows', () => {
   it('a summer choice made in one window survives, because the other has stopped writing', () => {
     const { open, disk } = world();
     const a = open('a', true);
-    a.game.duration = '25m';
+    a.game.duration = '30s';
     a.game.start({ rating: 50, seed: 4 });
     const b = open('b', false);
     vi.advanceTimersByTime(60 * 60 * 1000);
