@@ -87,7 +87,7 @@ describe('the extension, played through its messages', () => {
   it('Reset honours clears past careers and leaves a running career alone', () => {
     start();
     fake.send({ type: 'endCareer', sport: 'football' });
-    start('rugby', 'WAL', '1m');
+    start('rugby', 'WAL', '90s');
     fake.send({ type: 'ready' });
     expect(fake.box.honours).toBe('1 past career');
     fake.send({ type: 'resetHonours' });
@@ -97,9 +97,9 @@ describe('the extension, played through its messages', () => {
   });
 
   it('says when a season ends if that sport is not open, waits for the answer, then carries on', () => {
-    start('rugby', 'WAL', '1m');
+    start('rugby', 'WAL', '90s');
     open(null);
-    run(40 * 60_000);
+    run(50 * 60_000);
     expect(fake.toasts).toEqual([expect.stringMatching(/^Rugby season 1 finished: .*Decision waiting\.$/)]);
     expect(fake.status.text).toMatch(/\$\(bell\)/);
     expect(fake.view.badge.value).toBe(1);
@@ -113,7 +113,7 @@ describe('the extension, played through its messages', () => {
 
   it('Choose sports hides a sport, holds its career where it is, and brings it back', async () => {
     start();
-    start('rugby', 'WAL', '1m');
+    start('rugby', 'WAL', '90s');
     run(30_000);
     fake.pick = (items) => items.filter((i) => i.id !== 'football');
     await fake.commands.get('sportsSimulator.chooseSports')!();
@@ -149,7 +149,7 @@ describe('the extension, played through its messages', () => {
 
   it('a click on the status bar opens the sport on show', async () => {
     start();
-    start('rugby', 'WAL', '1m');
+    start('rugby', 'WAL', '90s');
     run(5000);
     const shown = fake.status.text.includes('Rugby') ? 'rugby' : 'football';
     await fake.commands.get('sportsSimulator.openShown')!();

@@ -65,7 +65,7 @@ describe('formats', () => {
     expect(band(FOOTBALL, 1)).toEqual({ min: 80, max: 99 });
     expect(band(FOOTBALL, 5)).toEqual({ min: 0, max: 19 });
     expect(cupStages(FOOTBALL, 'championship')).toHaveLength(9);
-    expect(SPORTS.football.present.durations).toEqual(['30s', '2m', '5m']);
+    expect(SPORTS.football.present.durations).toEqual(['30s', '2m', '5m', '10m']);
   });
 
   it('marks the zones of each sport', () => {
@@ -666,18 +666,19 @@ describe.each(NEW_SPORTS)('%s in the game', (id) => {
 
 describe('match lengths', () => {
   it('offers each sport its own, fitting a length it doesn\'t have to the next longer', () => {
-    expect(SPORTS.rugby.present.durations).toEqual(['1m', '2m', '5m']);
-    expect(SPORTS.cricket.present.durations).toEqual(['2m', '5m']);
+    expect(SPORTS.rugby.present.durations).toEqual(['90s', '5m', '15m', '30m']);
+    expect(SPORTS.cricket.present.durations).toEqual(['2m', '10m', '20m', '40m']);
     expect(fitDuration(SPORTS.cricket, '30s')).toBe('2m');
-    expect(fitDuration(SPORTS.cricket, '1m')).toBe('2m');
-    expect(fitDuration(SPORTS.rugby, '30s')).toBe('1m');
-    expect(fitDuration(SPORTS.football, '1m')).toBe('2m');
+    expect(fitDuration(SPORTS.cricket, '90s')).toBe('2m');
+    expect(fitDuration(SPORTS.rugby, '30s')).toBe('90s');
+    expect(fitDuration(SPORTS.football, '40m')).toBe('10m');
+    expect(fitDuration(SPORTS.rugby, '1m' as never)).toBe('90s');
     expect(fitDuration(SPORTS.football, '5m')).toBe('5m');
   });
 
   it('runs a tick by the sport\'s own clock', () => {
     expect(tickMs(SPORTS.football, '2m')).toBeCloseTo(120000 / 90);
-    expect(tickMs(SPORTS.rugby, '1m')).toBeCloseTo(60000 / 80);
+    expect(tickMs(SPORTS.rugby, '90s')).toBeCloseTo(90000 / 80);
     expect(tickMs(SPORTS.cricket, '2m')).toBe(500);
   });
 
@@ -724,15 +725,15 @@ describe('sports in the save', () => {
     const saved = saves[saves.length - 1];
     expect(saved.duration).toBe('5m');
     const again = new Game({ save: () => {}, changed: () => {} }, clock.scheduler);
-    again.setDuration('2m');
+    again.setDuration('15m');
     again.load(saved, false);
     expect(again.duration).toBe('5m');
     // An older save has none, and takes the default.
     const { duration: _, ...older } = saved;
-    again.setDuration('2m');
+    again.setDuration('15m');
     again.load(null, false);
     again.load(older, false);
-    expect(again.duration).toBe('2m');
+    expect(again.duration).toBe('15m');
   });
 
   describe('several sports at once', () => {
@@ -889,7 +890,7 @@ describe('sports in the save', () => {
     expect(setup.screen === 'setup' && setup.setup.sport).toBe('cricket');
     expect(setup.screen === 'setup' && setup.setup.leagues).toBe(5);
     expect(setup.screen === 'setup' && setup.setup.nations).toHaveLength(30);
-    expect(game.duration).toBe('2m');
+    expect(game.duration).toBe('10m');
     game.load(rugbySave);
     expect(game.sportId).toBe('rugby');
     expect(game.career!.clubs[0].name).toBe('Wales');

@@ -121,18 +121,17 @@
           "type": "string",
           "enum": [
             "30s",
-            "1m",
+            "90s",
             "2m",
-            "5m"
-          ],
-          "enumDescriptions": [
-            "30 seconds (football only: a season takes about 25 minutes)",
-            "1 minute (rugby only: a season takes about 20 minutes)",
-            "2 minutes (a season takes about 1½ hours in football, 35 minutes in rugby, 25 minutes in cricket)",
-            "5 minutes (a season takes about 3¾ hours in football, 1½ hours in rugby, 1 hour in cricket)"
+            "5m",
+            "10m",
+            "15m",
+            "20m",
+            "30m",
+            "40m"
           ],
           "default": "30s",
-          "description": "Real time one match takes in a new career; a career under way keeps its own, set from the ⏱ button. If the sport doesn't offer this length, the next longer one is used, so the default gives a season of about 20 to 25 minutes in every sport. Starting a career at another length makes that the default until you change this setting."
+          "description": "Real time one match takes in a new career; a career under way keeps its own, set from the ⏱ button. If the sport doesn't offer this length, the next longer one is used, so the default gives a season of about 25 minutes in every sport. Starting a career at another length makes that the default until you change this setting."
         },
         "sportsSimulator.fullTimeOverlay": {
           "type": "boolean",

@@ -26,7 +26,7 @@ export const footballPresenter: SportPresenter<FootballMatch> = {
       "Every summer some players retire or are dropped, and the squad loses strength, more at one end of the pitch than the other. Who's leaving shows where most of it went; your season shows where you were already short.",
       "Whatever the question, one answer strengthens the attack and the other the defence. Let one side fall too far behind and opponents exploit it, and at the top there's less room for a weak side.",
     ],
-    seasonLabels: { '30s': 'Season ~25 min', '2m': 'Season ~1½ hr', '5m': 'Season ~3¾ hr' },
+    seasonLabels: { '30s': 'Season ~25 min', '2m': 'Season ~1½ hr', '5m': 'Season ~4 hr', '10m': 'Season ~8 hr' },
   },
   questions: {
     callUp: { prompt: 'Retirements leave gaps. Who gets the call?' },
@@ -34,7 +34,7 @@ export const footballPresenter: SportPresenter<FootballMatch> = {
     formation: { prompt: 'Time for a new shape?', titles: { attack: 'Three up front', defence: 'A back five' } },
     training: { prompt: 'What does the summer camp work on?', titles: { attack: 'Finishing', defence: 'Defending' } },
   },
-  durations: ['30s', '2m', '5m'],
+  durations: ['30s', '2m', '5m', '10m'],
   clock: matchClock,
   timeline,
   score: (m) => [String(m.home.goals), String(m.away.goals)],

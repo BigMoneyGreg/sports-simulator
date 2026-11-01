@@ -74,7 +74,7 @@ export const cricketPresenter: SportPresenter<CricketMatch> = {
       "Every summer some players retire or are dropped, and the squad loses strength, more in the batting or the bowling. Who's leaving shows where most of it went; your season shows where you were already short.",
       "Whatever the question, one answer strengthens the batting and the other the bowling. Let one fall too far behind and opponents exploit it, and at the top there's less room for a weak side.",
     ],
-    seasonLabels: { '2m': 'Season ~25 min', '5m': 'Season ~1 hr' },
+    seasonLabels: { '2m': 'Season ~25 min', '10m': 'Season ~2 hr', '20m': 'Season ~4 hr', '40m': 'Season ~8 hr' },
   },
   questions: {
     callUp: { prompt: 'Retirements leave gaps. Who gets the call?' },
@@ -82,7 +82,7 @@ export const cricketPresenter: SportPresenter<CricketMatch> = {
     formation: { prompt: 'Time to change the balance of the side?', titles: { attack: 'An extra batter', defence: 'An extra bowler' } },
     training: { prompt: 'What does the summer camp work on?', titles: { attack: 'Power hitting', defence: 'Death bowling' } },
   },
-  durations: ['2m', '5m'],
+  durations: ['2m', '10m', '20m', '40m'],
   clock(m) {
     if (m.period === 'done') return m.penalties ? 'FT (SO)' : 'FT';
     if (m.period === 'break') return 'Innings break';

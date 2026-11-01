@@ -42,7 +42,7 @@ export function migrate(saved: SavedGame, migrations = MIGRATIONS): SavedGame | 
   return s.version === SAVE_VERSION ? s : null;
 }
 
-const DURATION_MS: Record<Duration, number> = { '30s': 30_000, '1m': 60_000, '2m': 120_000, '5m': 300_000 };
+const DURATION_MS: Record<Duration, number> = { '30s': 30_000, '90s': 90_000, '2m': 120_000, '5m': 300_000, '10m': 600_000, '15m': 900_000, '20m': 1_200_000, '30m': 1_800_000, '40m': 2_400_000 };
 
 /** Real milliseconds per tick of a match: a match-minute, or in cricket an over. */
 export function tickMs(sport: AnySport, duration: Duration): number {
@@ -53,6 +53,8 @@ export function tickMs(sport: AnySport, duration: Duration): number {
 export function fitDuration(sport: AnySport, duration: Duration): Duration {
   const offered = sport.present.durations;
   if (offered.includes(duration)) return duration;
+  // A length this version no longer has.
+  if (!DURATION_MS[duration]) return offered[0];
   return offered.find((d) => DURATION_MS[d] >= DURATION_MS[duration]) ?? offered[offered.length - 1];
 }
 
