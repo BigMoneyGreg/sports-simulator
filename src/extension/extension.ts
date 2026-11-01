@@ -4,7 +4,7 @@ import { SPORT_IDS, type SportId } from '../core/format';
 import { startRating } from '../core/league';
 import { Rng } from '../core/rng';
 import { newFeats, FEAT_TITLES, type CareerSummary } from '../core/honours';
-import { DURATIONS, type Duration, type PanelId, type ToHost } from '../shared/view';
+import { SEASON_LENGTHS, type SeasonLength, type PanelId, type ToHost } from '../shared/view';
 import { Game } from './game';
 import { Ownership, POLL_MS } from './ownership';
 import { SidebarProvider } from './sidebar';
@@ -34,10 +34,10 @@ export function activate(context: vscode.ExtensionContext): void {
   const statusBar = new StatusBar();
 
   const config = () => vscode.workspace.getConfiguration('sportsSimulator');
-  /** A new career's length: the one the last career started at, until the player changes the setting. */
-  const duration = (): Duration => {
-    const value = storage.lastDuration() ?? config().get<string>('matchDuration', '30s');
-    return (DURATIONS as string[]).includes(value) ? (value as Duration) : '30s';
+  /** A new career's season length: the one the last career started at, until the player changes the setting. */
+  const duration = (): SeasonLength => {
+    const value = storage.lastDuration() ?? config().get<string>('seasonLength', '25m');
+    return (SEASON_LENGTHS as string[]).includes(value) ? (value as SeasonLength) : '25m';
   };
 
   const shownSports = () => enabledSports(config().get('sports'));
@@ -200,7 +200,7 @@ export function activate(context: vscode.ExtensionContext): void {
         const { team, league } = message;
         owner.whenOwner(() => {
           if (game.career) return;
-          if (DURATIONS.includes(message.duration)) {
+          if (SEASON_LENGTHS.includes(message.duration)) {
             game.setDuration(message.duration);
             // The next new career starts from the same length.
             storage.setLastDuration(message.duration);
@@ -218,7 +218,7 @@ export function activate(context: vscode.ExtensionContext): void {
         owner.whenOwner(() => games[message.sport].togglePause());
         return;
       case 'setDuration':
-        if (DURATIONS.includes(message.duration)) owner.whenOwner(() => games[message.sport].setDuration(message.duration));
+        if (SEASON_LENGTHS.includes(message.duration)) owner.whenOwner(() => games[message.sport].setDuration(message.duration));
         refresh();
         return;
       case 'openPanel':
@@ -348,7 +348,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     vscode.workspace.onDidChangeConfiguration((e) => {
       // The setting is the length new careers start from; a career under way keeps its own.
-      if (e.affectsConfiguration('sportsSimulator.matchDuration')) {
+      if (e.affectsConfiguration('sportsSimulator.seasonLength')) {
         storage.setLastDuration(undefined);
         for (const game of all()) if (!game.career) game.setDuration(duration());
       }

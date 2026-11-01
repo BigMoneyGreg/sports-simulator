@@ -11,6 +11,7 @@ import { teamCount, type SportId } from '../src/core/format';
 import { goalRanks, sortTable, startRating } from '../src/core/league';
 import { Rng } from '../src/core/rng';
 import { tickMs, fullTimePause } from '../src/extension/game';
+import { SEASON_LABELS, SEASON_LENGTHS, type SeasonLength } from '../src/shared/view';
 import { SPORTS, type AnySport } from '../src/sports';
 
 const CAREERS = 16;
@@ -26,7 +27,7 @@ function check(name: string, pass: boolean, detail: string | number): void {
 
 /** Targets differ by sport: rugby's favourites win more, and its promoted sides bounce more with two going up. Champions should still lose a few. */
 const TARGETS: Record<'rugby' | 'cricket', { favourite: [number, number]; score: [number, number]; seasonMinutes: [number, number]; straightBack: [number, number]; championLosses: number }> = {
-  rugby: { favourite: [68, 74], score: [20, 32], seasonMinutes: [15, 24], straightBack: [30, 55], championLosses: 2.2 },
+  rugby: { favourite: [68, 74], score: [20, 32], seasonMinutes: [20, 32], straightBack: [30, 55], championLosses: 2.2 },
   cricket: { favourite: [63, 69], score: [140, 170], seasonMinutes: [20, 32], straightBack: [8, 30], championLosses: 1.9 },
 };
 
@@ -195,13 +196,13 @@ function careerRun(id: 'rugby' | 'cricket', sport: AnySport): void {
 
   console.log(`\n-- Season length --`);
   // A match's full clock plus the full-time pause; a chase that ends early makes cricket's a little shorter.
-  const matchMinutes = (d: (typeof sport.present.durations)[number]) => (tickMs(sport, d) * sport.module.ticks + fullTimePause(d)) / 60000;
-  for (const d of sport.present.durations) console.log(`      ${d}: about ${(mean(games) * matchMinutes(d)).toFixed(0)} min (label "${sport.present.terms.seasonLabels[d]}")`);
+  const matchMinutes = (d: SeasonLength) => (tickMs(sport, d) * sport.module.ticks + fullTimePause(d)) / 60000;
+  for (const d of SEASON_LENGTHS) console.log(`      ${d}: about ${(mean(games) * matchMinutes(d)).toFixed(0)} min (label "${SEASON_LABELS[d]}")`);
   console.log(`      matches a season: mean ${mean(games).toFixed(1)}, ${Math.min(...games)}–${Math.max(...games)}`);
-  const shortest = sport.present.durations[0];
+  const shortest = SEASON_LENGTHS[0];
   const t = TARGETS[id].seasonMinutes;
   const minutes = mean(games) * matchMinutes(shortest);
-  check(`Shortest match length gives a season of ${t[0]}–${t[1]} min`, minutes >= t[0] && minutes <= t[1], `${minutes.toFixed(0)} min at ${shortest}`);
+  check(`Shortest season length gives a season of ${t[0]}–${t[1]} min`, minutes >= t[0] && minutes <= t[1], `${minutes.toFixed(0)} min at ${shortest}`);
 }
 
 const only = process.argv.slice(2).find((a) => a === 'rugby' || a === 'cricket') as 'rugby' | 'cricket' | undefined;

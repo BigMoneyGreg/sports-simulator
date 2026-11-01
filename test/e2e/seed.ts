@@ -19,7 +19,7 @@ const step = () => queue.shift()!.fn();
 const moments: string[] = [];
 const game = new Game({ save: () => {}, changed: () => {} }, scheduler);
 game.selectSport('rugby');
-game.setDuration('1m');
+game.setDuration('25m');
 game.start({ rating: 55, seed: 21, team: 'WAL' });
 while (game.phase !== 'seasonOver') {
   if (game.phase === 'live') moments.push(JSON.stringify(game.snapshot()));

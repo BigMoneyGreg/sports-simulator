@@ -1,5 +1,5 @@
 import type { Rng } from './rng';
-import type { Duration } from '../shared/view';
+import type { SeasonLength } from '../shared/view';
 
 /** A player in a squad. Positions are sport-specific codes (e.g. GK, DEF). */
 export interface Player {
@@ -122,8 +122,6 @@ export interface SportTerms {
   deciderLabel: string;
   /** "Every summer some players retire…" and "Whatever the question…". */
   howTo: [string, string];
-  /** Roughly how long a whole season takes at each match length. */
-  seasonLabels: Partial<Record<Duration, string>>;
 }
 
 /** The summer question's wording for a sport. */
@@ -152,8 +150,8 @@ export interface InningsCard {
 export interface SportPresenter<M> {
   terms: SportTerms;
   questions: QuestionCopy;
-  /** Match lengths offered, shortest first. */
-  durations: Duration[];
+  /** Real seconds a match takes at each season length: a sport with fewer matches a season plays each one for longer. Measured to give the same average season in every sport. */
+  matchSeconds: Record<SeasonLength, number>;
   clock(match: M): string;
   /** The clock where space is tight, if it has a shorter form. */
   shortClock?(match: M): string;

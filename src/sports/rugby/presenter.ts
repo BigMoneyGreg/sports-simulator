@@ -26,7 +26,6 @@ export const rugbyPresenter: SportPresenter<RugbyMatch> = {
       "Every summer some players retire or are dropped, and the squad loses strength, more among the backs or the forwards. Who's leaving shows where most of it went; your season shows where you were already short.",
       "Whatever the question, one answer strengthens the attack and the other the defence. Let one side fall too far behind and opponents exploit it, and at the top there's less room for a weak side.",
     ],
-    seasonLabels: { '1m': 'Season ~20 min', '2m': 'Season ~35 min', '5m': 'Season ~1½ hr' },
   },
   questions: {
     callUp: { prompt: 'Retirements leave gaps. Who gets the call?' },
@@ -34,7 +33,7 @@ export const rugbyPresenter: SportPresenter<RugbyMatch> = {
     formation: { prompt: 'Time for a new game plan?', titles: { attack: 'Run it wide', defence: 'Tighten up' } },
     training: { prompt: 'What does the summer camp work on?', titles: { attack: 'Attack moves', defence: 'Defensive drills' } },
   },
-  durations: ['1m', '2m', '5m'],
+  matchSeconds: { '25m': 90, '90m': 330, '4h': 810, '8h': 1620 },
   clock(m) {
     if (m.period === 'done') return m.penalties ? 'FT (kicks)' : 'FT';
     const last = m.events[m.events.length - 1];
