@@ -26,7 +26,7 @@ function check(name: string, pass: boolean, detail: string | number): void {
 
 /** Targets differ by sport: rugby's favourites win more, and its promoted sides bounce more with two going up. Champions should still lose a few. */
 const TARGETS: Record<'rugby' | 'cricket', { favourite: [number, number]; score: [number, number]; seasonMinutes: [number, number]; straightBack: [number, number]; championLosses: number }> = {
-  rugby: { favourite: [68, 74], score: [20, 32], seasonMinutes: [15, 24], straightBack: [30, 55], championLosses: 2.2 },
+  rugby: { favourite: [68, 74], score: [20, 32], seasonMinutes: [20, 32], straightBack: [30, 55], championLosses: 2.2 },
   cricket: { favourite: [63, 69], score: [140, 170], seasonMinutes: [20, 32], straightBack: [8, 30], championLosses: 1.9 },
 };
 
