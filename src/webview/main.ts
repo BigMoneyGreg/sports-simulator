@@ -8,6 +8,7 @@ import {
   type GameView,
   type HonoursView,
   type LiveMatchView,
+  type MatchBadge,
   type NationOption,
   type PanelId,
   type PlayoffView,
@@ -204,9 +205,13 @@ function rowHtml(r: SportRowView, isOpen: boolean): string {
   return `<div class="sport-row${isOpen ? ' open' : ''}${r.waiting ? ' waiting' : ''}">
     <button type="button" class="row-main" data-open="${r.id}" aria-expanded="${isOpen}">
       <span class="chevron" aria-hidden="true"></span>${sportIcon(r.id)}
-      <span class="row-text"><span class="row-name">${esc(r.name)}${r.club ? `<span class="muted"> · ${esc(r.club)}</span>` : ''}</span><span class="row-line muted small"></span></span>
+      <span class="row-text"><span class="row-name">${esc(r.name)}${r.club ? `<span class="muted"> · ${esc(r.club)}</span>` : ''}</span><span class="row-sub">${r.badge && !isOpen && !r.waiting ? badgeHtml(r.badge) : ''}<span class="row-line muted small"></span></span></span>
     </button>${control}${r.club ? '<span class="row-progress" aria-hidden="true"><span></span></span>' : ''}
   </div>`;
+}
+
+function badgeHtml(b: MatchBadge): string {
+  return `<span class="badge ${b.kind}">${b.label}</span>`;
 }
 
 function writeRow(section: HTMLElement, html: string, line: string): void {
@@ -553,7 +558,7 @@ function scoreboard(m: LiveMatchView, terms: SportTerms): string {
   const team = (t: LiveMatchView['home'], town: string) =>
     `<div class="team ${t.isPlayer ? 'me' : ''}" title="${esc(t.name)}"${t.isPlayer ? ` data-accent="${esc(t.colours[0])}"` : ''}>${swatch(t, 'crest big')}<span class="code">${esc(t.short)}</span><span class="town">${esc(town)}</span></div>`;
   return `<div class="board card">
-      <div class="comp muted small">${esc(m.competition)}${m.round ? ` · ${esc(m.round)}` : ''}${m.rival ? ' · <span class="rival-tag">⚔ Rival match</span>' : ''}</div>
+      <div class="comp muted small">${m.badge ? `${badgeHtml(m.badge)} ${esc(m.stage ?? '')}` : esc(m.competition)}${m.round ? ` · ${esc(m.round)}` : ''}${m.rival ? ' · <span class="rival-tag">⚔ Rival match</span>' : ''}</div>
       <div class="score">${team(m.home, m.homeTown)}<div class="mid"><div class="goals${long ? ' long' : ''}">${esc(m.score[0] || '–')}<span>${esc(terms.scoreJoin.trim())}</span>${esc(m.score[1] || '–')}</div>
         <div class="clock-big ${m.finished ? 'ft' : 'live'}">${esc(m.clock)}</div></div>${team(m.away, m.awayTown)}</div>
       ${m.situation ? `<div class="small situation">${esc(m.situation)}</div>` : ''}

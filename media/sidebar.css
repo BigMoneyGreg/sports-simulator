@@ -1492,6 +1492,40 @@ body.vscode-light .focus.defence strong {
   display: none;
 }
 
+.row-sub {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.row-sub .row-line {
+  min-width: 0;
+}
+
+/* A word on a solid colour: readable in any theme, and not only by its colour. */
+.badge {
+  flex: none;
+  padding: 0 4px;
+  border-radius: 3px;
+  color: #1e1e1e;
+  font-size: 0.8em;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.badge.cup {
+  background: #b4bec9;
+}
+
+.badge.world {
+  background: #e3b341;
+}
+
+.badge.playoff {
+  background: #79b8ff;
+}
+
 .waiting .row-line {
   color: var(--vscode-foreground);
   font-weight: 600;
@@ -1874,6 +1908,12 @@ body.vscode-high-contrast .nation.on,
 body.vscode-high-contrast tr.me {
   outline: 1px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
   outline-offset: -1px;
+}
+
+body.vscode-high-contrast .badge {
+  background: transparent;
+  color: var(--vscode-foreground);
+  outline: 1px solid var(--vscode-contrastBorder, currentColor);
 }
 
 body.vscode-high-contrast .chip,

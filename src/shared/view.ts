@@ -27,8 +27,17 @@ export interface TimelineView {
   score?: string;
 }
 
+/** Marks a match that isn't an ordinary league one. */
+export interface MatchBadge {
+  label: 'Cup' | 'World' | 'Play-off';
+  kind: 'cup' | 'world' | 'playoff';
+}
+
 export interface LiveMatchView {
   competition: string;
+  badge?: MatchBadge;
+  /** With a badge, the rest of the competition's name: "Round of 64", "Group B". */
+  stage?: string;
   /** e.g. "MD 7/38" for league matches. */
   round?: string;
   /** Town names for the scoreboard. */
@@ -190,6 +199,8 @@ export interface SportRowView {
   club?: string;
   /** "3rd Wk 7/38 · SCO 1–1 RSA 59'". */
   line?: string;
+  /** Shown before the line when this isn't a league match. */
+  badge?: MatchBadge;
   /** How far through the league season, from 0 to 1. */
   progress?: number;
   paused: boolean;

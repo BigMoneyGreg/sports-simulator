@@ -7,7 +7,7 @@ import { difference, goalRanks, recordResult, runRateAgainst, runRateFor, sortTa
 import { SPORTS, sportOf, type AnySport } from '../sports';
 import { shortName, surname } from '../sports/football/names';
 import { ordinal } from '../shared/format';
-import type { CareerRowView, HonoursView, SportRowView, CupRunView, CupsView, CupTieView, CupView, NationOption, CabinetView, QuestionView, ClubView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, TableView, TeamBadge, View } from '../shared/view';
+import type { CareerRowView, MatchBadge, HonoursView, SportRowView, CupRunView, CupsView, CupTieView, CupView, NationOption, CabinetView, QuestionView, ClubView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, TableView, TeamBadge, View } from '../shared/view';
 import { fullTimePause } from './game';
 import type { Game } from './game';
 
@@ -445,6 +445,24 @@ function competition(fixture: Fixture, career: Career): string {
   }
 }
 
+const BADGES: Partial<Record<Fixture['kind'], MatchBadge>> = {
+  cup: { label: 'Cup', kind: 'cup' },
+  championship: { label: 'World', kind: 'world' },
+  playoffSemi1: { label: 'Play-off', kind: 'playoff' },
+  playoffSemi2: { label: 'Play-off', kind: 'playoff' },
+  playoffFinal: { label: 'Play-off', kind: 'playoff' },
+};
+
+/** The badge for the match on show, if it isn't an ordinary league one. */
+function matchBadge(game: Game): MatchBadge | undefined {
+  return game.shownMatch ? BADGES[game.shownMatch.fixture.kind] : undefined;
+}
+
+/** What a badge leaves to say: "Round of 64", "Group B", "League 3 final". */
+function badgeStage(fixture: Fixture, career: Career): string {
+  return competition(fixture, career).replace(/^.* · /, '').replace(' play-off', '');
+}
+
 function buildMatch(game: Game): LiveMatchView | null {
   const shown = game.shownMatch;
   const career = game.career!;
@@ -464,6 +482,7 @@ function buildMatch(game: Game): LiveMatchView | null {
   const scorecard = present.scorecard?.(match, { playerName }, towns);
   const view: LiveMatchView = {
     competition: competition(fixture, career),
+    ...(BADGES[fixture.kind] ? { badge: BADGES[fixture.kind], stage: badgeStage(fixture, career) } : {}),
     // Once the match is over the calendar has moved on, so its label would be the next match's.
     round: fixture.kind === 'league' && !module.isFinished(match) ? roundLabel(career) : undefined,
     homeTown: towns[0],
@@ -718,10 +737,11 @@ export function statusText(game: Game, goal = false): string {
   if (!career) return '$(trophy) Start a Sports Simulator career';
   if (career.pending) return `$(bell) ${SEASON_OVER}`;
   const score = scoreLine(game);
+  const badge = matchBadge(game);
   // Paused between matches after a restart: nothing to show but where the career stands.
   if (!score) return `${STATUS_ICONS[game.sportId]}  ${game.paused ? '⏸ ' : ''}${standing(game)}`;
   const rival = game.shownMatch && isRivalFixture(career, game.shownMatch.fixture) ? '⚔ ' : '';
-  return `${STATUS_ICONS[game.sportId]}  ${rival}${game.paused ? '⏸ ' : ''}${goal && !score.startsWith('FT') ? `${alert} ` : ''}${score} · ${standing(game)}`;
+  return `${STATUS_ICONS[game.sportId]}  ${rival}${game.paused ? '⏸ ' : ''}${badge ? `${badge.label}: ` : ''}${goal && !score.startsWith('FT') ? `${alert} ` : ''}${score}${badge ? '' : ` · ${standing(game)}`}`;
 }
 
 /** Where the player's club stands in its league table before the matchday in progress. */
@@ -764,9 +784,19 @@ export function collapsedText(game: Game): string | undefined {
   const career = game.career;
   if (!career) return undefined;
   if (career.pending) return 'Season over';
+  const badge = matchBadge(game);
+  if (badge) return `${badge.label} · ${rowLine(game)}`;
   const place = `${ordinal(leaguePlace(career).position)} Wk ${Math.max(1, leagueWeek(game))}/${leagueRounds(career.season)}`;
   const score = scoreLine(game, true);
   return score ? `${place} · ${score}` : place;
+}
+
+/** A minimised row's line, which has the room for a badge beside it: a tournament says where it's got to, and league place would only mislead. */
+function rowLine(game: Game): string {
+  const badge = matchBadge(game);
+  if (!badge) return collapsedText(game)!;
+  const score = scoreLine(game, true)!;
+  return badge.kind === 'world' ? `${badgeStage(game.shownMatch!.fixture, game.career!)} · ${score}` : score;
 }
 
 /** "Wk 7/14 · 2nd in L3". */
@@ -780,7 +810,9 @@ function standing(game: Game): string {
 function standingText(game: Game): string {
   const name = game.sport.present.terms.name;
   if (game.career!.pending) return `$(bell) ${name}: season over`;
-  return `${STATUS_ICONS[game.sportId]}  ${name}: ${game.paused ? '⏸ ' : ''}${standing(game)}`;
+  const badge = matchBadge(game);
+  const place = badge?.kind === 'world' ? badgeStage(game.shownMatch!.fixture, game.career!) : standing(game);
+  return `${STATUS_ICONS[game.sportId]}  ${name}: ${game.paused ? '⏸ ' : ''}${badge ? `${badge.label} · ` : ''}${place}`;
 }
 
 /** The sports ticked in the settings. Unticking every one would leave an empty box, so that counts as all of them. */
@@ -795,9 +827,10 @@ export function sportRows(games: Game[]): SportRowView[] {
     const career = game.career;
     const row = { id: game.sportId, name: game.sport.present.terms.name, paused: game.paused, waiting: !!career?.pending };
     if (!career) return { ...row, paused: false };
-    const line = collapsedText(game);
+    const line = career.pending ? collapsedText(game)! : rowLine(game);
+    const badge = career.pending ? undefined : matchBadge(game);
     const progress = career.pending ? 1 : leaguePlace(career).played / leagueRounds(career.season);
-    return { ...row, club: career.clubs[career.playerClubId].name, line: game.paused && !career.pending ? `⏸ ${line}` : line, progress };
+    return { ...row, club: career.clubs[career.playerClubId].name, line: game.paused && !career.pending ? `⏸ ${line}` : line, ...(badge ? { badge } : {}), progress };
   });
 }
 

@@ -856,6 +856,22 @@ describe('sports in the save', () => {
       expect(boxStatus(games, 'football', false, 'cricket').text).toMatch(/^🏏  Cricket: ⏸ Wk /);
     });
 
+    it('marks cup matches everywhere outside the box, without a league place beside them', () => {
+      const { games, game, clocks } = setUp(['football']);
+      start(game('football'), 'SCO');
+      const g = game('football');
+      while (g.shownMatch?.fixture.kind !== 'cup') clocks.get('football')!.run(1);
+      expect(statusText(g)).toMatch(/^⚽ {2}(⚔ )?Cup: /);
+      expect(statusText(g)).not.toMatch(/Wk/);
+      expect(collapsedText(g)).toMatch(/^Cup · /);
+      const [row] = sportRows(games);
+      expect(row.badge).toEqual({ label: 'Cup', kind: 'cup' });
+      expect(row.line).not.toMatch(/Wk|Cup/);
+      const view = buildView(g);
+      expect(view.screen === 'game' && view.match!.badge?.kind).toBe('cup');
+      expect(view.screen === 'game' && view.match!.stage).toMatch(/^Round of/);
+    });
+
     it('says which sport is on show, for the status bar click', () => {
       const { games, game } = setUp();
       start(game('football'), 'SCO');
