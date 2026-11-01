@@ -7,6 +7,7 @@ International football, rugby and cricket sims that live in a small box in your 
   <img src="media/screenshots/match.png" width="220" alt="A live match: scoreboard and match report">
   <img src="media/screenshots/table.png" width="220" alt="The live league table, with teams moving as goals go in">
   <img src="media/screenshots/seasonOver.png" width="220" alt="The end of a season: who is leaving, the clues and the summer question">
+  <img src="media/screenshots/world.png" width="220" alt="A World Championship match, with its gold row and badge">
   <img src="media/screenshots/cups.png" width="220" alt="The World Championship knockout rounds in the Cups tab">
 </p>
 
