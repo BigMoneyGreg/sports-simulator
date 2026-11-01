@@ -651,6 +651,7 @@ In rough priority order:
 | Match length stays the player's choice, for each sport on its own, with lengths that give similar seasons | A season-length choice and exact seasons (match lengths adjusting after a cup exit) were tried and measured. The user chose this: it's easy to picture and to change, and a player can run one sport fast and another slow |
 | World Championship as its own mini season after the summer | The user's design: blended into a season it was easy to miss, and now the summer's decision pays off straight away. It can't change ratings, so balance holds |
 | Minimised rows flash green and red like the open sport | The user's choice: they're what's usually on screen, in a box that's often short |
+| Big moments fade in and out softly rather than flash | The user's choice: something running beside your work shouldn't snap for attention |
 | A badge marks cup, play-off and World Championship matches; league matches stay plain | A collapsed row or the status bar couldn't tell them apart. Each badge has a word, so colour isn't the only cue |
 | Hiding a sport holds its clock, without touching the career or its own pause | If it played on hidden, a season could end with a decision waiting on a sport the player can't see. A hold isn't saved, so the setting alone decides it and un-hiding can't undo a pause the player chose |
 | Reset honours leaves running careers alone | Honours are a side record: wiping them shouldn't cost seasons of play, and End and Reset already deal with careers one at a time |

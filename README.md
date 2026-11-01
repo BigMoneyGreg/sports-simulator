@@ -50,7 +50,7 @@ To stop a career, press **End…** on its row. **End career** keeps it in Past c
 - Badges show at a glance when a match is a cup tie, a play-off or the World Championship
 - Live match reports with each team's events on its own side, a real scorecard in cricket, and live tables, with your score, week and league place in the status bar (and a *GOAL!*, *TRY!* or *WICKET!* as it happens); with several careers it shows each sport's week and place in turn; hover it for your position and expected finish
 - Collapse the box and its title still shows your position and score
-- A flash in the box, on the open sport and on minimised rows: green when it goes your way, red when it doesn't
+- A soft colour fade in the box, on the open sport and on minimised rows: green when it goes your way, red when it doesn't
 - Works by keyboard, with screen reader announcements and high contrast themes
 - Fits any size: shrink the box and it keeps just the essentials (club, league, position, form and controls)
 - Season reports, trophy cabinet, club history and records

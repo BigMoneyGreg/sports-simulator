@@ -438,7 +438,7 @@ announcer.className = 'sr-only';
 announcer.setAttribute('aria-live', 'polite');
 document.body.appendChild(announcer);
 
-const FLASH_MS = 1600;
+const FLASH_MS = 2400;
 const lastScore = { key: '', home: 0, away: 0 };
 const flash: Flash = { cls: '', at: 0, id: 0 };
 

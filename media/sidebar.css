@@ -1709,24 +1709,24 @@ body.vscode-light .focus.defence strong {
   background: var(--vscode-sideBar-background, var(--vscode-editor-background));
 }
 
-/* Goal flash on the scoreboard and header: green for us, red against. */
+/* A big moment on the scoreboard, header and minimised rows: a soft fade in and out, green for us, red against. */
 .goal-for {
-  animation: goal-for 1.6s ease-out;
+  animation: goal-for 2.4s ease-in-out;
 }
 
 .goal-against {
-  animation: goal-against 1.6s ease-out;
+  animation: goal-against 2.4s ease-in-out;
 }
 
 @keyframes goal-for {
-  from {
-    box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--win) 40%, transparent);
+  25% {
+    box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--win) 28%, transparent);
   }
 }
 
 @keyframes goal-against {
-  from {
-    box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--loss) 40%, transparent);
+  25% {
+    box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--loss) 28%, transparent);
   }
 }
 
