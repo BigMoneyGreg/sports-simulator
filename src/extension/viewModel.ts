@@ -864,6 +864,16 @@ export function enabledSports(setting: Partial<Record<SportId, boolean>> | undef
   return on.length ? on : [...SPORT_IDS];
 }
 
+/** How the player's match stands for big moments, so a minimised row can flash like the open one. */
+function playerMoments(game: Game): Pick<SportRowView, 'moments'> {
+  const shown = game.shownMatch;
+  if (!shown) return {};
+  const { match, fixture } = shown;
+  const [home, away] = game.sport.module.alerts(match);
+  const atHome = fixture.home === game.career!.playerClubId;
+  return { moments: { match: `${game.career!.season.number}-${fixture.kind}-${fixture.home}-${fixture.away}`, mine: atHome ? home : away, theirs: atHome ? away : home } };
+}
+
 /** Each sport's row in the box's list. */
 export function sportRows(games: Game[]): SportRowView[] {
   return games.map((game) => {
@@ -875,7 +885,7 @@ export function sportRows(games: Game[]): SportRowView[] {
     const badge = stopped ? undefined : matchBadge(game);
     const world = !career.pending && (currentSlot(career.season)?.kind === 'championship' || game.shownMatch?.fixture.kind === 'championship' || !!career.worldEnd);
     const progress = career.pending ? 1 : leaguePlace(career).played / leagueRounds(career.season);
-    return { ...row, club: career.clubs[career.playerClubId].name, waiting: stopped, ...(career.worldEnd?.played ? { waitingLine: `${WORLD_OVER}: see how it went` } : {}), ...(world ? { world } : {}), line: game.paused && !stopped ? `⏸ ${line}` : line, ...(badge ? { badge } : {}), progress };
+    return { ...row, club: career.clubs[career.playerClubId].name, waiting: stopped, ...(career.worldEnd?.played ? { waitingLine: `${WORLD_OVER}: see how it went` } : {}), ...(world ? { world } : {}), line: game.paused && !stopped ? `⏸ ${line}` : line, ...(badge ? { badge } : {}), ...playerMoments(game), progress };
   });
 }
 

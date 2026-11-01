@@ -872,6 +872,19 @@ describe('sports in the save', () => {
       expect(view.screen === 'game' && view.match!.stage).toMatch(/^Round of/);
     });
 
+    it('tells a minimised row about big moments for and against the player', () => {
+      const { games, game, clocks } = setUp(['rugby']);
+      start(game('rugby'), 'WAL');
+      const g = game('rugby');
+      const before = sportRows(games)[0].moments!;
+      expect(before).toMatchObject({ mine: 0, theirs: 0 });
+      while (g.phase === 'live') clocks.get('rugby')!.run(1);
+      const { fixture, match } = g.shownMatch!;
+      const [home, away] = g.sport.module.alerts(match);
+      const atHome = fixture.home === g.career!.playerClubId;
+      expect(sportRows(games)[0].moments).toEqual({ match: before.match, mine: atHome ? home : away, theirs: atHome ? away : home });
+    });
+
     it('says which sport is on show, for the status bar click', () => {
       const { games, game } = setUp();
       start(game('football'), 'SCO');

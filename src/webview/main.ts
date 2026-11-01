@@ -269,6 +269,7 @@ function renderRows(): void {
     const bar = section.querySelector<HTMLElement>('.row-progress span');
     if (bar) bar.style.width = `${(r.progress ?? 0) * 100}%`;
     if (isOpen && panel.parentElement !== section) section.append(askBox, panel);
+    flashRow(r, section, isOpen);
   }
   if (honours) {
     const section = app.querySelector<HTMLElement>(':scope > [data-sport="honours"]')!;
@@ -439,7 +440,29 @@ document.body.appendChild(announcer);
 
 const FLASH_MS = 1600;
 const lastScore = { key: '', home: 0, away: 0 };
-const flash = { cls: '', at: 0, id: 0 };
+const flash: Flash = { cls: '', at: 0, id: 0 };
+
+interface Flash {
+  cls: string;
+  at: number;
+  id: number;
+}
+
+/** What each minimised row last showed, and its own flash. */
+const rowFlashes = new Map<SportId, { moments: NonNullable<SportRowView['moments']>; flash: Flash }>();
+
+/** A minimised row flashes as the open sport's header does. The open one is already flashing there. */
+function flashRow(r: SportRowView, section: HTMLElement, isOpen: boolean): void {
+  if (!r.moments) return;
+  const seen = rowFlashes.get(r.id);
+  const rowFlash = seen?.flash ?? { cls: '', at: 0, id: 0 };
+  if (seen?.moments.match === r.moments.match) {
+    const mine = r.moments.mine > seen.moments.mine;
+    if (mine || r.moments.theirs > seen.moments.theirs) Object.assign(rowFlash, { cls: mine ? 'goal-for' : 'goal-against', at: Date.now(), id: rowFlash.id + 1 });
+  }
+  rowFlashes.set(r.id, { moments: r.moments, flash: rowFlash });
+  if (!isOpen && !r.waiting) applyFlash(section.querySelectorAll<HTMLElement>('.sport-row'), rowFlash);
+}
 
 /** Notices a big moment in the player's match: green when it goes their way, red when it doesn't. */
 function trackGoals(v: GameView): void {
@@ -463,14 +486,18 @@ function trackGoals(v: GameView): void {
  * flash up part-way through (negative delay) instead of restarting it.
  */
 function showFlash(): void {
-  const elapsed = Date.now() - flash.at;
+  applyFlash(app.querySelectorAll<HTMLElement>('.board, .head'), flash);
+}
+
+function applyFlash(elements: NodeListOf<HTMLElement>, { cls, at, id }: Flash): void {
+  const elapsed = Date.now() - at;
   if (elapsed >= FLASH_MS) return;
-  app.querySelectorAll<HTMLElement>('.board, .head').forEach((el) => {
-    if (el.dataset.flash === String(flash.id)) return;
-    el.dataset.flash = String(flash.id);
+  elements.forEach((el) => {
+    if (el.dataset.flash === String(id)) return;
+    el.dataset.flash = String(id);
     el.classList.remove('goal-for', 'goal-against');
     void el.offsetWidth; // restart the animation if the same class was already on
-    el.classList.add(flash.cls);
+    el.classList.add(cls);
     el.style.animationDelay = `-${elapsed}ms`;
   });
 }

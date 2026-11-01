@@ -209,6 +209,8 @@ export interface SportRowView {
   line?: string;
   /** Shown before the line when this isn't a league match. */
   badge?: MatchBadge;
+  /** Big moments so far in the player's match, for the flash: goals, tries, wickets. */
+  moments?: { match: string; mine: number; theirs: number };
   /** How far through the league season, from 0 to 1. */
   progress?: number;
   paused: boolean;
