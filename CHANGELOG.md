@@ -24,6 +24,7 @@ First release.
 - No ceiling at 99: a great manager can keep climbing and chase an unbeaten season
 - A lopsided team declines, and recovers, over a few seasons rather than overnight
 - Season reports, trophy cabinet, club history and records
+- Each season report lists the top five scorers across all leagues, cups aside: try scorers in rugby, run scorers and wicket takers in cricket
 - Players get the most common names in their own country, now and then borrowing a surname from a neighbour, and real stars' names are blocked
 - Status bar: your live score, week and league place, with *GOAL!*, *TRY!* or *WICKET!* as it happens. With several careers it shows each sport's week and place in turn, 5 seconds each, and a click opens the one on show
 - Setup: pick or type your country, then its starting league and match length. The default gives a season of about 20 to 25 minutes in every sport

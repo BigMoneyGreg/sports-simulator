@@ -119,9 +119,9 @@ export interface Season {
   /** Played before this season's league in the year after every fourth season, as its own mini season. */
   championship: Cup | null;
   playerMatches: PlayerMatch[];
-  /** Goals per player this season (own goals excluded). */
+  /** League goals per player this season (own goals excluded). */
   scorers: Record<number, number>;
-  /** Cricket: wickets per player this season. */
+  /** Cricket: league wickets per player this season. */
   wickets?: Record<number, number>;
 }
 
@@ -430,10 +430,11 @@ export function completeRound(career: Career, results: RoundResult[]): void {
   career.suspended = (career.suspended ?? []).filter((id) => !servedBy(id));
   for (const { fixture, outcome } of results) {
     for (const red of outcome.sentOff ?? []) career.suspended.push(red.playerId);
-    for (const g of outcome.goals) if (!g.ownGoal) s.scorers[g.playerId] = (s.scorers[g.playerId] ?? 0) + (g.count ?? 1);
-    for (const w of outcome.wicketTakers ?? []) (s.wickets ??= {})[w.playerId] = (s.wickets[w.playerId] ?? 0) + w.count;
-    if (fixture.kind === 'league') recordResult(s.leagues[fixture.tier - 1].table, fixture.home, fixture.away, outcome);
-    else if (fixture.kind === 'cup') recordCupResult(format, s.cup, fixture, outcome, rng);
+    if (fixture.kind === 'league') {
+      for (const g of outcome.goals) if (!g.ownGoal) s.scorers[g.playerId] = (s.scorers[g.playerId] ?? 0) + (g.count ?? 1);
+      for (const w of outcome.wicketTakers ?? []) (s.wickets ??= {})[w.playerId] = (s.wickets[w.playerId] ?? 0) + w.count;
+      recordResult(s.leagues[fixture.tier - 1].table, fixture.home, fixture.away, outcome);
+    } else if (fixture.kind === 'cup') recordCupResult(format, s.cup, fixture, outcome, rng);
     else if (fixture.kind === 'championship') recordCupResult(format, s.championship!, fixture, outcome, rng);
     else recordPlayoff(s, fixture, outcome);
     if (fixture.home === career.playerClubId || fixture.away === career.playerClubId) {

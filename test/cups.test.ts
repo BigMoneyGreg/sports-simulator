@@ -124,6 +124,21 @@ describe('cups in a career', () => {
     expect(c.season.cup.entrants).toEqual(standing.slice(0, 64));
   });
 
+  it('keeps the season tally to league matches', () => {
+    const c = newCareer({ rating: 50, seed: 9, team: 'NOR' }, footballSport);
+    const total = () => Object.values(c.season.scorers).reduce((a, b) => a + b, 0);
+    const kinds = new Set<string>();
+    while (nextRound(c)) {
+      const before = total();
+      const [{ fixture }] = playRound(c, footballSport);
+      kinds.add(fixture.kind);
+      if (fixture.kind === 'league') expect(total()).toBeGreaterThan(before);
+      else expect(total()).toBe(before);
+    }
+    expect(kinds).toContain('cup');
+    expect(kinds).toContain('league');
+  });
+
   it('leaves ratings alone: only the league decides the summer', () => {
     const c = newCareer({ rating: 50, seed: 10, team: 'NOR' }, footballSport);
     const before = c.clubs.map(rating);

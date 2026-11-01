@@ -746,6 +746,13 @@ function seasonEndHtml(e: SeasonEndView, sport: SportId, terms: SportTerms): str
     <p class="small"><button type="button" class="link" data-copy="${esc(e.summary)}">Copy summary</button> <span class="muted">${esc(e.summary)}</span></p>
     </div>
 
+    ${e.leaders
+      .map(
+        (l) => `<h3 class="sub">${esc(l.label)}</h3>
+    <p class="small">${l.rows.map((row) => `<span class="${row.isPlayer ? 'strong' : 'muted'}">${esc(row.text)}</span>`).join('<br>')}</p>`,
+      )
+      .join('')}
+
     <h3 class="sub">Final table</h3>
     ${tableHtml([e.table], 1, terms)}
     ${e.playoffs ? playoffHtml(e.playoffs) : ''}

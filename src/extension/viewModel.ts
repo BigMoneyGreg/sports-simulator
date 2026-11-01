@@ -148,6 +148,16 @@ function cupLine(r: Pick<SeasonRecord, 'cup' | 'championship'>): string | undefi
   return parts.length ? parts.join(' · ') : undefined;
 }
 
+/** The top five of a season's tally, across every league. */
+function seasonLeaders(career: Career, tally: Record<number, number> = {}): SeasonEndView['leaders'][number]['rows'] {
+  return career.clubs
+    .flatMap((c) => c.squad.map((p) => ({ club: c, name: p.name, count: tally[p.id] ?? 0 })))
+    .filter((x) => x.count > 0)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5)
+    .map((x) => ({ text: `${shortName(x.club)} – ${x.name} (${x.count})`, isPlayer: x.club.id === career.playerClubId }));
+}
+
 /** Long servants retire from international sport; the rest are dropped. */
 const RETIRES_AFTER = 5;
 
@@ -365,6 +375,10 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
       ...rivalSeason(career),
       cups: [seasonCupLine(career, s.cup)],
     },
+    leaders: [
+      { label: `${sportOf(career).present.terms.topScorers}, all leagues`, rows: seasonLeaders(career, s.scorers) },
+      ...(s.wickets ? [{ label: 'Top wicket takers, all leagues', rows: seasonLeaders(career, s.wickets) }] : []),
+    ],
     performance: end.performance > 0 ? 'above' : end.performance < 0 ? 'below' : 'expected',
     squad: squadChanges(career),
     question: summerQuestion(career),

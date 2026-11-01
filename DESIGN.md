@@ -436,7 +436,7 @@ Screen contents:
 The question comes first, under the headline, so it's in view without scrolling; the season report and final table follow.
 
 1. Final table with promotion, play-offs and relegation
-2. **Season report:** goals scored and conceded against the league average, goals a game in your matches against the league's, best and worst runs, top scorer. No verdict: reading it is the player's job (lots of goals at both ends = leaning attacking).
+2. **Season report:** goals scored and conceded against the league average, goals a game in your matches against the league's, best and worst runs, top scorer. No verdict: reading it is the player's job (lots of goals at both ends = leaning attacking). Below it, the season's top five across all leagues, cups aside, as "team – player (count)": goals, tries, or runs and wickets. The club's own top scorer counts league matches too, so the two always agree.
 3. Decline: the overall rating drop only (e.g. 55 → 45), never the attack/defence split
 4. The Summer card holds both clues and the question: leaving the squad (who, what they play, retired or dropped), then the clue (*Attack 10th for goals scored · Defence 4th for goals conceded*), then the summer question with two answers (§7). Picking one highlights it; a separate **Start next season** button below confirms it
 
@@ -615,7 +615,7 @@ In rough priority order:
 - Weather and pitch conditions affecting matches
 - Mid-season transfer window with a small point top-up
 - Manager reputation / sacking (optional "hardcore" toggle)
-- Season-end awards (player of the season, golden boot)
+- Season-end awards (player of the season); a golden boot in club history
 - Multiple careers in parallel (per project)
 
 ## 16. Decisions log

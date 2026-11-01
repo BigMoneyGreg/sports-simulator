@@ -215,6 +215,9 @@ describe('season end view', () => {
     const e = v.seasonEnd;
     expect(e.table.rows).toHaveLength(20);
     expect(e.report.record).toMatch(/^\d+W \d+D \d+L$/);
+    expect(e.leaders[0].rows).toHaveLength(5);
+    const counts = e.leaders[0].rows.map((row) => Number(row.text.match(/\((\d+)\)$/)![1]));
+    expect(counts).toEqual([...counts].sort((a, b) => b - a));
     // Players never see ratings or how the drain split: no numbers reach the webview.
     expect(JSON.stringify(v.club)).not.toMatch(/"attack"|"defence"|"rating"/);
     expect(e).not.toHaveProperty('decline');

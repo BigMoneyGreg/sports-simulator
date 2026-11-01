@@ -299,6 +299,8 @@ export interface SeasonEndView {
     rival?: string;
     cups: CupRunView[];
   };
+  /** The season's best across every league, cups aside: "Brazil – Rafael Costa (24)". */
+  leaders: { label: string; rows: { text: string; isPlayer: boolean }[] }[];
   /** How the finish compared with expectation; the summer's points themselves stay in the host. */
   performance: 'above' | 'expected' | 'below';
   /** The squad's summer changes: "Finlay Ross · striker · retires after 9 seasons, 142 goals" leaving, new names arriving. */
