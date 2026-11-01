@@ -3,6 +3,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { activate, deactivate } from '../src/extension/extension';
+import { chooseFocus, newCareer, playSeason } from '../src/core/career';
+import { SAVE_VERSION } from '../src/extension/game';
+import { footballSport } from '../src/sports/football';
 import { fake } from './fakeVscode';
 
 const memento = () => {
@@ -60,6 +63,27 @@ describe('the extension, played through its messages', () => {
     fake.configListeners.forEach((fn) => fn({ affectsConfiguration: (k) => k === 'sportsSimulator.matchDuration' }));
     fake.send({ type: 'ready' });
     expect(fake.box.view.setup.duration).toBe('30s');
+  });
+
+  it('announces a World Championship, and on Continue starts the league', () => {
+    const c = newCareer({ rating: 95, seed: 40, team: 'BRA' }, footballSport);
+    for (let season = 0; season < 4; season++) {
+      playSeason(c, footballSport);
+      chooseFocus(c, 'attack');
+    }
+    close();
+    fake.reset();
+    writeFileSync(join(dir, 'career.json'), JSON.stringify({ version: SAVE_VERSION, career: c, live: null, paused: false, duration: '30s' }));
+    launch();
+    expect(fake.toasts[0]).toMatch(/^Football: the World Championship begins\. Brazil are in Group [A-Z]\.$/);
+    open(null);
+    run(30 * 60_000);
+    expect(fake.toasts[1]).toMatch(/^Football: .*World Championship/);
+    expect(fake.status.text).toBe('$(bell) World Championship over');
+    expect(fake.view.badge.value).toBe(1);
+    fake.send({ type: 'continueSeason', sport: 'football' });
+    expect(fake.view.badge).toBeUndefined();
+    expect(fake.status.text).not.toMatch(/World/);
   });
 
   it('End keeps the career in Past careers', () => {

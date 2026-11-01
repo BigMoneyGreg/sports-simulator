@@ -10,6 +10,8 @@ import { cupTieView } from '../src/extension/viewModel';
 const ids = (n: number) => Array.from({ length: n }, (_, i) => i);
 const result = (homeGoals: number, awayGoals: number, winner?: 'home' | 'away') => ({ homeGoals, awayGoals, goals: [], winner });
 
+const sortTopTwo = (c: Career) => c.pending!.standing.slice(0, 40);
+
 function nextSeason(c: Career): void {
   playSeason(c, footballSport);
   allocatePoints(c, fillAllocation(c.clubs[c.playerClubId], c.pending!.points, { attack: 1, defence: 1 }));
@@ -87,18 +89,31 @@ describe('World Championship', () => {
 });
 
 describe('cups in a career', () => {
-  it('holds the World Championship every fourth summer, for Leagues 1 and 2', () => {
-    const c = newCareer({ rating: 50, seed: 8, team: 'NOR' }, footballSport);
-    for (let season = 1; season <= 4; season++) {
-      expect(c.season.calendar.some((s) => s.kind === 'championship')).toBe(season === 4);
-      if (season < 4) nextSeason(c);
+  it('holds the World Championship after every fourth season, for its Leagues 1 and 2, with the result on that season', () => {
+    const c = newCareer({ rating: 95, seed: 8, team: 'BRA' }, footballSport);
+    let top: number[] = [];
+    for (let season = 1; season <= 5; season++) {
+      expect(c.season.calendar.some((s) => s.kind === 'championship')).toBe(season === 5);
+      if (season === 4) {
+        playSeason(c, footballSport);
+        top = sortTopTwo(c);
+        allocatePoints(c, fillAllocation(c.clubs[c.playerClubId], c.pending!.points, { attack: 1, defence: 1 }));
+      } else if (season < 5) nextSeason(c);
     }
-    while (nextRound(c) && c.season.calendar[c.season.round].kind !== 'championship') playRound(c, footballSport);
-    const top = c.season.leagues.slice(0, 2).flatMap((l) => l.clubIds);
+    expect(c.season.calendar[0].kind).toBe('championship');
+    expect(c.season.championship!.season).toBe(4);
     expect([...c.season.championship!.entrants].sort((a, b) => a - b)).toEqual([...top].sort((a, b) => a - b));
-    nextSeason(c);
+    while (c.season.calendar[c.season.round].kind === 'championship') playRound(c, footballSport);
     expect(c.honours.championship).toHaveLength(1);
+    expect(c.honours.championship[0].season).toBe(4);
+    expect(c.lastChampionship).toBe(c.season.championship);
+    expect(c.worldEnd).toMatchObject({ season: 4, played: true });
+    expect(c.history[3].championship).toBeTruthy();
     expect(c.honours.cup).toHaveLength(4);
+    nextSeason(c);
+    expect(c.history[4].championship).toBeUndefined();
+    expect(c.honours.championship).toHaveLength(1);
+    expect(c.honours.cup).toHaveLength(5);
   });
 
   it('enters the top 64 of this season’s final standings into next season’s cup', () => {

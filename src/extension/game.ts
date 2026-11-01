@@ -15,6 +15,7 @@ import {
   type Career,
   type CareerOptions,
   type SeasonEnd,
+  type WorldEnd,
 } from '../core/career';
 import type { Fixture } from '../core/league';
 import { Rng } from '../core/rng';
@@ -22,14 +23,21 @@ import type { SportId } from '../core/format';
 import { SPORTS, type AnySport } from '../sports';
 import type { Duration } from '../shared/view';
 
-export const SAVE_VERSION = 8;
+export const SAVE_VERSION = 9;
 
 /**
  * Upgrades for older saves: `MIGRATIONS[n]` turns a version-n save into
  * version n + 1. Whenever SAVE_VERSION goes up, add one here, so players'
  * careers carry over.
  */
-export const MIGRATIONS: Record<number, (saved: SavedGame) => SavedGame> = {};
+export const MIGRATIONS: Record<number, (saved: SavedGame) => SavedGame> = {
+  // The World Championship used to end a season; now it's played between them.
+  8: (s) => {
+    const season = s.career.season;
+    const left = season.calendar.slice(0, season.round).filter((slot) => slot.kind !== 'championship').length;
+    return { ...s, career: { ...s.career, season: { ...season, calendar: season.calendar.filter((slot) => slot.kind !== 'championship'), round: left, championship: null } } };
+  },
+};
 
 /** The save brought up to SAVE_VERSION, or null if it can't be (too old, or from a newer version). */
 export function migrate(saved: SavedGame, migrations = MIGRATIONS): SavedGame | null {
@@ -92,11 +100,14 @@ export interface GameHost {
   changed(): void;
   fullTime?(match: unknown, fixture: Fixture): void;
   seasonOver?(end: SeasonEnd): void;
+  /** A World Championship the player is in has begun. */
+  worldStarted?(): void;
+  worldOver?(end: WorldEnd): void;
   /** A save that couldn't be brought up to date: keep it somewhere before a new career replaces it. */
   unreadable?(saved: SavedGame): void;
 }
 
-export type Phase = 'idle' | 'live' | 'fullTime' | 'seasonOver';
+export type Phase = 'idle' | 'live' | 'fullTime' | 'seasonOver' | 'worldOver';
 
 export class Game {
   career: Career | null = null;
@@ -148,7 +159,7 @@ export class Game {
     this.duration = fitDuration(this.sport, saved.duration ?? this.duration);
     this.live = saved.live;
     this.paused = saved.paused;
-    this.phase = this.career.pending ? 'seasonOver' : this.live ? 'live' : 'idle';
+    this.phase = this.career.pending ? 'seasonOver' : this.career.worldEnd?.played ? 'worldOver' : this.live ? 'live' : 'idle';
     if (run) this.run();
   }
 
@@ -218,6 +229,13 @@ export class Game {
     this.nextSeason();
   }
 
+  /** The player has seen how the World Championship went: on to the league season. */
+  continueSeason(): void {
+    if (!this.career?.worldEnd) return;
+    this.career.worldEnd = null;
+    this.nextSeason();
+  }
+
   private nextSeason(): void {
     this.phase = 'idle';
     this.save();
@@ -231,6 +249,7 @@ export class Game {
     if (!this.career || this.paused || this.held) return;
     switch (this.phase) {
       case 'seasonOver':
+      case 'worldOver':
         return;
       case 'live':
         this.schedule(() => this.tick(), tickMs(this.sport, this.duration));
@@ -249,7 +268,23 @@ export class Game {
     const career = this.career!;
     const sport = this.sport;
     this.lastMatch = null;
+    const first = career.season.calendar[career.season.round];
+    if (career.season.round === 0 && first?.kind === 'championship' && career.season.championship!.entrants.includes(career.playerClubId)) {
+      this.tell(() => this.host.worldStarted?.());
+    }
     for (;;) {
+      const world = career.worldEnd;
+      if (world?.played) {
+        this.phase = 'worldOver';
+        this.save();
+        this.tell(() => this.host.worldOver?.(world));
+        this.tell(() => this.host.changed());
+        return;
+      }
+      if (world) {
+        career.worldEnd = null;
+        this.tell(() => this.host.worldOver?.(world));
+      }
       if (career.pending || isSeasonOver(career)) {
         const end = endSeason(career, sport);
         this.phase = 'seasonOver';

@@ -1,4 +1,4 @@
-import { currentSlot, FOCUSES, formatOf, fullHistory, leagueRounds, type SeasonEnd, type Career, type Focus, type Playoff, type SeasonRecord, type Slot } from '../core/career';
+import { currentSlot, FOCUSES, formatOf, fullHistory, leagueRounds, type WorldEnd, type SeasonEnd, type Career, type Focus, type Playoff, type SeasonRecord, type Slot } from '../core/career';
 import { SPORT_IDS, type SportId } from '../core/format';
 import { CHAMPIONSHIP_EVERY, CUP_NAMES, cupFixtures, cupRun, cupStages, stageLabel, stillIn, type Cup, type CupId, type CupTie } from '../core/cups';
 import { better, emptyRecords, topScorers, type MatchRecord } from '../core/records';
@@ -7,7 +7,7 @@ import { difference, goalRanks, recordResult, runRateAgainst, runRateFor, sortTa
 import { SPORTS, sportOf, type AnySport } from '../sports';
 import { shortName, surname } from '../sports/football/names';
 import { ordinal } from '../shared/format';
-import type { CareerRowView, MatchBadge, HonoursView, SportRowView, CupRunView, CupsView, CupTieView, CupView, NationOption, CabinetView, QuestionView, ClubView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, TableView, TeamBadge, View } from '../shared/view';
+import type { CareerRowView, MatchBadge, WorldEndView, HonoursView, SportRowView, CupRunView, CupsView, CupTieView, CupView, NationOption, CabinetView, QuestionView, ClubView, FixtureView, FullTimeView, GameView, HistoryRowView, LiveMatchView, PlayoffView, RecordsView, SeasonEndView, TableView, TeamBadge, View } from '../shared/view';
 import { fullTimePause } from './game';
 import type { Game } from './game';
 
@@ -74,6 +74,7 @@ export function buildView(game: Game, options: ViewOptions = { fullTimeOverlay: 
     waiting: career.pending ? 'seasonOver' : null,
     playoffs: season.playoffs.map((p) => playoffView(career, p)),
     seasonEnd: career.pending ? buildSeasonEnd(career, tables[tier - 1]) : null,
+    worldEnd: career.worldEnd?.played ? buildWorldEnd(career, career.worldEnd) : null,
     cups: buildCups(career, !!game.live),
     fullTime: options.fullTimeOverlay ? buildFullTime(game) : null,
   };
@@ -362,7 +363,7 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
       topScorer: scorer && scorer.goals > 0 ? `${scorer.name} (${scorer.goals})` : undefined,
       ...(bowler && bowler.wickets > 0 ? { topWickets: `${bowler.name} (${bowler.wickets})` } : {}),
       ...rivalSeason(career),
-      cups: [s.cup, s.championship].flatMap((cup) => (cup ? [seasonCupLine(career, cup)] : [])),
+      cups: [seasonCupLine(career, s.cup)],
     },
     performance: end.performance > 0 ? 'above' : end.performance < 0 ? 'below' : 'expected',
     squad: squadChanges(career),
@@ -372,6 +373,43 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
   };
 }
 
+
+function buildWorldEnd(career: Career, end: WorldEnd): WorldEndView {
+  const me = career.clubs[career.playerClubId];
+  const run = cupRun(formatOf(career), career.season.championship!, me.id);
+  const headline =
+    run === 'Winners'
+      ? `World champions! ${me.name} lift the World Championship.`
+      : run === 'Final'
+        ? 'Runners-up at the World Championship.'
+        : run === 'Group stage'
+          ? 'Out in the World Championship group stage.'
+          : `Knocked out of the World Championship in the ${(run ?? '').toLowerCase()}.`;
+  return { season: end.season, headline, winner: badge(career, end.winner), won: run === 'Winners' };
+}
+
+const WORLD_OVER = 'World Championship over';
+
+/** The short message when a World Championship starts. */
+export function worldStarted(game: Game): string {
+  const career = game.career!;
+  const me = career.clubs[career.playerClubId];
+  const group = career.season.championship!.groups.find((g) => g.table.some((r) => r.clubId === me.id));
+  return `${game.sport.present.terms.name}: the World Championship begins. ${me.name} are in Group ${group!.name}.`;
+}
+
+/** The short message when a World Championship ends. */
+export function worldFinished(game: Game, end: WorldEnd): string {
+  const career = game.career!;
+  const name = game.sport.present.terms.name;
+  if (end.played) return `${name}: ${buildWorldEnd(career, end).headline}`;
+  return `${name}: ${career.clubs[end.winner].name} won the World Championship. Season ${career.season.number} begins.`;
+}
+
+/** Whether the game is stopped until the player does something. */
+export function waitingOnPlayer(game: Game): boolean {
+  return !!game.career && (!!game.career.pending || !!game.career.worldEnd?.played);
+}
 
 function rivalView(career: Career, tables: TableView[]): ClubView['rival'] {
   if (career.rival === null || career.rival === undefined) return undefined;
@@ -621,9 +659,9 @@ function fixtureView(career: Career, slot: Slot, f: Pick<Fixture, 'home' | 'away
 function buildCups(career: Career, live: boolean): CupsView {
   const s = career.season;
   const next = Math.ceil(s.number / CHAMPIONSHIP_EVERY) * CHAMPIONSHIP_EVERY;
-  const upcoming = next === s.number ? 'This summer · Leagues 1–2 qualify when the league season ends' : `Next: summer of Season ${next} · Leagues 1–2 qualify`;
+  const upcoming = next === s.number ? 'After this season · its Leagues 1–2 qualify' : `Next: after Season ${next} · its Leagues 1–2 qualify`;
   let championship: CupView;
-  if (s.championship) championship = cupView(career, s.championship, live);
+  if (s.championship && s.championship.winner === undefined) championship = cupView(career, s.championship, live);
   else if (career.lastChampionship) {
     const last = cupView(career, career.lastChampionship);
     championship = { ...last, status: `Season ${career.lastChampionship.season} edition · ${last.status}`, next: upcoming };
@@ -662,11 +700,12 @@ export function cupTieView(career: Career, t: CupTie): CupTieView {
 /** When the cup's next round is played: "After matchday 12", "Playing now", or "This summer" for the championship. */
 function whenPlayed(career: Career, cup: Cup, live: boolean): string | undefined {
   const s = career.season;
+  if (cup.id === 'championship') return live ? 'Playing now' : undefined;
   if (cup.season !== s.number) return undefined;
   const at = s.calendar.findIndex((slot, i) => i >= s.round && slot.kind === cup.id);
   if (at < 0) return undefined;
   const before = s.calendar.slice(0, at).reverse().find((slot) => slot.kind === 'league');
-  if (cup.id === 'championship' || !before || before.kind !== 'league') return 'This summer, after the league season';
+  if (!before || before.kind !== 'league') return undefined;
   if (at === s.round) return live ? 'Playing now' : 'Next up';
   return `After matchday ${before.index + 1}`;
 }
@@ -736,6 +775,7 @@ export function statusText(game: Game, goal = false): string {
   const { alert } = game.sport.present.terms;
   if (!career) return '$(trophy) Start a Sports Simulator career';
   if (career.pending) return `$(bell) ${SEASON_OVER}`;
+  if (career.worldEnd?.played) return `$(bell) ${WORLD_OVER}`;
   const score = scoreLine(game);
   const badge = matchBadge(game);
   // Paused between matches after a restart: nothing to show but where the career stands.
@@ -764,6 +804,7 @@ function careerLines(game: Game): string[] {
   const place = leaguePlace(career);
   const lines = [`**${me.name}** · League ${place.tier}, ${ordinal(place.position)} · ${place.played}/${leagueRounds(career.season)} played`];
   if (career.pending) lines.push(SEASON_OVER);
+  else if (career.worldEnd?.played) lines.push(WORLD_OVER);
   else {
     lines.push(`Expected to finish ${ordinal(career.season.expected[me.id])}`);
     const shown = game.shownMatch;
@@ -784,6 +825,7 @@ export function collapsedText(game: Game): string | undefined {
   const career = game.career;
   if (!career) return undefined;
   if (career.pending) return 'Season over';
+  if (career.worldEnd?.played) return WORLD_OVER;
   const badge = matchBadge(game);
   if (badge) return `${badge.label} · ${rowLine(game)}`;
   const place = `${ordinal(leaguePlace(career).position)} Wk ${Math.max(1, leagueWeek(game))}/${leagueRounds(career.season)}`;
@@ -810,6 +852,7 @@ function standing(game: Game): string {
 function standingText(game: Game): string {
   const name = game.sport.present.terms.name;
   if (game.career!.pending) return `$(bell) ${name}: season over`;
+  if (game.career!.worldEnd?.played) return `$(bell) ${name}: ${WORLD_OVER}`;
   const badge = matchBadge(game);
   const place = badge?.kind === 'world' ? badgeStage(game.shownMatch!.fixture, game.career!) : standing(game);
   return `${STATUS_ICONS[game.sportId]}  ${name}: ${game.paused ? '⏸ ' : ''}${badge ? `${badge.label} · ` : ''}${place}`;
@@ -827,10 +870,12 @@ export function sportRows(games: Game[]): SportRowView[] {
     const career = game.career;
     const row = { id: game.sportId, name: game.sport.present.terms.name, paused: game.paused, waiting: !!career?.pending };
     if (!career) return { ...row, paused: false };
-    const line = career.pending ? collapsedText(game)! : rowLine(game);
-    const badge = career.pending ? undefined : matchBadge(game);
+    const stopped = waitingOnPlayer(game);
+    const line = stopped ? collapsedText(game)! : rowLine(game);
+    const badge = stopped ? undefined : matchBadge(game);
+    const world = !career.pending && (currentSlot(career.season)?.kind === 'championship' || game.shownMatch?.fixture.kind === 'championship' || !!career.worldEnd);
     const progress = career.pending ? 1 : leaguePlace(career).played / leagueRounds(career.season);
-    return { ...row, club: career.clubs[career.playerClubId].name, line: game.paused && !career.pending ? `⏸ ${line}` : line, ...(badge ? { badge } : {}), progress };
+    return { ...row, club: career.clubs[career.playerClubId].name, waiting: stopped, ...(career.worldEnd?.played ? { waitingLine: `${WORLD_OVER}: see how it went` } : {}), ...(world ? { world } : {}), line: game.paused && !stopped ? `⏸ ${line}` : line, ...(badge ? { badge } : {}), progress };
   });
 }
 
@@ -927,7 +972,7 @@ export function boxStatus(games: Game[], followed: SportId, goal = false, showin
   const game = statusGame(games, showing);
   const careers = games.filter((g) => g.career);
   const name = (g: Game) => g.sport.present.terms.name;
-  const waitingElsewhere = careers.some((g) => g !== game && g.career!.pending);
+  const waitingElsewhere = careers.some((g) => g !== game && waitingOnPlayer(g));
   let text = careers.length > 1 ? standingText(game) : statusText(game, goal);
   if (waitingElsewhere) text = text ? `${text} $(bell)` : `$(bell) ${SEASON_OVER}`;
   const tooltip = careers.length > 1 ? `${careers.map((g) => `${name(g)}: ${careerLines(g).join('\n\n')}`).join('\n\n---\n\n')}\n\nClick to open` : statusTooltip(game);

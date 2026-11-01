@@ -10,7 +10,7 @@ import { Ownership, POLL_MS } from './ownership';
 import { SidebarProvider } from './sidebar';
 import { StatusBar } from './statusBar';
 import { Storage, type LiveStatus } from './storage';
-import { boxStatus, buildHonours, buildView, careerSummary, cycledSport, enabledSports, GoalWatch, honoursLine, SEASON_OVER, seasonFinished, sportRows, STATUS_CYCLE_MS, statusGame } from './viewModel';
+import { boxStatus, buildHonours, buildView, careerSummary, cycledSport, enabledSports, GoalWatch, honoursLine, SEASON_OVER, seasonFinished, sportRows, waitingOnPlayer, worldFinished, worldStarted, STATUS_CYCLE_MS, statusGame } from './viewModel';
 
 let ownership: Ownership | undefined;
 
@@ -91,11 +91,11 @@ export function activate(context: vscode.ExtensionContext): void {
   const updateOutside = () => {
     const live = outside();
     onShow = live.sport ?? followed;
-    const decisions = listed().filter((g) => g.career?.pending).length;
+    const decisions = listed().filter(waitingOnPlayer).length;
     // Starting a career and the summer choice show even with the score turned off: they're waiting on the player.
     const waiting = !listed().some((g) => g.career) || decisions > 0;
     statusBar.update(config().get('statusBarScore', true) || waiting ? live.text : null, live.tooltip);
-    sidebar.setInfo(live.description, decisions ? { value: decisions, tooltip: decisions === 1 ? SEASON_OVER : `${decisions} seasons over: decisions waiting` } : undefined);
+    sidebar.setInfo(live.description, decisions ? { value: decisions, tooltip: decisions === 1 ? (listed().some((g) => g.career?.pending) ? SEASON_OVER : 'World Championship over') : `${decisions} seasons over: decisions waiting` } : undefined);
   };
 
   /** A small message that goes by itself; the badge, bell and pinned line stay until the player acts. */
@@ -136,6 +136,11 @@ export function activate(context: vscode.ExtensionContext): void {
       seasonOver: (end) => {
         checkHonours();
         if (!(sidebar.visible && open === sport)) toast(seasonFinished(game, end));
+      },
+      worldStarted: () => toast(worldStarted(game)),
+      worldOver: (end) => {
+        checkHonours();
+        if (!end.played || !(sidebar.visible && open === sport)) toast(worldFinished(game, end));
       },
       unreadable: (old) => {
         // Kept whole as a backup, and its history archived like a finished career, before the player starts again.
@@ -238,6 +243,9 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       case 'chooseSports':
         void vscode.commands.executeCommand('sportsSimulator.chooseSports');
+        return;
+      case 'continueSeason':
+        owner.whenOwner(() => games[message.sport].continueSeason());
         return;
       case 'chooseFocus': {
         const { focus } = message;

@@ -116,7 +116,7 @@ export interface Season {
   round: number;
   playoffs: Playoff[];
   cup: Cup;
-  /** Drawn once the league season ends, in championship years. */
+  /** Played before this season's league in the year after every fourth season, as its own mini season. */
   championship: Cup | null;
   playerMatches: PlayerMatch[];
   /** Goals per player this season (own goals excluded). */
@@ -208,6 +208,13 @@ export interface SeasonRecord {
   ratingEnd: number;
 }
 
+export interface WorldEnd {
+  season: number;
+  winner: number;
+  /** Whether the player's side was in it. */
+  played: boolean;
+}
+
 export interface Career {
   version: number;
   sport: SportId;
@@ -225,6 +232,8 @@ export interface Career {
   honours: { cup: CupWinner[]; championship: CupWinner[] };
   /** The most recent World Championship, kept to look back on until the next one. */
   lastChampionship: Cup | null;
+  /** A World Championship has just finished: the game stops here if the player was in it. */
+  worldEnd?: WorldEnd | null;
   /** Players sent off, who miss their club's next match. */
   suspended: number[];
   /** Id for the next new player. */
@@ -328,7 +337,9 @@ function newSeason(format: SportFormat, number: number, leagues: number[][], sta
     format.cup.after.forEach((after, stage) => after === index && calendar.push({ kind: 'cup', stage }));
   });
   if (format.playoffs) for (let stage = 0; stage < 3; stage++) calendar.push({ kind: 'playoff', stage });
-  if (number % CHAMPIONSHIP_EVERY === 0) cupStages(format, 'championship').forEach((_, stage) => calendar.push({ kind: 'championship', stage }));
+  // Every fourth season is followed by the World Championship, for those who finished it in Leagues 1 and 2.
+  const worldYear = number > 1 && (number - 1) % CHAMPIONSHIP_EVERY === 0;
+  if (worldYear) calendar.unshift(...cupStages(format, 'championship').map((_, stage): Slot => ({ kind: 'championship', stage })));
   return {
     number,
     leagues: leagueSeasons,
@@ -339,7 +350,7 @@ function newSeason(format: SportFormat, number: number, leagues: number[][], sta
     round: 0,
     playoffs: [],
     cup: drawCup(format, number, standing.slice(0, format.cup.entrants), rng),
-    championship: null,
+    championship: worldYear ? drawChampionship(format, number - 1, standing.slice(0, format.championship.entrants), rng) : null,
     playerMatches: [],
     scorers: {},
   };
@@ -454,12 +465,27 @@ export function completeRound(career: Career, results: RoundResult[]): void {
   s.round++;
   if (done?.kind === 'league' && done.index === s.schedule.length - 1) {
     s.playoffs = format.playoffs ? drawPlayoffs(s) : [];
-    if (s.calendar.some((slot) => slot.kind === 'championship')) {
-      const top = s.leagues.slice(0, 2).flatMap((l) => sortTable(l.table).map((r) => r.clubId));
-      s.championship = drawChampionship(format, s.number, top.slice(0, format.championship.entrants), rng);
-    }
   }
+  if (done?.kind === 'championship' && currentSlot(s)?.kind !== 'championship') closeChampionship(career, format);
   career.rng = rng.state;
+}
+
+/** Puts the result on the season it followed, since it's that season's World Championship. */
+function closeChampionship(career: Career, format: SportFormat): void {
+  const cup = career.season.championship!;
+  const me = career.playerClubId;
+  const run = cupRun(format, cup, me);
+  const last = career.history[career.history.length - 1];
+  if (run && last) last.championship = run;
+  recordCupWinner(career, cup);
+  career.lastChampionship = cup;
+  career.worldEnd = { season: cup.season, winner: cup.winner!, played: cup.entrants.includes(me) };
+}
+
+function recordCupWinner(career: Career, cup: Cup): void {
+  if (cup.winner === undefined) return;
+  const final = cup.rounds[cup.rounds.length - 1].ties[0];
+  career.honours[cup.id].push({ season: cup.season, winner: cup.winner, runnerUp: final.home === cup.winner ? final.away : final.home });
 }
 
 function playerMatch(career: Career, round: number, fixture: Fixture, outcome: MatchOutcome): PlayerMatch {
@@ -787,12 +813,8 @@ export function allocatePoints(career: Career, allocation: Record<Stat, number>)
   career.history.push(record);
   recordSeasonGoals((career.records ??= emptyRecords()), record.goalsFor, record.season);
 
-  for (const cup of [career.season.cup, career.season.championship]) {
-    if (cup?.winner === undefined) continue;
-    const final = cup.rounds[cup.rounds.length - 1].ties[0];
-    career.honours[cup.id].push({ season: cup.season, winner: cup.winner, runnerUp: final.home === cup.winner ? final.away : final.home });
-  }
-  if (career.season.championship) career.lastChampionship = career.season.championship;
+  recordCupWinner(career, career.season.cup);
+  career.worldEnd = null;
 
   const rng = new Rng(career.rng);
   for (const change of pending.turnover ?? []) {
@@ -840,7 +862,6 @@ function seasonRecord(career: Career, pending: SeasonEnd): SeasonRecord {
     topScorer: top && top.goals > 0 ? top : undefined,
     ...(bowler && bowler.goals > 0 ? { topWickets: bowler } : {}),
     cup: cupRun(format, s.cup, me.id) ?? undefined,
-    championship: (s.championship && cupRun(format, s.championship, me.id)) ?? undefined,
     ratingStart: s.ratingAtStart[me.id],
     ratingEnd: rating(me),
   };

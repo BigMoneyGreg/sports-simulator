@@ -30,7 +30,7 @@ writeFileSync(join(user, 'User', 'settings.json'), JSON.stringify({ 'security.wo
 
 const seedFile = join(profile, 'seed.cjs');
 await build({ entryPoints: [join(root, 'test/e2e/seed.ts')], bundle: true, platform: 'node', format: 'cjs', outfile: seedFile, logLevel: 'error' });
-spawnSync(process.execPath, [seedFile, join(storage, 'career.rugby.json')], { stdio: 'inherit' });
+spawnSync(process.execPath, [seedFile, join(storage, 'career.rugby.json'), join(storage, 'career.cricket.json')], { stdio: 'inherit' });
 
 // Behind other windows VS Code holds back its drawing, and notifications with it.
 const BACKGROUND_OK = ['--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows'];
@@ -159,9 +159,26 @@ try {
   await until('next season', async () => !/decision waiting/i.test(await rowText('rugby')));
   passed('Answering starts the next season', true);
 
+  // A World Championship just finished: gold row, its own report, then the next season.
+  passed('A finished World Championship shows on its row', /World Championship over/.test(await rowText('cricket')));
+  passed('Its row is gold', await box.run(inBox(`return d.querySelector('[data-sport="cricket"]').classList.contains('world');`)));
+  await click('[data-sport="cricket"] .row-main');
+  await until('the report', () => box.run(inBox(`return !!d.getElementById('continueSeason');`)));
+  await shot(main, 'world-end');
+  passed('The report has no summer question', await box.run(inBox(`return !d.querySelector('[data-focus]') && /World/.test(d.querySelector('.headline').textContent);`)));
+  await click('#continueSeason');
+  await until('the league', () => box.run(inBox(`return !d.getElementById('continueSeason') && !!d.querySelector('[data-ask-career]');`)));
+  passed('Carrying on starts the league', true);
+  await click('[data-ask-career]');
+  await until('the question', () => box.run(inBox(`return !!d.querySelector('[data-ask-reset]');`)));
+  await click('[data-ask-reset]');
+  await until('the red step', () => box.run(inBox(`return !!d.querySelector('[data-do-reset]');`)));
+  await click('[data-do-reset]');
+  await until('cricket gone', async () => !/India/.test(await rowText('cricket')));
+
   // Start football from nothing, browsing the country list.
   await click('[data-sport="football"] .row-main');
-  await until('setup', () => box.run(inBox(`return !!d.getElementById('search');`)));
+  await until('setup', () => box.run(inBox(`return !!d.getElementById('search') && /football/i.test(d.querySelector('.setup h2').textContent);`)));
   const listed = await box.run(inBox(`return d.querySelectorAll('#nations .nation').length;`));
   passed('Countries can be browsed without typing', listed > 100 || (await box.run(inBox(`return !!d.querySelector('.chosen');`))), `${listed} listed`);
   await box.run(inBox(`const s = d.getElementById('search'); s.value = 'Scotland'; s.dispatchEvent(new Event('input', { bubbles: true })); return true;`));

@@ -1920,3 +1920,17 @@ body.vscode-high-contrast .chip,
 body.vscode-high-contrast .pin {
   border-color: var(--vscode-contrastBorder, currentColor);
 }
+
+/* The World Championship is rare enough to make a fuss of. */
+.sport.world {
+  --sport: #e3b341;
+}
+
+/* Four match lengths with their season times need two rows in a narrow box. */
+.seg[data-name='duration'] {
+  flex-wrap: wrap;
+}
+
+.seg[data-name='duration'] button {
+  flex: 1 0 calc(50% - 2px);
+}

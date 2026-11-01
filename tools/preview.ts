@@ -10,7 +10,9 @@
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { Game, type Scheduler } from '../src/extension/game';
+import { chooseFocus, newCareer, playSeason } from '../src/core/career';
+import { Game, SAVE_VERSION, type Scheduler } from '../src/extension/game';
+import { SPORTS } from '../src/sports';
 import { buildHonours, buildView, careerSummary, honoursLine, sportRows } from '../src/extension/viewModel';
 import type { SportRowView, View } from '../src/shared/view';
 
@@ -66,10 +68,10 @@ for (let season = 0; season < 3; season++) {
   game.chooseFocus(season % 2 ? 'attack' : 'defence');
   while (phase() !== 'seasonOver') run();
 }
-// Season 4 ends with the World Championship.
-views.championship = { view: buildView(game), tab: 'cups', cup: 'championship' };
+// After season 4's summer, the World Championship, if the side made it.
 {
   game.chooseFocus('attack');
+  views.championship = { view: buildView(game), tab: game.shownMatch?.fixture.kind === 'championship' ? 'match' : 'cups', cup: 'championship' };
   for (let md = 0; md < 3; md++) {
     while (phase() === 'live') run();
     run();
@@ -106,12 +108,26 @@ for (const [sport, team, seed] of [['rugby', 'WAL', 7], ['cricket', 'SRI', 7]] a
     g.chooseFocus(season % 2 ? 'attack' : 'defence');
     while (at() !== 'seasonOver') run();
   }
-  views[`${sport}_championship`] = { view: buildView(g), tab: 'cups', cup: 'championship' };
   g.chooseFocus('attack');
+  views[`${sport}_championship`] = { view: buildView(g), tab: 'cups', cup: 'championship' };
   run(3);
   views[`${sport}_club`] = { view: buildView(g), tab: 'club' };
   views[`${sport}_championshipLater`] = { view: buildView(g), tab: 'cups', cup: 'championship' };
   later[sport] = g;
+}
+// A side good enough for the World Championship, in it and then out of it.
+{
+  const c = newCareer({ rating: 95, seed: 40, team: 'BRA' }, SPORTS.football);
+  for (let season = 0; season < 4; season++) {
+    playSeason(c, SPORTS.football);
+    chooseFocus(c, 'attack');
+  }
+  const g = new Game({ save: () => {}, changed: () => {} }, manual);
+  g.load(JSON.parse(JSON.stringify({ version: SAVE_VERSION, career: c, live: null, paused: false, duration: '2m' })));
+  run(40);
+  views.world = { view: buildView(g), tab: 'match' };
+  while (g.phase !== 'worldOver') run();
+  views.worldEnd = { view: buildView(g), tab: 'match' };
 }
 // Every screen sits in the list: its own sport open, the others minimised.
 const { football, rugby, rugbyNone, cricketWaiting } = sampleRows as Record<string, SportRowView>;

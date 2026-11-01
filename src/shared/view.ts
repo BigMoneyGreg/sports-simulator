@@ -28,6 +28,14 @@ export interface TimelineView {
 }
 
 /** Marks a match that isn't an ordinary league one. */
+/** How the player's World Championship went. */
+export interface WorldEndView {
+  season: number;
+  headline: string;
+  winner: TeamBadge;
+  won: boolean;
+}
+
 export interface MatchBadge {
   label: 'Cup' | 'World' | 'Play-off';
   kind: 'cup' | 'world' | 'playoff';
@@ -204,8 +212,12 @@ export interface SportRowView {
   /** How far through the league season, from 0 to 1. */
   progress?: number;
   paused: boolean;
-  /** The summer's decision is waiting. */
+  /** The summer's decision is waiting, or the World Championship's report. */
   waiting: boolean;
+  /** What's waiting, when it isn't the summer's decision. */
+  waitingLine?: string;
+  /** A World Championship is on. */
+  world?: boolean;
 }
 
 export interface NationOption {
@@ -307,6 +319,7 @@ export interface GameView {
   fixtures: FixtureView[];
   club: ClubView;
   waiting: 'seasonOver' | null;
+  worldEnd: WorldEndView | null;
   playoffs: PlayoffView[];
   seasonEnd: SeasonEndView | null;
   cups: CupsView;
@@ -396,6 +409,7 @@ export type ToHost =
   /** Deletes it, as if it was never played. */
   | { type: 'resetCareer'; sport: SportId }
   | { type: 'resetHonours' }
+  | { type: 'continueSeason'; sport: SportId }
   /** Asks which sports, and whether Honours, show in the box. */
   | { type: 'chooseSports' };
 

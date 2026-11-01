@@ -21,6 +21,7 @@ import {
   type ToHost,
   type ToWebview,
   type View,
+  type WorldEndView,
 } from '../shared/view';
 import { ordinal } from '../shared/format';
 import type { SportId } from '../core/format';
@@ -256,13 +257,14 @@ function renderRows(): void {
   // A long open page can push the other rows out of sight, so a decision waiting stays pinned at the top.
   const pins = document.getElementById('pins')!;
   const waiting = open ? rows.filter((r) => r.waiting && r.id !== open) : [];
-  patch(pins, waiting.map((r) => `<button type="button" class="pin" data-open="${r.id}">${esc(r.name)}: season over, decision waiting</button>`));
+  patch(pins, waiting.map((r) => `<button type="button" class="pin" data-open="${r.id}">${esc(r.name)}: ${esc(r.waitingLine ?? 'season over, decision waiting')}</button>`));
   app.style.setProperty('--pin-h', `${pins.offsetHeight}px`);
   for (const r of rows) {
     const section = app.querySelector<HTMLElement>(`:scope > [data-sport="${r.id}"]`)!;
     const isOpen = open === r.id;
     section.classList.toggle('needs-you', r.waiting && !isOpen);
-    writeRow(section, rowHtml(r, isOpen), isOpen ? '' : r.waiting ? 'Season over: decision waiting' : r.club ? (r.line ?? '') : 'Not started');
+    section.classList.toggle('world', !!r.world);
+    writeRow(section, rowHtml(r, isOpen), isOpen ? '' : r.waiting ? (r.waitingLine ?? 'Season over: decision waiting') : r.club ? (r.line ?? '') : 'Not started');
     // Inline styles are blocked by the CSP, so the width goes through the CSSOM.
     const bar = section.querySelector<HTMLElement>('.row-progress span');
     if (bar) bar.style.width = `${(r.progress ?? 0) * 100}%`;
@@ -402,8 +404,8 @@ function renderGame(v: GameView): void {
     panel.dataset.mode = 'game';
   }
   // The narrowest layout shows only the header, except when a summer choice is waiting.
-  app.classList.toggle('needs-choice', !!v.seasonEnd);
-  patch(document.getElementById('top')!, [headerHtml(v), v.header.paused && !v.seasonEnd ? '<p class="notice paused small">Paused. Press ▶ to carry on.</p>' : '']);
+  app.classList.toggle('needs-choice', !!v.seasonEnd || !!v.worldEnd);
+  patch(document.getElementById('top')!, [headerHtml(v), v.header.paused && !v.seasonEnd && !v.worldEnd ? '<p class="notice paused small">Paused. Press ▶ to carry on.</p>' : '']);
   const tabs: [Tab, string][] = [
     ['match', 'Match'],
     ['table', 'Table'],
@@ -414,7 +416,7 @@ function renderGame(v: GameView): void {
   const nav = `<nav class="tabs" role="tablist">${tabs
     .map(([id, label]) => `<button type="button" role="tab" aria-selected="${ui.tab === id}" tabindex="${ui.tab === id ? 0 : -1}" class="${ui.tab === id ? 'on' : ''}" data-tab="${id}">${label}</button>`)
     .join('')}</nav>`;
-  patch(document.getElementById('main')!, v.seasonEnd ? [seasonEndHtml(v.seasonEnd, v.sport, v.terms)] : [nav, ...panelParts(v)]);
+  patch(document.getElementById('main')!, v.seasonEnd ? [seasonEndHtml(v.seasonEnd, v.sport, v.terms)] : v.worldEnd ? [worldEndHtml(v.worldEnd, v.fixtures)] : [nav, ...panelParts(v)]);
   paintSwatches();
   trackGoals(v);
   showFlash();
@@ -721,6 +723,18 @@ function seasonEndHtml(e: SeasonEndView, sport: SportId, terms: SportTerms): str
   </div>`;
 }
 
+function worldEndHtml(e: WorldEndView, fixtures: FixtureView[]): string {
+  return `<div class="season-end">
+    <div class="card hero ${e.won ? 'champion' : ''}">
+      <h2 class="headline">${esc(e.headline)}</h2>
+      <p class="muted small">After Season ${e.season}${e.won ? '' : ` · won by ${swatch(e.winner)}${esc(e.winner.name)}`}</p>
+    </div>
+    <button type="button" id="continueSeason" class="primary">Start next season</button>
+    <h3 class="sub">Your matches</h3>
+    ${fixturesHtml(fixtures.filter((f) => f.kind === 'championship' && f.result))}
+  </div>`;
+}
+
 function fixturesHtml(fixtures: FixtureView[]): string {
   return `<ol class="fixtures card flush">${fixtures
     .map(
@@ -908,6 +922,8 @@ app.addEventListener('click', (e) => {
     send({ type: 'chooseFocus', sport: openSport(), focus: summer.focus });
   } else if (button.dataset.copy) {
     send({ type: 'copy', text: button.dataset.copy });
+  } else if (button.id === 'continueSeason') {
+    send({ type: 'continueSeason', sport: openSport() });
   } else if (button.id === 'newCareer') {
     ask = { kind: 'career', step: 'choose' };
     render();

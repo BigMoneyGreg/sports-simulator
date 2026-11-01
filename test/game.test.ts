@@ -1,7 +1,8 @@
 import { footballSport } from '../src/sports/football';
+import { chooseFocus, newCareer, playSeason } from '../src/core/career';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Game, migrate, tickMs, SAVE_VERSION, type SavedGame } from '../src/extension/game';
-import { buildView, collapsedText, GoalWatch, statusText, statusTooltip } from '../src/extension/viewModel';
+import { buildView, collapsedText, GoalWatch, sportRows, statusText, statusTooltip } from '../src/extension/viewModel';
 
 function setup() {
   const saves: (SavedGame | null)[] = [];
@@ -228,6 +229,76 @@ describe('season end view', () => {
     game.chooseFocus('defence');
     expect(game.career!.history).toHaveLength(1);
     expect(buildView(game).screen).toBe('game');
+  });
+});
+
+describe('the World Championship as its own mini season', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  /** A career at the moment season 5 begins, with this side's level. */
+  function atWorldYear(rating: number, team: string): SavedGame {
+    const c = newCareer({ rating, seed: 40, team }, footballSport);
+    for (let s = 0; s < 4; s++) {
+      playSeason(c, footballSport);
+      chooseFocus(c, 'attack');
+    }
+    return JSON.parse(JSON.stringify({ version: SAVE_VERSION, career: c, live: null, paused: false, duration: '30s' }));
+  }
+
+  it('plays after the summer, stops for its report, then starts the league', () => {
+    const saved = atWorldYear(95, 'BRA');
+    const events: string[] = [];
+    const game = new Game({ save: () => {}, changed: () => {}, worldStarted: () => events.push('started'), worldOver: (e) => events.push(`over ${e.season} ${e.played}`) });
+    game.load(saved);
+    expect(events).toEqual(['started']);
+    expect(game.shownMatch!.fixture.kind).toBe('championship');
+    expect(statusText(game)).toMatch(/World: /);
+    const [row] = sportRows([game]);
+    expect(row).toMatchObject({ world: true, badge: { label: 'World', kind: 'world' } });
+    expect(row.line).toMatch(/^Group [A-Z] · /);
+    vi.advanceTimersByTime(4 * 60 * 60 * 1000);
+    expect(game.phase).toBe('worldOver');
+    expect(events[1]).toBe('over 4 true');
+    expect(game.career!.season.calendar[game.career!.season.round].kind).toBe('league');
+    expect(statusText(game)).toBe('$(bell) World Championship over');
+    expect(sportRows([game])[0]).toMatchObject({ waiting: true, world: true, waitingLine: expect.stringMatching(/^World Championship over/) });
+    const view = buildView(game);
+    expect(view.screen === 'game' && view.worldEnd?.headline).toMatch(/World|group stage/);
+    // A restart stays on the report.
+    const again = new Game({ save: () => {}, changed: () => {} });
+    again.load(JSON.parse(JSON.stringify(game.snapshot())));
+    expect(again.phase).toBe('worldOver');
+    again.shutdown();
+    game.continueSeason();
+    expect(game.phase).toBe('live');
+    expect(game.shownMatch!.fixture.kind).toBe('league');
+    expect(game.career!.worldEnd).toBeNull();
+  });
+
+  it('passes straight on for a side that did not qualify, saying who won', () => {
+    const saved = atWorldYear(1, 'FIJ');
+    saved.career.season.championship!.entrants.includes(saved.career.playerClubId) && expect.unreachable('expected a side outside it');
+    const events: string[] = [];
+    const game = new Game({ save: () => {}, changed: () => {}, worldStarted: () => events.push('started'), worldOver: (e) => events.push(`over ${e.played}`) });
+    game.load(saved);
+    expect(events).toEqual(['over false']);
+    expect(game.phase).toBe('live');
+    expect(game.shownMatch!.fixture.kind).not.toBe('championship');
+    expect(game.career!.worldEnd).toBeNull();
+    expect(game.career!.honours.championship).toHaveLength(1);
+    game.shutdown();
+  });
+
+  it('upgrades a save with the World Championship still at the end of its season', () => {
+    const saved = atWorldYear(95, 'BRA');
+    const season = saved.career.season;
+    const old = { ...saved, version: 8, career: { ...saved.career, season: { ...season, calendar: [...season.calendar.filter((s) => s.kind !== 'championship'), { kind: 'championship', stage: 0 } as const], round: 3 } } };
+    const upgraded = migrate(old)!;
+    expect(upgraded.version).toBe(SAVE_VERSION);
+    expect(upgraded.career.season.calendar.some((s) => s.kind === 'championship')).toBe(false);
+    expect(upgraded.career.season.championship).toBeNull();
+    expect(upgraded.career.season.round).toBe(3);
   });
 });
 

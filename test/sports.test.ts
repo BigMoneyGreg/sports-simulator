@@ -510,19 +510,19 @@ describe.each(NEW_SPORTS)('%s careers', (id) => {
   it('has no play-offs, and finishes both cups', () => {
     const c = newCareer({ rating: 40, seed: 6 }, sport);
     let championships = 0;
-    playYears(c, 8, (career) => {
+    playYears(c, 9, (career) => {
       const s = career.season;
       expect(s.calendar.some((x) => x.kind === 'playoff')).toBe(false);
       expect(s.playoffs).toEqual([]);
       expect(s.cup.winner).toBeDefined();
-      if (s.number % 4 === 0) {
+      if (s.number > 1 && s.number % 4 === 1) {
         championships++;
         expect(s.championship?.winner).toBeDefined();
         expect(s.championship?.entrants).toHaveLength(f.championship.entrants);
       } else expect(s.championship).toBeNull();
     });
     expect(championships).toBe(2);
-    expect(c.honours.cup).toHaveLength(8);
+    expect(c.honours.cup).toHaveLength(9);
     expect(c.honours.championship).toHaveLength(2);
   });
 

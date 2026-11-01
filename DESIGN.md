@@ -47,7 +47,7 @@ Season (runs automatically, 38 matchdays)
   └─ full-time overlay in the sidebar box (fades after 5s) → next matchday
         │
         ▼
-Play-offs (if you finished 3rd–6th); Nations Cup ties during the season, World Championship every 4th summer
+Play-offs (if you finished 3rd–6th); Nations Cup ties during the season; the World Championship follows every 4th summer as its own mini season
         │
         ▼
 End of season
@@ -68,7 +68,7 @@ Next season … (won league 1? → carry on, or start a new career)
 | Option | Values | Notes |
 |---|---|---|
 | League | 1–5 (buttons) | Where you start. Your rating is random within the league, weighted to mid-table: 50% chance of 40–60% of the way up the league's band, 25% of 20–40%, 25% of 60–80% (never the very top or bottom). Not shown; you find out from the table |
-| Match duration | 30 sec · 2 min · 5 min | Length of one 90-minute match; can be changed any time from the ⏱ button in the box. Default 2 min |
+| Match duration | 30 sec · 2 · 5 · 10 min in football, 1½ · 5 · 15 · 30 in rugby, 2 · 10 · 20 · 40 in cricket | Length of one match; can be changed any time from the ⏱ button in the box. Default the shortest |
 | Country | Type to search; matches appear as you type | Sets the league picker to its usual level (marked *Usual*); any league can be picked, but only once a country is chosen. Preselected from VS Code's display language when it points to one country (German → Germany; plain English doesn't). See §10 |
 
 ### Starting position
@@ -202,7 +202,7 @@ Cups never change ratings: only league finishes feed the summer (§7). They brin
 - A tie settled by extra time or penalties names its winner (*Brazil win 3–1 on penalties*).
 - Six cup matchdays sit between league rounds (after matchdays 6, 12, 18, 24, 30 and 36), so the final comes before the last two league rounds.
 
-**World Championship, every fourth summer** (seasons 4, 8, 12…), after the play-offs and before the summer decision.
+**World Championship, after every fourth season** (seasons 4, 8, 12…), as its own mini season: after the summer decision and its squad changes, before the next league season. Those who finished that season in Leagues 1 and 2 qualify, so a relegated side can still play and a promoted one can miss out. It has its own short report and no question, and a result goes on the season it followed. A side that didn't qualify goes straight on, with a message saying who won.
 - Leagues 1 and 2 of the season just finished (40 nations), seeded by final position into five pots of 8. Each of 8 groups of 5 takes one nation from each pot, so the top 8 are always apart.
 - Groups play once each (5 matchdays, one team resting each time) at neutral venues; points, goal difference, goals scored.
 - The top two in each group go through. Round of 16: A1 v B2, C1 v D2, E1 v F2, G1 v H2, then B1 v A2, D1 v C2, F1 v E2, H1 v G2, so teams from the same group can only meet again in the final. One-off neutral matches to the final.
@@ -477,7 +477,7 @@ The game uses real nations, not clubs: country names, flags and colours are free
 
 ## 11. Settings 🟢 NOW
 
-- Match duration (30 seconds / 1 / 2 / 5 minutes): the length a new career starts from, 30 seconds by default, which gives a season of about 20 to 25 minutes in every sport as each sport rounds up to its shortest. Each career keeps its own, changed from the ⏱ button in the box. Starting a career at another length makes that the default, kept in the extension's own storage rather than the player's settings, until the setting is changed
+- Match duration (four lengths in each sport, with similar seasons): the length a new career starts from, 30 seconds by default, which gives a season of about 20 to 25 minutes in every sport as each sport rounds up to its shortest. Each career keeps its own, changed from the ⏱ button in the box. Starting a career at another length makes that the default, kept in the extension's own storage rather than the player's settings, until the setting is changed
 - Full-time overlay on/off
 - Status bar score on/off
 - Which sports show (a tick for each; none ticked counts as all). Also from **Choose sports…** under the list in the box, which asks in a tick-list that won't accept no sports at all
@@ -575,7 +575,7 @@ Football's numbers and behaviour are unchanged: whole careers on fixed seeds has
 | Top/bottom bonus | 6, 4, 2 / 2, 4, 6 | 6, 3, 0 / 0, 3, 6 | 6, 3, 0 / 0, 3, 6 |
 | Favourite wins (of decided games) | about 64% | about 71% | about 66% |
 | Champions' losses a season | about 7.5 of 38 | about 2.6 of 14 | about 2.2 of 10 |
-| Match lengths | 30s, 2m, 5m | 1m, 2m, 5m | 2m, 5m |
+| Match lengths | 30s, 2m, 5m, 10m | 1½m, 5m, 15m, 30m | 2m, 10m, 20m, 40m |
 | Season, shortest length | 23 min | 18 min | 27 min |
 | Nations Cup | top 64 | top 32 | top 16 |
 | World Championship | 40: 8 groups of 5 | 16: 4 groups of 4 | 12: 4 groups of 3 |
@@ -648,6 +648,9 @@ In rough priority order:
 | Nothing else stops the clock: a failed save or redraw is logged and warned about once | Losing a few seconds' progress is better than a game that silently freezes until VS Code reloads |
 | A damaged save is set aside, not treated as no career | "No career" would have deleted it at the next close |
 | Works in Restricted Mode, and prefers the local machine when remote | It never reads workspace files, and careers should follow the player rather than each server |
+| Match length stays the player's choice, for each sport on its own, with lengths that give similar seasons | A season-length choice and exact seasons (match lengths adjusting after a cup exit) were tried and measured. The user chose this: it's easy to picture and to change, and a player can run one sport fast and another slow |
+| World Championship as its own mini season after the summer | The user's design: blended into a season it was easy to miss, and now the summer's decision pays off straight away. It can't change ratings, so balance holds |
+| A badge marks cup, play-off and World Championship matches; league matches stay plain | A collapsed row or the status bar couldn't tell them apart. Each badge has a word, so colour isn't the only cue |
 | Hiding a sport holds its clock, without touching the career or its own pause | If it played on hidden, a season could end with a decision waiting on a sport the player can't see. A hold isn't saved, so the setting alone decides it and un-hiding can't undo a pause the player chose |
 | Reset honours leaves running careers alone | Honours are a side record: wiping them shouldn't cost seasons of play, and End and Reset already deal with careers one at a time |
 | One End… button instead of separate End and Reset; the Reset command removed | Two ways to stop a career needed explaining; asking at the moment makes the difference clear. VS Code's pop-ups can't be red, so these questions live in the box |

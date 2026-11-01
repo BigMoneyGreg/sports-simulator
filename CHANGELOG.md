@@ -15,7 +15,8 @@ First release.
 - **Cricket:** the further down the order, the sooner a batter gets out and the slower they score, and matches show a real scorecard: how each batter got out, runs and balls, and the bowling figures
 - Matches against your rival are called out in the status bar, on the scoreboard and at full time, and the season report shows how you did against them
 - International football career: about 210 nations to play as, 100 of them in a world of 5 leagues with promotion, play-offs and relegation
-- Nations Cup every season and a World Championship every fourth summer, with their own Cups tab
+- Nations Cup every season, and a World Championship after every fourth season as its own mini season, with their own Cups tab
+- Badges show at a glance when a match is a cup tie, a play-off or the World Championship
 - Live matches, match report and live tables in the Explorer sidebar, with your score in the status bar (GOAL! when one goes in, and a hover with your position and expected finish)
 - Collapse the box and its title still shows your position and score; a badge marks the summer choice
 - One decision a season, asked a different way each summer (call up a player, appoint a coach, change formation, set the training camp), read from where you ranked for goals scored and conceded and from who's retiring or being dropped
