@@ -73,6 +73,14 @@ export interface LiveMatchView {
   timeline: TimelineView[];
   /** Shown instead of the timeline in a sport that has one, latest innings first. */
   scorecard?: InningsCard[];
+  /** A race: the running order, in place of the scoreboard. */
+  race?: RaceView;
+}
+
+export interface RaceView {
+  /** "Monaco", or the Race of Nations. */
+  venue: string;
+  rows: { place: number; team: TeamBadge; driver: string; gap: string; moved: number; out: boolean; pit: boolean; mine: boolean; rival: boolean }[];
 }
 
 export interface FullTimeView {
@@ -88,6 +96,8 @@ export interface FullTimeView {
   ms: number;
   /** Changes for every new full time, so the card animates once per match. */
   key: string;
+  /** A race: there's only the player's team to show, not two sides. */
+  solo?: boolean;
 }
 
 export interface HistoryRowView {
@@ -143,9 +153,20 @@ export interface TableRowView {
   move?: number;
 }
 
+/** A driver in a sport of races: the individual title beside the team one. */
+export interface DriverRowView {
+  pos: number;
+  name: string;
+  team: TeamBadge;
+  points: number;
+  wins: number;
+  isPlayer: boolean;
+}
+
 export interface TableView {
   tier: number;
   rows: TableRowView[];
+  drivers?: DriverRowView[];
 }
 
 export interface FixtureView {
@@ -158,6 +179,8 @@ export interface FixtureView {
   town: string;
   opponent: TeamBadge;
   home: boolean;
+  /** A race: where it is, in place of an opponent. */
+  venue?: string;
   result?: string;
   /** The full result on hover, e.g. "1–1, won 4–1 on penalties". */
   resultTitle?: string;
@@ -190,7 +213,7 @@ export interface HeaderView {
   played: number;
   games: number;
   /** Last five league results, oldest first, with a hover line like "W 2–0 v Hengate (H)". */
-  form: { result: 'W' | 'D' | 'L'; title: string }[];
+  form: { result: 'W' | 'D' | 'L'; title: string; label?: string }[];
   paused: boolean;
   season: number;
   round: string;
@@ -367,7 +390,8 @@ export interface CupView {
 }
 
 export interface CupsView {
-  cup: CupView;
+  /** A sport of races has no Nations Cup. */
+  cup: CupView | null;
   championship: CupView;
 }
 

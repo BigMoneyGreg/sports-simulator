@@ -32,6 +32,16 @@ export interface MatchOptions {
    * earlier legs (home side's goals first), added before deciding a winner.
    */
   knockout?: { aggregate: [number, number] };
+  /** A race: everyone in it, not only the two sides the shared match shape names. */
+  field?: TeamSheet[];
+  /** A race with one car per team. */
+  oneCar?: boolean;
+}
+
+/** Where every car finished, or is now, best first. */
+export interface RaceResult {
+  order: { clubId: number; driverId: number; place: number; grid: number; points: number; out: boolean }[];
+  fieldSize: number;
 }
 
 export interface GoalRecord {
@@ -61,6 +71,8 @@ export interface MatchOutcome {
   balls?: [number, number];
   /** Cricket: wickets taken, by player. */
   wicketTakers?: { playerId: number; count: number }[];
+  /** A race's full result. */
+  race?: RaceResult;
 }
 
 /** The match simulation a sport plugs into the shared league core. */
@@ -126,6 +138,8 @@ export interface SportTerms {
   howTo: [string, string];
   /** Roughly how long a whole season takes at each match length. */
   seasonLabels: Partial<Record<Duration, string>>;
+  /** The words a sport of races uses where a match sport has its own. */
+  race?: { matchTab: string; lostShort: string; lostLong: string; scored: string; conceded: string; matches: string; worldName: string };
 }
 
 /** The summer question's wording for a sport. */
@@ -150,6 +164,18 @@ export interface InningsCard {
   bowlers: { name: string; overs: string; runs: number; wickets: number }[];
 }
 
+/** One car in the running order. */
+export interface RaceRow {
+  place: number;
+  clubId: number;
+  driver: string;
+  /** "+3.2", "Leader", "Out". */
+  gap: string;
+  moved: number;
+  out: boolean;
+  pit: boolean;
+}
+
 /** How a sport's matches read on screen. */
 export interface SportPresenter<M> {
   terms: SportTerms;
@@ -168,6 +194,8 @@ export interface SportPresenter<M> {
   details?(match: M, ctx: TimelineContext): string[];
   /** A sport with a scorecard shows it instead of the match report, latest innings first. */
   scorecard?(match: M, ctx: TimelineContext, teams: [string, string]): InningsCard[];
+  /** A sport of races shows its running order. */
+  race?(match: M, ctx: TimelineContext): { rows: RaceRow[] };
   /** The full-time card's note ("after extra time") and scorers line. */
   fullTime(match: M, names: [string, string], name: (id: number) => string): { note?: string; scorers: string };
   /** Under a leaver's name: "142 goals", "38 tries", "2,310 runs". */

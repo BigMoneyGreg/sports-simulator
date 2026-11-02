@@ -1,9 +1,9 @@
-import { currentSlot, FOCUSES, formatOf, fullHistory, leagueRounds, type WorldEnd, type SeasonEnd, type Career, type Focus, type Playoff, type SeasonRecord, type Slot } from '../core/career';
+import { currentSlot, FOCUSES, formatOf, fullHistory, leagueRounds, type WorldEnd, type SeasonEnd, type Career, type Focus, type PlayerMatch, type Playoff, type SeasonRecord, type Slot } from '../core/career';
 import { SPORT_IDS, type SportId } from '../core/format';
 import { CHAMPIONSHIP_EVERY, CUP_NAMES, cupFixtures, cupRun, cupStages, stageLabel, stillIn, type Cup, type CupId, type CupTie } from '../core/cups';
 import { better, emptyRecords, topScorers, type MatchRecord } from '../core/records';
 import { FEAT_TITLES, greatest, trophies, type CareerSummary, type Feat } from '../core/honours';
-import { difference, goalRanks, recordResult, runRateAgainst, runRateFor, sortTable, zone, type Fixture, type TableRow } from '../core/league';
+import { difference, goalRanks, recordRace, recordResult, runRateAgainst, runRateFor, sortTable, zone, type Fixture, type TableRow } from '../core/league';
 import { SPORTS, sportOf, type AnySport } from '../sports';
 import { shortName, surname } from '../sports/football/names';
 import { ordinal } from '../shared/format';
@@ -47,6 +47,7 @@ export function buildView(game: Game, options: ViewOptions = { fullTimeOverlay: 
         .filter((x) => x.kind === 'league')
         .slice(-5)
         .map((x) => {
+          if (x.race) return { result: raceResult(x), label: x.race.places[0].out ? 'X' : String(x.race.places[0].place), title: placesText(x) };
           const result = matchResult(x);
           return { result, title: `${result} ${x.goalsFor}–${x.goalsAgainst} v ${shortName(career.clubs[x.opponentId])} (${x.home ? 'H' : 'A'})` };
         }),
@@ -83,7 +84,9 @@ export function buildView(game: Game, options: ViewOptions = { fullTimeOverlay: 
 
 const RIVAL_MATCH = 'Rival match';
 
-function isRivalFixture(career: Career, fixture: Pick<Fixture, 'home' | 'away'>): boolean {
+function isRivalFixture(career: Career, fixture: Pick<Fixture, 'home' | 'away' | 'field'>): boolean {
+  // Everyone in the league is in every race, so none of them is special.
+  if (fixture.field) return false;
   return career.rival !== null && (fixture.home === career.rival || fixture.away === career.rival);
 }
 
@@ -93,7 +96,7 @@ function buildFullTime(game: Game): FullTimeView | null {
   const sport = sportOf(career);
   const { match, fixture } = game.lastMatch;
   const name = (id: number) => {
-    const ids = [fixture.home, fixture.away];
+    const ids = fixture.field ?? [fixture.home, fixture.away];
     for (const clubId of ids) {
       const p = career.clubs[clubId].squad.find((x) => x.id === id);
       if (p) return surname(p.name);
@@ -105,17 +108,30 @@ function buildFullTime(game: Game): FullTimeView | null {
     competition: `${competition(fixture, career)}${isRivalFixture(career, fixture) ? ` · ${RIVAL_MATCH}` : ''}`,
     home: badge(career, fixture.home),
     away: badge(career, fixture.away),
-    score: sport.present.score(match).join(sport.present.terms.scoreJoin),
+    score: sport.present.score(match).filter((x, i) => x || !fixture.field || !i).join(sport.present.terms.scoreJoin),
     note,
+    ...(fixture.field ? { solo: true } : {}),
     scorers,
     ms: fullTimePause(game.duration),
     key: `${career.sport}-${career.season.number}-${career.season.round}`,
   };
 }
 
-/** "26W 7D 5L", or "7W 3L" in a sport without draws. */
-function recordText(r: Pick<SeasonRecord, 'won' | 'drawn' | 'lost'>, draws = true): string {
+/** "26W 7D 5L", "7W 3L" in a sport without draws, or "4W 9 podiums" in a sport of races. */
+function recordText(r: Pick<SeasonRecord, 'won' | 'drawn' | 'lost'>, draws = true, sport?: AnySport): string {
+  if (sport?.format.race) return `${r.won}W ${r.lost} podiums`;
   return draws ? `${r.won}W ${r.drawn}D ${r.lost}L` : `${r.won}W ${r.lost}L`;
+}
+
+/** A race the player was in: W for a win, D for points, L for neither, as the form dots colour them. */
+function raceResult(m: { race?: PlayerMatch['race'] }): 'W' | 'D' | 'L' {
+  const best = m.race!.places[0];
+  return best.place === 1 && !best.out ? 'W' : m.race!.places.some((p) => p.points > 0) ? 'D' : 'L';
+}
+
+/** "P3, P7", or "P3, DNF". */
+function placesText(m: { race?: PlayerMatch['race'] }): string {
+  return m.race!.places.map((p) => (p.out ? 'DNF' : `P${p.place}`)).join(', ');
 }
 
 /** W, D or L; a level score settled by a super over counts as the result it ended in. */
@@ -125,11 +141,11 @@ function matchResult(m: { goalsFor: number; goalsAgainst: number; won?: boolean 
 }
 
 /** One line for sharing: "Season 7 · Champions, League 3 · 26W 7D 5L · Promoted 🏆". */
-export function summaryLine(r: Pick<SeasonRecord, 'season' | 'tier' | 'position' | 'won' | 'drawn' | 'lost' | 'outcome'>, draws = true): string {
+export function summaryLine(r: Pick<SeasonRecord, 'season' | 'tier' | 'position' | 'won' | 'drawn' | 'lost' | 'outcome'>, draws = true, sport?: AnySport): string {
   const place = r.position === 1 ? `Champions, League ${r.tier}` : `${ordinal(r.position)}, League ${r.tier}`;
   const tail =
     r.outcome === 'promoted' ? 'Promoted' : r.outcome === 'playoffWinner' ? 'Promoted via the play-offs' : r.outcome === 'relegated' ? 'Relegated' : r.outcome === 'playoffs' ? 'Lost in the play-offs' : '';
-  return [`Season ${r.season}`, place, recordText(r, draws), tail].filter(Boolean).join(' · ') + (r.position === 1 ? ' 🏆' : '');
+  return [`Season ${r.season}`, place, recordText(r, draws, sport), tail].filter(Boolean).join(' · ') + (r.position === 1 ? ' 🏆' : '');
 }
 
 const RUN_SHORT: Record<string, string> = {
@@ -149,8 +165,9 @@ function cupLine(r: Pick<SeasonRecord, 'cup' | 'championship'>): string | undefi
 }
 
 /** The top five of a season's tally, across every league. */
-function seasonLeaders(career: Career, tally: Record<number, number> = {}): SeasonEndView['leaders'][number]['rows'] {
+function seasonLeaders(career: Career, tally: Record<number, number> = {}, among?: number[]): SeasonEndView['leaders'][number]['rows'] {
   return career.clubs
+    .filter((c) => !among || among.includes(c.id))
     .flatMap((c) => c.squad.map((p) => ({ club: c, name: p.name, count: tally[p.id] ?? 0 })))
     .filter((x) => x.count > 0)
     .sort((a, b) => b.count - a.count)
@@ -199,12 +216,12 @@ export function summerQuestion(career: Career): QuestionView {
 function seasonCupLine(career: Career, cup: Cup): CupRunView {
   const run = cupRun(formatOf(career), cup, career.playerClubId) ?? "Didn't qualify";
   const winner = cup.winner !== undefined && cup.winner !== career.playerClubId ? ` · won by ${shortName(career.clubs[cup.winner])}` : '';
-  return { name: CUP_NAMES[cup.id], run: run + winner };
+  return { name: cupName(career, cup.id), run: run + winner };
 }
 
 function historyRow(r: SeasonRecord, sport: AnySport): HistoryRowView {
   const { draws } = sport.present.terms;
-  return { season: r.season, tier: r.tier, position: r.position, record: recordText(r, draws), points: r.points, outcome: r.outcome, cups: cupLine(r), summary: summaryLine(r, draws) };
+  return { season: r.season, tier: r.tier, position: r.position, record: recordText(r, draws, sport), points: r.points, outcome: r.outcome, cups: cupLine(r), summary: summaryLine(r, draws, sport) };
 }
 
 function cabinet(history: SeasonRecord[]): CabinetView {
@@ -225,10 +242,12 @@ function recordsView(career: Career): RecordsView {
   const run = (x: { best: number; bestSeason?: number }, one: string, many: string) =>
     x.best ? `${x.best} ${x.best === 1 ? one : many}${x.bestSeason ? ` (S${x.bestSeason})` : ''}` : '—';
   const mg = r.manager;
+  // A race has no margin to measure and no such thing as avoiding defeat.
+  const race = !!formatOf(career).race;
   return {
-    biggestWin: r.biggestWin && score(r.biggestWin),
-    heaviestDefeat: r.heaviestDefeat && score(r.heaviestDefeat),
-    unbeaten: run(r.unbeaten, 'match', 'matches'),
+    biggestWin: race ? undefined : r.biggestWin && score(r.biggestWin),
+    heaviestDefeat: race ? undefined : r.heaviestDefeat && score(r.heaviestDefeat),
+    unbeaten: race ? '0' : run(r.unbeaten, 'match', 'matches'),
     winning: run(r.winning, 'win', 'wins'),
     mostGoals: r.mostGoalsSeason && `${r.mostGoalsSeason.goals} (S${r.mostGoalsSeason.season})`,
     topScorers: topScorers(r).map((s) => `${s.name} ${s.goals}`),
@@ -281,6 +300,11 @@ function seasonGoals(table: TableRow[], clubId: number): ClubView['goals'] {
 /** What a side has scored and conceded, and the league's averages, as shown: in cricket per over, as totals depend on who batted first. */
 function scoreTexts(table: TableRow[], row: TableRow): { scoredText: string; concededText: string; avgForText: string; avgAgainstText: string } {
   const mean = (of: (r: TableRow) => number) => table.reduce((t, r) => t + of(r), 0) / table.length;
+  if (row.raced || table.some((r) => r.raced)) {
+    // Two cars each race, and grid places count up from the back of 20.
+    const grid = (r: TableRow) => (r.played ? 21 - r.goalsFor / (2 * r.played) : 0);
+    return { scoredText: grid(row).toFixed(1), concededText: String(row.goalsAgainst), avgForText: mean(grid).toFixed(1), avgAgainstText: mean((r) => r.goalsAgainst).toFixed(1) };
+  }
   if (row.ballsFaced === undefined) {
     const average = String(Math.round(mean((r) => r.goalsFor)));
     return { scoredText: String(row.goalsFor), concededText: String(row.goalsAgainst), avgForText: average, avgAgainstText: average };
@@ -297,7 +321,7 @@ function differenceText(row: TableRow): string {
 
 /** How the season went against the rival, if they met. */
 function rivalSeason(career: Career): { rival?: string } {
-  const met = career.season.playerMatches.filter((m) => m.opponentId === career.rival).map(matchResult);
+  const met = career.season.playerMatches.filter((m) => m.opponentId === career.rival).map((m) => (m.race ? (m.race.beatRival ? 'W' : 'L') : matchResult(m)));
   if (!met.length) return {};
   const count = (r: string) => met.filter((x) => x === r).length;
   const record = recordText({ won: count('W'), drawn: count('D'), lost: count('L') }, sportOf(career).present.terms.draws);
@@ -315,6 +339,7 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
   const avgAgainst = avgFor;
 
   // Runs across league matches, in order.
+  const races = s.playerMatches.filter((m) => m.kind === 'league' && m.race);
   const results = s.playerMatches.filter((m) => m.kind === 'league').map(matchResult);
   const longest = (ok: (r: string) => boolean) => {
     let best = 0;
@@ -328,8 +353,9 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
   const unbeaten = longest((r) => r !== 'L');
   const wins = longest((r) => r === 'W');
   const winless = longest((r) => r !== 'W');
-  const bestRun = wins >= 3 ? `${wins} wins in a row` : `${unbeaten} unbeaten`;
-  const worstRun = winless >= 2 ? `${winless} without a win` : 'never went two without a win';
+  const bestFinish = Math.min(...races.flatMap((m) => m.race!.places.filter((p) => !p.out).map((p) => p.place)), 99);
+  const bestRun = races.length ? (bestFinish < 99 ? `Best finish: P${bestFinish}` : 'Never finished') : wins >= 3 ? `${wins} wins in a row` : `${unbeaten} unbeaten`;
+  const worstRun = races.length ? `${row.goalsAgainst} retirement${row.goalsAgainst === 1 ? '' : 's'}` : winless >= 2 ? `${winless} without a win` : 'never went two without a win';
 
   const scorer = me.squad
     .map((p) => ({ name: p.name, goals: s.scorers[p.id] ?? 0 }))
@@ -359,7 +385,7 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
     table,
     playoffs: myPlayoff && playoffView(career, myPlayoff),
     report: {
-      record: recordText(row, draws),
+      record: recordText(row, draws, sportOf(career)),
       points: row.points,
       goalsFor: row.goalsFor,
       goalsAgainst: row.goalsAgainst,
@@ -373,16 +399,18 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
       topScorer: scorer && scorer.goals > 0 ? `${scorer.name} (${scorer.goals})` : undefined,
       ...(bowler && bowler.wickets > 0 ? { topWickets: `${bowler.name} (${bowler.wickets})` } : {}),
       ...rivalSeason(career),
-      cups: [seasonCupLine(career, s.cup)],
+      cups: formatOf(career).race ? [] : [seasonCupLine(career, s.cup)],
     },
     leaders: [
-      { label: `${sportOf(career).present.terms.topScorers}, all leagues`, rows: seasonLeaders(career, s.scorers) },
+      formatOf(career).race
+        ? { label: `Drivers' championship, League ${end.tier}`, rows: seasonLeaders(career, s.scorers, league.clubIds) }
+        : { label: `${sportOf(career).present.terms.topScorers}, all leagues`, rows: seasonLeaders(career, s.scorers) },
       ...(s.wickets ? [{ label: 'Top wicket takers, all leagues', rows: seasonLeaders(career, s.wickets) }] : []),
     ],
     performance: end.performance > 0 ? 'above' : end.performance < 0 ? 'below' : 'expected',
     squad: squadChanges(career),
     question: summerQuestion(career),
-    summary: summaryLine({ season: end.season, tier: end.tier, position: end.position, won: row.won, drawn: row.drawn, lost: row.lost, outcome: end.outcome }, draws),
+    summary: summaryLine({ season: end.season, tier: end.tier, position: end.position, won: row.won, drawn: row.drawn, lost: row.lost, outcome: end.outcome }, draws, sportOf(career)),
     canRetire: end.outcome === 'champion',
   };
 }
@@ -391,6 +419,10 @@ function buildSeasonEnd(career: Career, table: TableView): SeasonEndView {
 function buildWorldEnd(career: Career, end: WorldEnd): WorldEndView {
   const me = career.clubs[career.playerClubId];
   const run = cupRun(formatOf(career), career.season.championship!, me.id);
+  const world = cupName(career, 'championship');
+  if (formatOf(career).race) {
+    return { season: end.season, headline: run === 'Winners' ? `${me.name} win the ${world}!` : `${run} at the ${world}.`, winner: badge(career, end.winner), won: run === 'Winners' };
+  }
   const headline =
     run === 'Winners'
       ? `World champions! ${me.name} lift the World Championship.`
@@ -402,12 +434,20 @@ function buildWorldEnd(career: Career, end: WorldEnd): WorldEndView {
   return { season: end.season, headline, winner: badge(career, end.winner), won: run === 'Winners' };
 }
 
-const WORLD_OVER = 'World Championship over';
+/** A competition's name; a sport of races calls its big event something else. */
+function cupName(career: Pick<Career, 'sport'>, id: CupId): string {
+  return (id === 'championship' && SPORTS[career.sport].present.terms.race?.worldName) || CUP_NAMES[id];
+}
+
+function worldOver(career: Pick<Career, 'sport'>): string {
+  return `${cupName(career, 'championship')} over`;
+}
 
 /** The short message when a World Championship starts. */
 export function worldStarted(game: Game): string {
   const career = game.career!;
   const me = career.clubs[career.playerClubId];
+  if (formatOf(career).race) return `${game.sport.present.terms.name}: ${me.name} line up for the ${cupName(career, 'championship')}.`;
   const group = career.season.championship!.groups.find((g) => g.table.some((r) => r.clubId === me.id));
   return `${game.sport.present.terms.name}: the World Championship begins. ${me.name} are in Group ${group!.name}.`;
 }
@@ -417,7 +457,7 @@ export function worldFinished(game: Game, end: WorldEnd): string {
   const career = game.career!;
   const name = game.sport.present.terms.name;
   if (end.played) return `${name}: ${buildWorldEnd(career, end).headline}`;
-  return `${name}: ${career.clubs[end.winner].name} won the World Championship. Season ${career.season.number} begins.`;
+  return `${name}: ${career.clubs[end.winner].name} won the ${cupName(career, 'championship')}. Season ${career.season.number} begins.`;
 }
 
 /** Whether the game is stopped until the player does something. */
@@ -444,7 +484,8 @@ function nationOptions(sport: SportId): NationOption[] {
   return (nationLists[sport] ??= SPORTS[sport]
     .nations()
     .map((n) => ({ code: n.short, name: n.name, colours: n.colours, tier: n.tier }))
-    .sort((a, b) => a.name.localeCompare(b.name)));
+    // A sport of races lists its own history first, so it keeps its own order.
+    .sort((a, b) => (SPORTS[sport].format.race ? 0 : a.name.localeCompare(b.name))));
 }
 
 /** VS Code display languages that point clearly to one country (plain English doesn't). */
@@ -468,10 +509,11 @@ function roundLabel(career: Career): string {
   if (career.pending || !slot) return 'Season over';
   switch (slot.kind) {
     case 'league':
-      return `MD ${slot.index + 1}/${leagueRounds(s)}`;
+      return formatOf(career).race ? `Race ${slot.index + 1}/${leagueRounds(s)}` : `MD ${slot.index + 1}/${leagueRounds(s)}`;
     case 'playoff':
       return ['Play-off semi-final, 1st leg', 'Play-off semi-final, 2nd leg', 'Play-off final'][slot.stage];
     default:
+      if (formatOf(career).race) return cupName(career, slot.kind);
       return `${CUP_NAMES[slot.kind]} · ${stageLabel(formatOf(career), slot.kind, cupStages(formatOf(career), slot.kind)[slot.stage])}`;
   }
 }
@@ -481,6 +523,7 @@ function competition(fixture: Fixture, career: Career): string {
     case 'cup':
     case 'championship': {
       const format = formatOf(career);
+      if (format.race) return cupName(career, fixture.kind);
       const stage = cupStages(format, fixture.kind)[fixture.stage!];
       const cup = fixture.kind === 'cup' ? career.season.cup : career.season.championship!;
       const group = 'group' in stage ? cup.groups.find((g) => g.table.some((r) => r.clubId === fixture.home)) : undefined;
@@ -512,6 +555,7 @@ function matchBadge(game: Game): MatchBadge | undefined {
 
 /** What a badge leaves to say: "Round of 64", "Group B", "League 3 final". */
 function badgeStage(fixture: Fixture, career: Career): string {
+  if (fixture.field) return cupName(career, 'championship');
   return competition(fixture, career).replace(/^.* · /, '').replace(' play-off', '');
 }
 
@@ -523,6 +567,9 @@ function buildMatch(game: Game): LiveMatchView | null {
   const { module, present } = sport;
   const { match, fixture } = shown;
   const playerName = (side: 'home' | 'away', id: number) => {
+    // A race's drivers come from the whole field.
+    const driver = fixture.field?.flatMap((c) => career.clubs[c].squad).find((p) => p.id === id);
+    if (driver) return driver.name;
     const club = career.clubs[side === 'home' ? fixture.home : fixture.away];
     // Own goals are credited to the scoring side but the player belongs to the other.
     const other = career.clubs[side === 'home' ? fixture.away : fixture.home];
@@ -532,6 +579,7 @@ function buildMatch(game: Game): LiveMatchView | null {
   const situation = present.situation?.(match, towns);
   const details = present.details?.(match, { playerName }) ?? [];
   const scorecard = present.scorecard?.(match, { playerName }, towns);
+  const race = present.race?.(match, { playerName });
   const view: LiveMatchView = {
     competition: competition(fixture, career),
     ...(BADGES[fixture.kind] ? { badge: BADGES[fixture.kind], stage: badgeStage(fixture, career) } : {}),
@@ -547,6 +595,14 @@ function buildMatch(game: Game): LiveMatchView | null {
     ...(situation ? { situation } : {}),
     ...(details.length ? { details } : {}),
     ...(scorecard ? { scorecard } : {}),
+    ...(race
+      ? {
+          race: {
+            venue: fixture.kind === 'league' ? trackFor(career, fixture) : cupName(career, 'championship'),
+            rows: race.rows.map((r) => ({ ...r, team: badge(career, r.clubId), mine: r.clubId === career.playerClubId, rival: r.clubId === career.rival })),
+          },
+        }
+      : {}),
     clock: present.clock(match),
     finished: module.isFinished(match),
     timeline: present.timeline(match, { playerName }),
@@ -581,7 +637,9 @@ function buildTables(game: Game): TableView[] {
         if (f.kind !== 'league' || f.tier !== league.tier) return;
         const m = live.matches[i];
         if (!module.countsLive(m)) return;
-        recordResult(table, f.home, f.away, module.outcome(m));
+        const result = module.outcome(m);
+        if (result.race) recordRace(table, result.race);
+        else recordResult(table, f.home, f.away, result);
         playing = true;
       });
     }
@@ -604,14 +662,37 @@ function buildTables(game: Game): TableView[] {
         isRival: r.clubId === career.rival,
         move: (playing && before.get(r.clubId)! - (i + 1)) || undefined,
       })),
+      ...(format.race ? { drivers: driverRows(career, league.clubIds) } : {}),
     };
   });
+}
+
+/** A league's drivers by points this season, wins breaking ties. */
+function driverRows(career: Career, clubIds: number[]): NonNullable<TableView['drivers']> {
+  const s = career.season;
+  const sport = sportOf(career);
+  return clubIds
+    .flatMap((id) => sport.lineup(career.clubs[id].squad).map((d) => ({ id: d.id, clubId: id, name: career.clubs[id].squad.find((p) => p.id === d.id)!.name })))
+    .map((d) => ({ name: d.name, team: badge(career, d.clubId), points: s.scorers[d.id] ?? 0, wins: s.wins?.[d.id] ?? 0, isPlayer: d.clubId === career.playerClubId }))
+    .sort((a, b) => b.points - a.points || b.wins - a.wins || a.name.localeCompare(b.name))
+    .map((d, i) => ({ pos: i + 1, ...d }));
+}
+
+/** Where a league race is, from its place in the season. */
+function trackFor(career: Career, fixture: Fixture): string {
+  const { tracks } = formatOf(career).race!;
+  const at = career.season.schedule.findIndex((round) => round.includes(fixture));
+  // A saved race's fixture is a copy, so it goes by the calendar instead.
+  const slot = at >= 0 ? at : career.season.calendar[career.season.round];
+  const index = typeof slot === 'number' ? slot : slot?.kind === 'league' ? slot.index : tracks.length - 1;
+  return tracks[index % tracks.length];
 }
 
 const STAGE_SHORT: Record<string, string> = { 'Round of 64': '64', 'Round of 32': '32', 'Round of 16': '16', 'Quarter-final': 'QF', 'Semi-final': 'SF', Final: 'F' };
 
 /** A short label that fits beside "MD 38" ("Cup 32", "WC QF", "PO SF1"), and the full one for hovering. */
 function slotLabel(career: Career, slot: Slot): { label: string; title: string } {
+  if (slot.kind === 'league' && formatOf(career).race) return { label: `R${slot.index + 1}`, title: `Race ${slot.index + 1}` };
   if (slot.kind === 'league') return { label: `MD ${slot.index + 1}`, title: `League matchday ${slot.index + 1}` };
   if (slot.kind === 'playoff') {
     return [
@@ -621,6 +702,7 @@ function slotLabel(career: Career, slot: Slot): { label: string; title: string }
     ][slot.stage];
   }
   const format = formatOf(career);
+  if (format.race) return { label: 'RoN', title: cupName(career, slot.kind) };
   const stage = cupStages(format, slot.kind)[slot.stage];
   const title = `${CUP_NAMES[slot.kind]}: ${stageLabel(format, slot.kind, stage)}`;
   if ('group' in stage) return { label: `WC G${stage.group + 1}`, title };
@@ -660,6 +742,13 @@ function fixtureView(career: Career, slot: Slot, f: Pick<Fixture, 'home' | 'away
   const { label, title } = slotLabel(career, slot);
   const { terms } = sportOf(career).present;
   const view: FixtureView = { label, labelTitle: title, kind: slot.kind, opponent, town: shortName(career.clubs[opponentId]), home, current };
+  const { race } = formatOf(career);
+  if (race) view.venue = slot.kind === 'league' ? race.tracks[slot.index % race.tracks.length] : cupName(career, 'championship');
+  if (played?.race) {
+    view.result = placesText(played);
+    view.outcome = raceResult(played);
+    return view;
+  }
   if (played) {
     view.result = `${played.goalsFor}–${played.goalsAgainst}${played.penalties ? ` ${terms.deciderShort} (${played.penalties[0]}–${played.penalties[1]})` : played.extraTime ? ' aet' : ''}`;
     if (played.penalties) view.resultTitle = `${played.goalsFor}–${played.goalsAgainst}, ${played.won ? 'won' : 'lost'} ${played.penalties[0]}–${played.penalties[1]} ${terms.deciderLong}`;
@@ -673,13 +762,15 @@ function fixtureView(career: Career, slot: Slot, f: Pick<Fixture, 'home' | 'away
 function buildCups(career: Career, live: boolean): CupsView {
   const s = career.season;
   const next = Math.ceil(s.number / CHAMPIONSHIP_EVERY) * CHAMPIONSHIP_EVERY;
-  const upcoming = next === s.number ? 'After this season · its Leagues 1–2 qualify' : `Next: after Season ${next} · its Leagues 1–2 qualify`;
+  const carOne = formatOf(career).race ? ' · one car each' : '';
+  const upcoming = next === s.number ? `After this season · its Leagues 1–2 qualify${carOne}` : `Next: after Season ${next} · its Leagues 1–2 qualify${carOne}`;
   let championship: CupView;
   if (s.championship && s.championship.winner === undefined) championship = cupView(career, s.championship, live);
   else if (career.lastChampionship) {
     const last = cupView(career, career.lastChampionship);
     championship = { ...last, status: `Season ${career.lastChampionship.season} edition · ${last.status}`, next: upcoming };
   } else championship = { ...emptyCup(career, 'championship'), status: 'Not played yet', next: upcoming };
+  if (formatOf(career).race) return { cup: null, championship };
   const cup = cupView(career, s.cup, live);
   if (!s.cup.entrants.includes(career.playerClubId)) cup.next = `Last season's top ${formatOf(career).cup.entrants} qualify`;
   return { cup, championship };
@@ -687,7 +778,7 @@ function buildCups(career: Career, live: boolean): CupsView {
 
 function emptyCup(career: Career, id: CupId): CupView {
   const pastWinners = [...career.honours[id]].reverse().map((h) => ({ season: h.season, winner: badge(career, h.winner), runnerUp: badge(career, h.runnerUp) }));
-  return { id, name: CUP_NAMES[id], status: '', groups: [], rounds: [], pastWinners };
+  return { id, name: cupName(career, id), status: '', groups: [], rounds: [], pastWinners };
 }
 
 /** One cup tie as shown, naming the winner when extra time or penalties settled it. */
@@ -747,9 +838,14 @@ function cupView(career: Career, cup: Cup, live = false): CupView {
   }));
   if (cup.winner !== undefined) view.winner = badge(career, cup.winner);
   const run = cupRun(formatOf(career), cup, me);
+  if (formatOf(career).race) {
+    view.status = run === null ? "You didn't qualify." : run === 'Winners' ? `Winners! ${career.clubs[me].name} win the ${view.name}.` : cup.placed ? `Finished ${run}.` : 'On the grid.';
+    view.rounds = [];
+    return view;
+  }
   const nextTie = cup.rounds[cup.rounds.length - 1]?.ties.find((t) => (t.home === me || t.away === me) && t.winner === undefined);
   if (run === null) view.status = "You didn't qualify.";
-  else if (run === 'Winners') view.status = `Winners! ${career.clubs[me].name} lift the ${CUP_NAMES[cup.id]}.`;
+  else if (run === 'Winners') view.status = `Winners! ${career.clubs[me].name} lift the ${view.name}.`;
   else if (nextTie) {
     const opponent = shortName(career.clubs[nextTie.home === me ? nextTie.away : nextTie.home]);
     const venue = cup.id === 'championship' || run === 'Final' ? 'neutral' : nextTie.home === me ? 'home' : 'away';
@@ -771,6 +867,10 @@ function scoreLine(game: Game, short = false): string | null {
   const h = career.clubs[fixture.home].short;
   const a = career.clubs[fixture.away].short;
   const score = present.score(match);
+  if (fixture.field) {
+    const line = `${h} ${score.filter(Boolean).join(' ')}`;
+    return module.isFinished(match) ? `FT ${line}` : `${line} ${present.clock(match)}`;
+  }
   // Tight spaces join two totals with a dash too; a side yet to bat keeps the "v", or the dash would read as a minus.
   const join = short && score[0] && score[1] ? '–' : present.terms.scoreJoin;
   const line = `${h} ${score.join(join)} ${a}`.replace(/\s+/g, ' ');
@@ -779,7 +879,7 @@ function scoreLine(game: Game, short = false): string | null {
 }
 
 /** Emoji, as the status bar can't show the box's own icons and VS Code's own set has no sports. Two spaces follow them: one sits too close. */
-const STATUS_ICONS: Record<SportId, string> = { football: '⚽', rugby: '🏉', cricket: '🏏' };
+const STATUS_ICONS: Record<SportId, string> = { football: '⚽', rugby: '🏉', cricket: '🏏', grandprix: '🏎' };
 
 export const SEASON_OVER = 'Season over: one decision waiting';
 
@@ -789,7 +889,7 @@ export function statusText(game: Game, goal = false): string {
   const { alert } = game.sport.present.terms;
   if (!career) return '$(trophy) Start a Sports Simulator career';
   if (career.pending) return `$(bell) ${SEASON_OVER}`;
-  if (career.worldEnd?.played) return `$(bell) ${WORLD_OVER}`;
+  if (career.worldEnd?.played) return `$(bell) ${worldOver(career)}`;
   const score = scoreLine(game);
   const badge = matchBadge(game);
   // Paused between matches after a restart: nothing to show but where the career stands.
@@ -818,7 +918,7 @@ function careerLines(game: Game): string[] {
   const place = leaguePlace(career);
   const lines = [`**${me.name}** · League ${place.tier}, ${ordinal(place.position)} · ${place.played}/${leagueRounds(career.season)} played`];
   if (career.pending) lines.push(SEASON_OVER);
-  else if (career.worldEnd?.played) lines.push(WORLD_OVER);
+  else if (career.worldEnd?.played) lines.push(worldOver(career));
   else {
     lines.push(`Expected to finish ${ordinal(career.season.expected[me.id])}`);
     const shown = game.shownMatch;
@@ -839,7 +939,7 @@ export function collapsedText(game: Game): string | undefined {
   const career = game.career;
   if (!career) return undefined;
   if (career.pending) return 'Season over';
-  if (career.worldEnd?.played) return WORLD_OVER;
+  if (career.worldEnd?.played) return worldOver(career);
   const badge = matchBadge(game);
   if (badge) return `${badge.label} · ${rowLine(game)}`;
   const place = `${ordinal(leaguePlace(career).position)} Wk ${Math.max(1, leagueWeek(game))}/${leagueRounds(career.season)}`;
@@ -866,7 +966,7 @@ function standing(game: Game): string {
 function standingText(game: Game): string {
   const name = game.sport.present.terms.name;
   if (game.career!.pending) return `$(bell) ${name}: season over`;
-  if (game.career!.worldEnd?.played) return `$(bell) ${name}: ${WORLD_OVER}`;
+  if (game.career!.worldEnd?.played) return `$(bell) ${name}: ${worldOver(game.career!)}`;
   const badge = matchBadge(game);
   const place = badge?.kind === 'world' ? badgeStage(game.shownMatch!.fixture, game.career!) : standing(game);
   return `${STATUS_ICONS[game.sportId]}  ${name}: ${game.paused ? '⏸ ' : ''}${badge ? `${badge.label} · ` : ''}${place}`;
@@ -899,7 +999,7 @@ export function sportRows(games: Game[]): SportRowView[] {
     const badge = stopped ? undefined : matchBadge(game);
     const world = !career.pending && (currentSlot(career.season)?.kind === 'championship' || game.shownMatch?.fixture.kind === 'championship' || !!career.worldEnd);
     const progress = career.pending ? 1 : leaguePlace(career).played / leagueRounds(career.season);
-    return { ...row, club: career.clubs[career.playerClubId].name, waiting: stopped, ...(career.worldEnd?.played ? { waitingLine: `${WORLD_OVER}: see how it went` } : {}), ...(world ? { world } : {}), line: game.paused && !stopped ? `⏸ ${line}` : line, ...(badge ? { badge } : {}), ...playerMoments(game), progress };
+    return { ...row, club: career.clubs[career.playerClubId].name, waiting: stopped, ...(career.worldEnd?.played ? { waitingLine: `${worldOver(career)}: see how it went` } : {}), ...(world ? { world } : {}), line: game.paused && !stopped ? `⏸ ${line}` : line, ...(badge ? { badge } : {}), ...playerMoments(game), progress };
   });
 }
 
@@ -954,12 +1054,13 @@ function sportRecords(sport: SportId, careers: CareerSummary[]): HonoursView['re
     const m = c.records!.biggestWin;
     if (m && (!win || better(m, win.match))) win = { match: m, club: c.club };
   }
-  if (win) rows.push({ label: 'Biggest win', value: `${win.club} ${win.match.goalsFor}–${win.match.goalsAgainst} v ${win.match.opponent}` });
+  const race = !!SPORTS[sport].format.race;
+  if (win && !race) rows.push({ label: 'Biggest win', value: `${win.club} ${win.match.goalsFor}–${win.match.goalsAgainst} v ${win.match.opponent}` });
   const longest = (label: string, of: (c: CareerSummary) => number, one: string, many: string) => {
     const best = mine.reduce<CareerSummary | undefined>((b, c) => (of(c) > (b ? of(b) : 0) ? c : b), undefined);
     if (best) rows.push({ label, value: `${best.club}, ${plural(of(best), one, many)}` });
   };
-  longest('Unbeaten run', (c) => c.records!.unbeaten.best, 'match', 'matches');
+  if (!race) longest('Unbeaten run', (c) => c.records!.unbeaten.best, 'match', 'matches');
   longest('Winning run', (c) => c.records!.winning.best, 'win', 'wins');
   const top = (label: string, tally: (c: CareerSummary) => Record<number, { name: string; goals: number }> | undefined) => {
     const all = mine.flatMap((c) => topScorers(c.records!, 1, tally(c) ?? {}).map((s) => ({ ...s, club: c.club })));

@@ -5,6 +5,7 @@ import {
   doubleRoundRobin,
   potShuffle,
   emptyTable,
+  recordRace,
   recordResult,
   sortTable,
   type Fixture,
@@ -99,6 +100,8 @@ export interface PlayerMatch {
   penalties?: [number, number];
   extraTime?: boolean;
   won?: boolean;
+  /** A race: where the player's cars finished, best first, and whether they beat the rival's. */
+  race?: { places: { place: number; out: boolean; points: number }[]; beatRival?: boolean };
 }
 
 /** One matchday of the season. */
@@ -124,6 +127,8 @@ export interface Season {
   scorers: Record<number, number>;
   /** Cricket: league wickets per player this season. */
   wickets?: Record<number, number>;
+  /** A sport of races: league race wins per driver this season. */
+  wins?: Record<number, number>;
 }
 
 export interface CupWinner {
@@ -322,13 +327,18 @@ function playerStats(value: number, split?: Record<Stat, number>): Record<Stat, 
 function newSeason(format: SportFormat, number: number, leagues: number[][], standing: number[], clubs: Club[], rng: Rng): Season {
   const expected: Record<number, number> = {};
   const ratingAtStart: Record<number, number> = {};
-  const schedule: Fixture[][] = Array.from({ length: (format.leagueSize - 1) * 2 }, () => []);
+  const schedule: Fixture[][] = Array.from({ length: format.race?.rounds ?? (format.leagueSize - 1) * 2 }, () => []);
   const leagueSeasons = leagues.map((clubIds, t) => {
     const tier = t + 1;
     for (const [id, pos] of expectedPositions(clubIds.map((id) => clubs[id]))) expected[id] = pos;
-    doubleRoundRobin(clubIds, rng).forEach((round, r) => {
-      for (const [home, away] of round) schedule[r].push({ tier, home, away, kind: 'league', options: {} });
-    });
+    if (format.race) {
+      const field = playerFirst(clubIds, clubs);
+      for (const round of schedule) round.push({ tier, home: field[0], away: field[1], field, kind: 'league', options: { neutral: true } });
+    } else {
+      doubleRoundRobin(clubIds, rng).forEach((round, r) => {
+        for (const [home, away] of round) schedule[r].push({ tier, home, away, kind: 'league', options: {} });
+      });
+    }
     return { tier, clubIds: [...clubIds], table: emptyTable(clubIds) };
   });
   for (const c of clubs) ratingAtStart[c.id] = rating(c);
@@ -351,10 +361,15 @@ function newSeason(format: SportFormat, number: number, leagues: number[][], sta
     round: 0,
     playoffs: [],
     cup: drawCup(format, number, standing.slice(0, format.cup.entrants), rng),
-    championship: worldYear ? drawChampionship(format, number - 1, standing.slice(0, format.championship.entrants), rng) : null,
+    championship: worldYear ? drawChampionship(format, number - 1, format.race ? playerFirst(standing.slice(0, format.championship.entrants), clubs) : standing.slice(0, format.championship.entrants), rng) : null,
     playerMatches: [],
     scorers: {},
   };
+}
+
+/** A race's field, with the player's team first if it's in it: the live view follows the team in `home`. */
+function playerFirst(ids: number[], clubs: Club[]): number[] {
+  return [...ids].sort((a, b) => Number(clubs[b].isPlayer) - Number(clubs[a].isPlayer));
 }
 
 // ---------------------------------------------------------------------------
@@ -417,6 +432,13 @@ export function teamSheet(career: Career, clubId: number, sport: SportDefinition
   return { clubId, attack: c.attack, defence: c.defence, settledLean: c.settledLean, standing, lineup: sport.lineup(c.squad, new Set(career.suspended)) };
 }
 
+/** A fixture's match, with the whole field if it's a race. */
+export function createFixtureMatch<M>(career: Career, fixture: Fixture, sport: SportDefinition<M>, rng: Rng): M {
+  const sheet = (id: number) => teamSheet(career, id, sport);
+  const options = fixture.field ? { ...fixture.options, field: fixture.field.map(sheet) } : fixture.options;
+  return sport.module.createMatch(sheet(fixture.home), sheet(fixture.away), options, rng);
+}
+
 export interface RoundResult {
   fixture: Fixture;
   outcome: MatchOutcome;
@@ -436,7 +458,11 @@ export function completeRound(career: Career, results: RoundResult[]): void {
     if (fixture.kind === 'league') {
       for (const g of outcome.goals) if (!g.ownGoal) s.scorers[g.playerId] = (s.scorers[g.playerId] ?? 0) + (g.count ?? 1);
       for (const w of outcome.wicketTakers ?? []) (s.wickets ??= {})[w.playerId] = (s.wickets[w.playerId] ?? 0) + w.count;
-      recordResult(s.leagues[fixture.tier - 1].table, fixture.home, fixture.away, outcome);
+      if (outcome.race) {
+        recordRace(s.leagues[fixture.tier - 1].table, outcome.race);
+        const winner = outcome.race.order[0].driverId;
+        (s.wins ??= {})[winner] = (s.wins[winner] ?? 0) + 1;
+      } else recordResult(s.leagues[fixture.tier - 1].table, fixture.home, fixture.away, outcome);
     } else if (fixture.kind === 'cup') recordCupResult(format, s.cup, fixture, outcome, rng);
     else if (fixture.kind === 'championship') recordCupResult(format, s.championship!, fixture, outcome, rng);
     else recordPlayoff(s, fixture, outcome);
@@ -450,8 +476,9 @@ export function completeRound(career: Career, results: RoundResult[]): void {
         opponent: career.clubs[record.opponentId].shortName ?? career.clubs[record.opponentId].name,
         season: s.number,
         won: record.won,
-        // Only cricket settles every level score.
-        settled: outcome.balls !== undefined,
+        // Only cricket settles every level score, and a race has a winner or it doesn't.
+        settled: outcome.balls !== undefined || !!outcome.race,
+        ...(record.race?.beatRival !== undefined ? { beatRival: record.race.beatRival } : {}),
         rival: record.opponentId === career.rival,
         scorers: record.goals
           .filter((g) => g.for && !g.ownGoal)
@@ -504,6 +531,12 @@ function playerMatch(career: Career, round: number, fixture: Fixture, outcome: M
     goalsAgainst: home ? outcome.awayGoals : outcome.homeGoals,
     goals: outcome.goals.map(({ side, ...g }) => ({ ...g, for: side === mySide })),
   };
+  if (outcome.race) {
+    const mine = outcome.race.order.filter((c) => c.clubId === career.playerClubId);
+    const theirs = outcome.race.order.filter((c) => c.clubId === career.rival);
+    record.race = { places: mine.map(({ place, out, points }) => ({ place, out, points })), ...(theirs.length ? { beatRival: mine[0].place < theirs[0].place } : {}) };
+    if (theirs.length) record.opponentId = career.rival!;
+  }
   if (outcome.penalties) record.penalties = home ? outcome.penalties : [outcome.penalties[1], outcome.penalties[0]];
   if (outcome.extraTime) record.extraTime = true;
   if (outcome.winner) record.won = outcome.winner === mySide;
@@ -557,7 +590,7 @@ export function playRound<M>(career: Career, sport: SportDefinition<M>): RoundRe
   if (!fixtures) return [];
   const rng = new Rng(career.rng);
   const results = fixtures.map((fixture) => {
-    const m = sport.module.createMatch(teamSheet(career, fixture.home, sport), teamSheet(career, fixture.away, sport), fixture.options, rng);
+    const m = createFixtureMatch(career, fixture, sport, rng);
     while (!sport.module.isFinished(m)) sport.module.step(m, rng);
     return { fixture, outcome: sport.module.outcome(m) };
   });
@@ -815,7 +848,8 @@ export function allocatePoints(career: Career, allocation: Record<Stat, number>)
   normalise(career.clubs, career.totalRating);
   const record = seasonRecord(career, pending);
   career.history.push(record);
-  recordSeasonGoals((career.records ??= emptyRecords()), record.goalsFor, record.season);
+  // A race table's `goalsFor` is grid places, so a sport of races keeps its points here.
+  recordSeasonGoals((career.records ??= emptyRecords()), formatOf(career).race ? record.points : record.goalsFor, record.season);
 
   recordCupWinner(career, career.season.cup);
   career.worldEnd = null;

@@ -34,14 +34,15 @@ export function emptyRecords(): Records {
 }
 
 /** Records one of the player's matches. `won` decides knockout ties settled on penalties. */
-export function recordMatch(r: Records, m: MatchRecord & { scorers: { id: number; name: string; count?: number }[]; wickets?: { id: number; name: string; count: number }[]; won?: boolean; settled?: boolean; rival?: boolean }): void {
+export function recordMatch(r: Records, m: MatchRecord & { scorers: { id: number; name: string; count?: number }[]; wickets?: { id: number; name: string; count: number }[]; won?: boolean; settled?: boolean; rival?: boolean; beatRival?: boolean }): void {
   const diff = m.goalsFor - m.goalsAgainst;
   // `settled`: the sport has no draws, so a tie that was played off counts as the win or loss it ended in.
   const result = m.settled ? (m.won ? 'W' : 'L') : diff > 0 ? 'W' : diff < 0 ? 'L' : 'D';
   const key = result === 'W' ? 'won' : result === 'D' ? 'drawn' : 'lost';
   r.manager.matches++;
   r.manager[key]++;
-  if (m.rival) r.rival[key]++;
+  // In a race, beating the rival has nothing to do with winning.
+  if (m.rival) r.rival[m.beatRival === undefined ? key : m.beatRival ? 'won' : 'lost']++;
 
   const record: MatchRecord = { goalsFor: m.goalsFor, goalsAgainst: m.goalsAgainst, opponent: m.opponent, season: m.season };
   if (result === 'W' && diff > 0 && (!r.biggestWin || better(record, r.biggestWin))) r.biggestWin = record;

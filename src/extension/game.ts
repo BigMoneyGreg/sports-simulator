@@ -5,13 +5,13 @@ import {
   chooseFocus,
   type Focus,
   completeRound,
+  createFixtureMatch,
   endSeason,
   isSeasonOver,
   newCareer,
   nextRound,
   playerInRound,
   playRound,
-  teamSheet,
   type Career,
   type CareerOptions,
   type SeasonEnd,
@@ -301,7 +301,7 @@ export class Game {
         continue;
       }
       const rng = new Rng(career.rng);
-      const matches = fixtures.map((f) => sport.module.createMatch(teamSheet(career, f.home, sport), teamSheet(career, f.away, sport), f.options, rng));
+      const matches = fixtures.map((f) => createFixtureMatch(career, f, sport, rng));
       this.live = { fixtures, matches, player: fixtures.indexOf(mine), rng: rng.state };
       this.phase = 'live';
       this.save();

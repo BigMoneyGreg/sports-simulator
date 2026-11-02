@@ -33,7 +33,7 @@ International football, rugby and cricket sims that live in a small box in your 
 | Match lengths | 30 sec, 2, 5, 10 min | 1½, 5, 15, 30 min | 2, 10, 20, 40 min |
 | Season at those lengths | ~25 min, ~1½ hr, ~3¾ hr, ~7½ hr | ~25 min, ~1½ hr, ~4 hr, ~8 hr | ~20 min, ~1¾ hr, ~3½ hr, ~7 hr |
 
-Play one sport or all three at once. The box lists them: start or end each one whenever you like, and open one to see it in full while the others show one line and carry on. Pause any of them from its row. Each career keeps its own match length.
+Play one sport or all four at once. The box lists them: start or end each one whenever you like, and open one to see it in full while the others show one line and carry on. Pause any of them from its row. Each career keeps its own match length.
 
 Only want one? Press **Choose sports…** under the list and untick the rest; a hidden career waits where it was until you tick it again.
 
@@ -43,7 +43,7 @@ To stop a career, press **End…** on its row. **End career** keeps it in Past c
 
 ## Features
 
-- Three sports, with promotion and relegation in each; big nations start near the top, shuffled a little every career
+- Four sports, with promotion and relegation in each; big nations start near the top, shuffled a little every career
 - Play several sports at once, listed in the box with one open at a time
 - Honours, greatest teams and all-time records across every career
 - The Nations Cup every season, and the World Championship as its own mini season every four, each with its own Cups tab (draws, groups, results and past winners)

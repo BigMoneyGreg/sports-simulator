@@ -1,3 +1,4 @@
+import { GRAND_PRIX_ORDER } from '../src/sports/grandprix/data';
 import { FOOTBALL } from '../src/core/format';
 import { describe, expect, it } from 'vitest';
 import { newCareer } from '../src/core/career';
@@ -137,7 +138,7 @@ describe('player names', () => {
 
   it('gives every nation in every world its own list of common names', () => {
     for (const id of SPORT_IDS) {
-      for (const n of SPORTS[id].nations().filter((x) => id !== 'football' || WORLD_ORDER.includes(x.short))) {
+      for (const n of SPORTS[id].nations().filter((x) => (id === 'grandprix' ? GRAND_PRIX_ORDER : id === 'football' ? WORLD_ORDER : [x.short]).includes(x.short))) {
         const own = COUNTRY_NAMES[n.short];
         expect(own, `${id} ${n.name}`).toBeDefined();
         expect(own[0].split(' ').length, n.name).toBeGreaterThanOrEqual(12);

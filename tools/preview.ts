@@ -80,7 +80,7 @@ for (let season = 0; season < 3; season++) {
 views.clubLater = { view: buildView(game), tab: 'club' };
 views.championshipLater = { view: buildView(game), tab: 'cups', cup: 'championship' };
 // The other sports, through the same screens.
-for (const [sport, team, seed] of [['rugby', 'WAL', 7], ['cricket', 'SRI', 7]] as const) {
+for (const [sport, team, seed] of [['rugby', 'WAL', 7], ['cricket', 'SRI', 7], ['grandprix', 'SCO', 7]] as const) {
   const g = new Game({ save: () => {}, changed: () => {} }, manual);
   const at = () => g.phase;
   g.selectSport(sport);
@@ -92,7 +92,7 @@ for (const [sport, team, seed] of [['rugby', 'WAL', 7], ['cricket', 'SRI', 7]] a
     while (at() === 'live') run();
     run();
   }
-  run(sport === 'rugby' ? 55 : 28);
+  run(sport === 'rugby' ? 55 : sport === 'grandprix' ? 24 : 28);
   const now = buildView(g);
   views[`${sport}_match`] = { view: now, tab: 'match' };
   views[`${sport}_table`] = { view: now, tab: 'table' };
@@ -104,6 +104,7 @@ for (const [sport, team, seed] of [['rugby', 'WAL', 7], ['cricket', 'SRI', 7]] a
   while (at() !== 'seasonOver') run();
   views[`${sport}_seasonOver`] = { view: buildView(g), tab: 'match' };
   if (sport === 'cricket') sampleRows.cricketWaiting = sportRows([g])[0];
+  if (sport === 'grandprix') sampleRows.grandprix = sportRows([g])[0];
   for (let season = 0; season < 3; season++) {
     g.chooseFocus(season % 2 ? 'attack' : 'defence');
     while (at() !== 'seasonOver') run();
@@ -130,12 +131,12 @@ for (const [sport, team, seed] of [['rugby', 'WAL', 7], ['cricket', 'SRI', 7]] a
   views.worldEnd = { view: buildView(g), tab: 'match' };
 }
 // Every screen sits in the list: its own sport open, the others minimised.
-const { football, rugby, rugbyNone, cricketWaiting } = sampleRows as Record<string, SportRowView>;
+const { football, rugby, rugbyNone, cricketWaiting, grandprix } = sampleRows as Record<string, SportRowView>;
 for (const entry of Object.values(views)) {
   const v = entry.view as Exclude<View, { screen: 'honours' }>;
   const sport = v.screen === 'setup' ? v.setup.sport : v.sport;
   entry.open = sport;
-  entry.rows = [football, sport === 'rugby' && v.screen === 'setup' ? rugbyNone : rugby, cricketWaiting];
+  entry.rows = [football, sport === 'rugby' && v.screen === 'setup' ? rugbyNone : rugby, cricketWaiting, grandprix];
 }
 views.list = { view: null, open: null, rows: [{ ...football, paused: true }, rugbyNone, cricketWaiting] };
 // Honours: the football career still running, the other two ended, one honour earned.

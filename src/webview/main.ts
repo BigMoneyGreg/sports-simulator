@@ -120,6 +120,7 @@ const SPORT_ICONS: Record<SportId, string> = {
   football: '<circle cx="8" cy="8" r="6.5"/><path d="M8 5l2.9 2.1-1.1 3.4H6.2L5.1 7.1z"/><path d="M8 5V1.6M10.9 7.1l3.2-1M9.8 10.5l2 2.7M6.2 10.5l-2 2.7M5.1 7.1l-3.2-1"/>',
   rugby: '<ellipse cx="8" cy="8" rx="7" ry="4.3" transform="rotate(-40 8 8)"/><path d="M5.6 10.4l4.8-4.8M6.6 7.4l2 2M7.8 6.2l2 2"/>',
   cricket: '<path d="M13.6 1.4l1 1-3.1 3.1-1-1zM10.5 4.5l1 1L5.2 11.8a1.4 1.4 0 0 1-2-2z"/><circle cx="12.5" cy="12.5" r="1.9"/>',
+  grandprix: '<path d="M3.5 14.5V1.5M3.5 2h10v7h-10"/><path d="M6.8 2v7M10.2 2v7M3.5 5.5h10"/>',
 };
 
 const TROPHY_ICON = '<path d="M5 2h6v4a3 3 0 0 1-6 0zM5 3H2.5c0 2 1 3.2 2.6 3.5M11 3h2.5c0 2-1 3.2-2.6 3.5M8 9v3M5.5 14h5M6.5 12h3"/>';
@@ -172,7 +173,7 @@ function renderSetup(v: SetupView): void {
   panel.innerHTML = `
   <div class="setup card">
     <h2>New ${esc(v.terms.name.toLowerCase())} career</h2>
-    <p class="muted small">Every match plays itself. Each summer you make one decision.</p>
+    <p class="muted small">Every ${v.terms.race ? 'race' : 'match'} plays itself. Each summer you make one decision.</p>
 
     <div class="field">Country
       ${chosen ? `<div class="chosen">${swatch(chosen, 'crest big')}<strong>${esc(chosen.name)}</strong></div>` : ''}
@@ -359,8 +360,8 @@ function renderOverlay(ft: FullTimeView | null): void {
   if (ft.key === overlayKey) return;
   overlayKey = ft.key;
   overlay.innerHTML = `<div class="ft-card" role="status">
-      <div class="muted small">Full time · ${esc(ft.competition)}${ft.note ? ` · ${esc(ft.note)}` : ''}</div>
-      <div class="ft-score">${swatch(ft.home)}<span title="${esc(ft.home.name)}">${esc(ft.home.short)}</span> <strong>${esc(ft.score)}</strong> <span title="${esc(ft.away.name)}">${esc(ft.away.short)}</span>${swatch(ft.away)}</div>
+      <div class="muted small">${ft.solo ? 'Chequered flag' : 'Full time'} · ${esc(ft.competition)}${ft.note ? ` · ${esc(ft.note)}` : ''}</div>
+      <div class="ft-score">${swatch(ft.home)}<span title="${esc(ft.home.name)}">${esc(ft.home.short)}</span> <strong>${esc(ft.score)}</strong>${ft.solo ? '' : ` <span title="${esc(ft.away.name)}">${esc(ft.away.short)}</span>${swatch(ft.away)}`}</div>
       ${ft.scorers ? `<div class="small muted">${esc(ft.scorers)}</div>` : ''}
     </div>`;
   paintSwatches(overlay);
@@ -410,10 +411,10 @@ function renderGame(v: GameView): void {
   app.classList.toggle('needs-choice', !!v.seasonEnd || !!v.worldEnd);
   patch(document.getElementById('top')!, [headerHtml(v), v.header.paused && !v.seasonEnd && !v.worldEnd ? '<p class="notice paused small">Paused. Press ▶ to carry on.</p>' : '']);
   const tabs: [Tab, string][] = [
-    ['match', 'Match'],
+    ['match', v.terms.race?.matchTab ?? 'Match'],
     ['table', 'Table'],
     ['fixtures', 'Fixtures'],
-    ['cups', 'Cups'],
+    ['cups', v.cups.cup ? 'Cups' : 'Nations'],
     ['club', 'Team'],
   ];
   const nav = `<nav class="tabs" role="tablist">${tabs
@@ -504,7 +505,7 @@ function applyFlash(elements: NodeListOf<HTMLElement>, { cls, at, id }: Flash): 
 
 function headerHtml(v: GameView): string {
   const h = v.header;
-  const dots = h.form.map((f) => `<span class="dot ${f.result}" title="${esc(f.title)}">${f.result}</span>`).join('');
+  const dots = h.form.map((f) => `<span class="dot ${f.result}" title="${esc(f.title)}">${esc(f.label ?? f.result)}</span>`).join('');
   const next = h.durations[(h.durations.indexOf(h.duration) + 1) % h.durations.length];
   return `<header class="head card" data-accent="${esc(h.club.colours[0])}">
     <div class="head-line"><div class="club">${swatch(h.club, 'crest')}<div class="name">${esc(h.club.name)}</div></div><span class="form" role="group" aria-label="Form, latest last">${dots}</span></div>
@@ -531,7 +532,7 @@ function panelParts(v: GameView): string[] {
           return `<button type="button" class="${x.tier === tier ? 'on' : ''} ${mine ? 'mine' : ''}" data-tier="${x.tier}"${mine ? ' title="Your league"' : ''}>L${x.tier}</button>`;
         })
         .join('')}</div>`;
-      return [chips, tableHtml(v.tables, tier, v.terms), playoff ? playoffHtml(playoff) : ''];
+      return [chips, tableHtml(v.tables, tier, v.terms), driversHtml(v.tables[tier - 1]), playoff ? playoffHtml(playoff) : ''];
     }
     case 'fixtures':
       return [fixturesHtml(v.fixtures)];
@@ -561,9 +562,31 @@ function matchParts(v: GameView): string[] {
     const event = `<span class="who" title="${esc(team.name)}: ${esc(t.text)}">${esc(t.text)}</span><span class="ev-icon">${icon(t)}</span>`;
     return `<li class="${t.kind}${team.isPlayer ? ' mine' : ''}"><div class="ev home">${t.side === 'home' ? event : ''}</div><div class="ev-mid"><span class="min">${esc(t.clock)}</span>${t.score ? `<span class="running">${esc(t.score)}</span>` : ''}</div><div class="ev away">${t.side === 'away' ? event : ''}</div></li>`;
   };
+  if (m.race) return [raceHtml(m, m.race), `<div class="card feed-card">${items.length ? `<ol class="report-feed">${[...items].reverse().map(row).join('')}</ol>` : `<p class="muted small center">${esc(v.terms.noEventsYet)}</p>`}</div>`];
   const teams = `<div class="feed-teams"><span>${swatch(m.home)}${esc(m.home.short)}</span><span>${esc(m.away.short)}${swatch(m.away)}</span></div>`;
   if (m.scorecard) return [scoreboard(m, v.terms), ...m.scorecard.map(inningsHtml)];
   return [scoreboard(m, v.terms), `<div class="card feed-card">${items.length ? `${teams}<ol class="report-feed">${[...items].reverse().map(row).join('')}</ol>` : `<p class="muted small center">${esc(v.terms.noEventsYet)}</p>`}</div>`];
+}
+
+/** The running order, in place of a scoreboard: everyone's on one track. */
+function raceHtml(m: LiveMatchView, race: NonNullable<LiveMatchView['race']>): string {
+  const arrow = (moved: number) => (moved ? `<span class="move ${moved > 0 ? 'up' : 'down'}">${moved > 0 ? '▲' : '▼'}</span>` : '');
+  const row = (r: NonNullable<LiveMatchView['race']>['rows'][number]) =>
+    `<tr class="${r.mine ? 'me' : ''} ${r.rival ? 'rival' : ''} ${r.out ? 'out' : ''}"><td class="pos">${r.place}</td><td class="team" title="${esc(r.team.name)}">${swatch(r.team)}${esc(r.team.short)}</td><td class="driver">${esc(r.driver)}${r.pit ? ' <span class="muted small">pit</span>' : ''}</td><td class="gap">${arrow(r.moved)} ${esc(r.gap)}</td></tr>`;
+  return `<div class="board card race-board">
+      <div class="comp muted small">${m.badge ? `${badgeHtml(m.badge)} ` : ''}${esc(race.venue)}${m.round ? ` · ${esc(m.round)}` : ''}</div>
+      <div class="clock-big ${m.finished ? 'ft' : 'live'}">${esc(m.clock)}</div>
+      ${m.situation ? `<div class="small situation">${esc(m.situation)}</div>` : ''}
+      <table class="running"><tbody>${race.rows.map(row).join('')}</tbody></table>
+    </div>`;
+}
+
+/** The drivers' title, under the teams'. */
+function driversHtml(t: TableView): string {
+  if (!t.drivers?.length) return '';
+  return `<h3 class="sub">Drivers</h3><div class="card flush"><table class="league no-draws"><thead><tr><th></th><th></th><th title="Race wins">W</th><th title="Points">Pts</th></tr></thead><tbody>${t.drivers
+    .map((d) => `<tr class="${d.isPlayer ? 'me' : ''}"><td class="pos">${d.pos}</td><td class="team" title="${esc(d.team.name)}">${swatch(d.team)}${esc(d.name)}</td><td>${d.wins}</td><td class="pts">${d.points}</td></tr>`)
+    .join('')}</tbody></table></div>`;
 }
 
 /** One innings, the way a real scorecard sets it out. The one finished is folded away, and stays open or shut between updates. */
@@ -608,10 +631,10 @@ function tableHtml(tables: TableView[], tier: number, terms: SportTerms): string
       <td class="pos">${r.pos}</td><td class="team" title="${esc(r.name)}${r.isRival ? ' · your rival' : ''}">${esc(r.town)}${
         r.move ? ` <span class="move ${r.move > 0 ? 'up' : 'down'}" title="${r.move > 0 ? 'Up' : 'Down'} ${Math.abs(r.move)} since kick-off">${r.move > 0 ? '▲' : '▼'}</span>` : ''
       }</td>
-      <td>${r.played}</td><td>${r.won}</td>${terms.draws ? `<td>${r.drawn}</td>` : ''}<td>${r.lost}</td><td class="diff">${esc(r.gdText)}</td><td class="pts">${r.points}</td></tr>`,
+      <td>${r.played}</td><td>${r.won}</td>${terms.draws ? `<td>${r.drawn}</td>` : ''}<td>${r.lost}</td>${terms.race ? '' : `<td class="diff">${esc(r.gdText)}</td>`}<td class="pts">${r.points}</td></tr>`,
     )
     .join('');
-  return `<div class="card flush"><table class="league${terms.draws ? '' : ' no-draws'}"><thead><tr><th></th><th></th><th title="Played">P</th><th title="Won">W</th>${terms.draws ? '<th title="Drawn">D</th>' : ''}<th title="Lost">L</th><th title="${esc(terms.diffLong)}">${esc(terms.diffShort)}</th><th title="Points">Pts</th></tr></thead>
+  return `<div class="card flush"><table class="league${terms.draws ? '' : ' no-draws'}"><thead><tr><th></th><th></th><th title="Played">P</th><th title="Won">W</th>${terms.draws ? '<th title="Drawn">D</th>' : ''}<th title="${esc(terms.race?.lostLong ?? 'Lost')}">${esc(terms.race?.lostShort ?? 'L')}</th>${terms.race ? '' : `<th title="${esc(terms.diffLong)}">${esc(terms.diffShort)}</th>`}<th title="Points">Pts</th></tr></thead>
     <tbody>${rows}</tbody></table></div>
     ${legendHtml(t)}`;
 }
@@ -643,8 +666,8 @@ const CUP_SHORT: Record<CupView['id'], string> = { cup: 'Nations Cup', champions
  * winners.
  */
 function cupParts(v: GameView): string[] {
-  const c = ui.cup === 'championship' ? v.cups.championship : v.cups.cup;
-  const toggle = `<div class="seg chips">${[v.cups.cup, v.cups.championship]
+  const c = ui.cup === 'championship' || !v.cups.cup ? v.cups.championship : v.cups.cup;
+  const toggle = !v.cups.cup ? '' : `<div class="seg chips">${[v.cups.cup, v.cups.championship]
     .map((x) => `<button type="button" class="${x.id === c.id ? 'on' : ''}" data-cup="${x.id}"><span class="full">${esc(x.name)}</span><span class="short">${CUP_SHORT[x.id]}</span></button>`)
     .join('')}</div>`;
   const status = `<div class="card cup-status"><div class="small">${esc(c.status)}</div>${c.next ? `<div class="small muted">${esc(c.next)}</div>` : ''}${
@@ -709,7 +732,7 @@ function seasonEndHtml(e: SeasonEndView, sport: SportId, terms: SportTerms): str
     <div class="card accent-card">
     <h3 class="sub first">Summer</h3>
     <p class="small">${esc(verdict)}</p>
-    <div class="clue">
+    <div class="clue${terms.race ? ' wide' : ''}">
       <div class="clue-row"><span>${esc(terms.attack)}</span><strong>${ordinal(r.scoredRank)}</strong><span class="muted small">${esc(terms.clueScored)}</span></div>
       <div class="clue-row"><span>${esc(terms.defence)}</span><strong>${ordinal(r.concededRank)}</strong><span class="muted small">${esc(terms.clueConceded)}</span></div>
     </div>
@@ -734,8 +757,8 @@ function seasonEndHtml(e: SeasonEndView, sport: SportId, terms: SportTerms): str
     <h3 class="sub first">Season report</h3>
     <dl class="report">
       <dt>Record</dt><dd>${esc(r.record)} · ${r.points} pts</dd>
-      <dt>Scored</dt><dd>${esc(r.scoredText)} <span class="muted">(league avg ${esc(r.avgForText)})</span></dd>
-      <dt>Conceded</dt><dd>${esc(r.concededText)} <span class="muted">(league avg ${esc(r.avgAgainstText)})</span></dd>
+      <dt>${esc(terms.race?.scored ?? 'Scored')}</dt><dd>${esc(r.scoredText)} <span class="muted">(league avg ${esc(r.avgForText)})</span></dd>
+      <dt>${esc(terms.race?.conceded ?? 'Conceded')}</dt><dd>${esc(r.concededText)} <span class="muted">(league avg ${esc(r.avgAgainstText)})</span></dd>
       <dt>Best run</dt><dd>${esc(r.bestRun)}</dd>
       <dt>Worst run</dt><dd>${esc(r.worstRun)}</dd>
       ${r.topScorer ? `<dt>${esc(terms.topScorer)}</dt><dd>${esc(r.topScorer)}</dd>` : ''}
@@ -775,8 +798,8 @@ function fixturesHtml(fixtures: FixtureView[]): string {
   return `<ol class="fixtures card flush">${fixtures
     .map(
       (f) => `<li class="${f.current ? 'current' : ''} ${f.result ? 'played' : ''} ${f.kind}"><span class="muted small"${f.labelTitle ? ` title="${esc(f.labelTitle)}"` : ''}>${esc(f.label)}</span>
-      <span class="opp" title="${esc(f.opponent.name)}">${swatch(f.opponent)}<span class="ellipsis">${esc(f.town)}</span></span>
-      <span class="muted small">${f.home ? 'H' : 'A'}</span>
+      ${f.venue ? `<span class="opp"><span class="ellipsis">${esc(f.venue)}</span></span><span></span>` : `<span class="opp" title="${esc(f.opponent.name)}">${swatch(f.opponent)}<span class="ellipsis">${esc(f.town)}</span></span>
+      <span class="muted small">${f.home ? 'H' : 'A'}</span>`}
       <span class="res">${f.result ? `<span class="pill ${f.outcome ?? ''}"${f.resultTitle ? ` title="${esc(f.resultTitle)}"` : ''}>${esc(f.result)}</span>` : f.current ? '<span class="pill live">LIVE</span>' : ''}</span></li>`,
     )
     .join('')}</ol>`;
@@ -807,10 +830,10 @@ function clubHtml(v: GameView): string {
     <div class="club">${swatch(c, 'crest')}<div><div class="name">${esc(c.name)}</div><div class="muted small">${esc(c.short)} · League ${c.tier} · Season ${c.season}</div></div></div>
     <p class="expect">Expected to finish <strong>${ordinal(c.expected)}</strong> this season</p>
     <dl class="report">
-      <dt>Scored</dt><dd>${esc(g.scoredText)} · ${ordinal(g.scoredRank)} <span class="muted">(league avg ${esc(g.avgForText)})</span></dd>
-      <dt>Conceded</dt><dd>${esc(g.concededText)} · ${ordinal(g.concededRank)} <span class="muted">(league avg ${esc(g.avgAgainstText)})</span></dd>
+      <dt>${esc(v.terms.race?.scored ?? 'Scored')}</dt><dd>${esc(g.scoredText)} · ${ordinal(g.scoredRank)} <span class="muted">(league avg ${esc(g.avgForText)})</span></dd>
+      <dt>${esc(v.terms.race?.conceded ?? 'Conceded')}</dt><dd>${esc(g.concededText)} · ${ordinal(g.concededRank)} <span class="muted">(league avg ${esc(g.avgAgainstText)})</span></dd>
     </dl>
-    <p class="muted small">After ${g.played} league match${g.played === 1 ? '' : 'es'} this season.</p>
+    <p class="muted small">After ${g.played} ${v.terms.race ? `race${g.played === 1 ? '' : 's'}` : `league match${g.played === 1 ? '' : 'es'}`} this season.</p>
     ${
       c.rival
         ? `<p class="small rival">Rival: ${swatch(c.rival)}<strong>${esc(c.rival.name)}</strong> <span class="muted">· ${esc(c.rival.where)}</span><br><span class="muted">${esc(c.rival.record)}</span></p>`
@@ -837,7 +860,7 @@ function clubHtml(v: GameView): string {
   </div>
   <div class="card">
     <h3 class="sub first">Manager</h3>
-    <p class="small">${r.manager.seasons} season${r.manager.seasons === 1 ? '' : 's'} completed · ${r.manager.matches} matches · ${r.manager.won}W ${v.terms.draws ? `${r.manager.drawn}D ` : ''}${r.manager.lost}L · ${r.manager.winPct}% won · ${r.manager.titles} title${r.manager.titles === 1 ? '' : 's'}</p>
+    <p class="small">${r.manager.seasons} season${r.manager.seasons === 1 ? '' : 's'} completed · ${r.manager.matches} ${v.terms.race?.matches ?? 'matches'} · ${r.manager.won}W${v.terms.race ? '' : ` ${v.terms.draws ? `${r.manager.drawn}D ` : ''}${r.manager.lost}L`} · ${r.manager.winPct}% won · ${r.manager.titles} title${r.manager.titles === 1 ? '' : 's'}</p>
 
   </div>
   <div class="card">

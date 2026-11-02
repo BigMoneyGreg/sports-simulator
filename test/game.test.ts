@@ -184,8 +184,8 @@ describe('game clock', () => {
     expect(v.fixtures.filter((f) => f.kind === 'league')).toHaveLength(38);
     // Wales are in the first-round cup draw, so their tie is listed before it's played.
     expect(v.fixtures.filter((f) => f.kind === 'cup')).toEqual([expect.objectContaining({ label: 'Cup 64', current: false })]);
-    expect(v.cups.cup.status).toMatch(/^Still in · Round of 64 v .+ \((home|away)\)$/);
-    expect(v.cups.cup.next).toBe('After matchday 6');
+    expect(v.cups.cup!.status).toMatch(/^Still in · Round of 64 v .+ \((home|away)\)$/);
+    expect(v.cups.cup!.next).toBe('After matchday 6');
     expect(v.match!.clock).toMatch(/^\d+'$/);
     expect(statusText(game)).toMatch(/^⚽  [A-Z0-9]{3} \d+–\d+ [A-Z0-9]{3} \d+' · Wk \d+\/\d+ · \d+(st|nd|rd|th) in L\d$/);
   });

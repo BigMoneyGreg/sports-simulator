@@ -1,7 +1,7 @@
 {
   "name": "sports-simulator",
   "displayName": "Sports Simulator",
-  "description": "International football, rugby and cricket sims that play themselves in your sidebar while you code: leagues, cups and a World Championship.",
+  "description": "International football, rugby, cricket and Grand Prix racing sims that play themselves in your sidebar while you code: leagues, cups and world titles.",
   "icon": "media/icon.png",
   "galleryBanner": {
     "color": "#1b5e3a",
@@ -30,6 +30,7 @@
     "soccer",
     "rugby",
     "cricket",
+    "racing",
     "sport",
     "sports",
     "manager",
@@ -101,13 +102,18 @@
             "cricket": {
               "type": "boolean",
               "default": true
+            },
+            "grandprix": {
+              "type": "boolean",
+              "default": true
             }
           },
           "additionalProperties": false,
           "default": {
             "football": true,
             "rugby": true,
-            "cricket": true
+            "cricket": true,
+            "grandprix": true
           },
           "description": "The sports to show. Hiding one with a career under way stops its clock and keeps the career, which carries on from the same moment when the sport is shown again. With none ticked, all of them show."
         },

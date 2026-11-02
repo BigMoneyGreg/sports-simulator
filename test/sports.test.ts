@@ -48,10 +48,12 @@ describe('formats', () => {
     // Every league line falls inside a pot, so teams near it can start either side.
     for (let line = f.leagueSize; line < teamCount(f); line += f.leagueSize) expect(f.startingPots, `line ${line}`).not.toContain(line);
     expect(f.cup.entrants).toBeLessThanOrEqual(teamCount(f));
-    expect(Math.log2(f.cup.entrants) % 1).toBe(0);
-    // One cup round for each slot in the calendar, all inside the league season.
+    // One cup round for each slot in the calendar, all inside the league season. A sport of races has no cup.
     expect(cupStages(f, 'cup')).toHaveLength(f.cup.after.length);
-    expect(Math.max(...f.cup.after)).toBeLessThan((f.leagueSize - 1) * 2);
+    if (!f.race) {
+      expect(Math.log2(f.cup.entrants) % 1).toBe(0);
+      expect(Math.max(...f.cup.after)).toBeLessThan((f.leagueSize - 1) * 2);
+    }
     // Leagues 1 and 2 are the championship.
     expect(f.championship.entrants).toBeLessThanOrEqual(f.leagueSize * 2);
     expect(f.championship.entrants % f.championship.groupSize).toBe(0);
@@ -823,9 +825,9 @@ describe('sports in the save', () => {
     });
 
     it('shows only the sports ticked in the settings, or all of them if none is', () => {
-      expect(enabledSports(undefined)).toEqual(['football', 'rugby', 'cricket']);
-      expect(enabledSports({ football: false, cricket: false })).toEqual(['rugby']);
-      expect(enabledSports({ football: false, rugby: false, cricket: false })).toEqual(['football', 'rugby', 'cricket']);
+      expect(enabledSports(undefined)).toEqual(['football', 'rugby', 'cricket', 'grandprix']);
+      expect(enabledSports({ football: false, cricket: false, grandprix: false })).toEqual(['rugby']);
+      expect(enabledSports({ football: false, rugby: false, cricket: false, grandprix: false })).toEqual(['football', 'rugby', 'cricket', 'grandprix']);
     });
 
     it('leaves a hidden sport out of the corner: no name, no bell, and it stops being followed', () => {

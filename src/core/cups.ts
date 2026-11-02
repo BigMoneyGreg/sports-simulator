@@ -1,3 +1,4 @@
+import { ordinal } from '../shared/format';
 import type { SportFormat } from './format';
 import { emptyTable, recordResult, sortTable, type Fixture, type TableRow } from './league';
 import type { Rng } from './rng';
@@ -35,6 +36,7 @@ function knockoutRounds(teams: number, neutral: (teams: number) => boolean): Rou
 
 /** How a competition runs in this sport, worked out from how many teams enter it. */
 function cupFormat(format: SportFormat, id: CupId): Format {
+  if (format.race) return { groupDays: 0, rounds: id === 'cup' ? [] : [{ name: 'Final', neutral: true }] };
   if (id === 'cup') return { groupDays: 0, rounds: knockoutRounds(format.cup.entrants, (left) => left === 2) };
   const { entrants, groupSize } = format.championship;
   // An odd-sized group needs an extra matchday, as one team rests each time. The top two of each group go through.
@@ -73,6 +75,8 @@ export interface Cup {
   /** Knockout rounds drawn so far. */
   rounds: CupRound[];
   winner?: number;
+  /** A race's finishing order, by team. */
+  placed?: number[];
 }
 
 /** One matchday of a cup: a group matchday, or a knockout round. */
@@ -95,13 +99,14 @@ function openDraw(ids: number[], rng: Rng): CupTie[] {
 /** The Nations Cup: an open draw every round. */
 export function drawCup(format: SportFormat, season: number, entrants: number[], rng: Rng): Cup {
   if (entrants.length !== format.cup.entrants) throw new Error(`the cup needs ${format.cup.entrants} entrants`);
-  return { id: 'cup', season, entrants: [...entrants], groups: [], rounds: [{ name: cupFormat(format, 'cup').rounds[0].name, ties: openDraw(entrants, rng) }] };
+  return { id: 'cup', season, entrants: [...entrants], groups: [], rounds: format.race ? [] : [{ name: cupFormat(format, 'cup').rounds[0].name, ties: openDraw(entrants, rng) }] };
 }
 
 /** The World Championship: one pot by seeding for each place in a group (in football, five pots of eight), one from each pot in every group. */
 export function drawChampionship(format: SportFormat, season: number, entrants: number[], rng: Rng): Cup {
   const { entrants: needed, groupSize } = format.championship;
   if (entrants.length !== needed) throw new Error(`the championship needs ${needed} entrants`);
+  if (format.race) return { id: 'championship', season, entrants: [...entrants], groups: [], rounds: [] };
   const groupCount = needed / groupSize;
   const pots = Array.from({ length: groupSize }, (_, p) => rng.shuffle(entrants.slice(p * groupCount, (p + 1) * groupCount)));
   const groups = Array.from({ length: groupCount }, (_, g) => {
@@ -133,6 +138,7 @@ function singleRoundRobin(ids: number[]): [number, number][][] {
 export function cupFixtures(format: SportFormat, cup: Cup, stageIndex: number): Fixture[] {
   const stage = cupStages(format, cup.id)[stageIndex];
   const base = { tier: 0, kind: cup.id, stage: stageIndex } as const;
+  if (format.race) return [{ ...base, home: cup.entrants[0], away: cup.entrants[1], field: cup.entrants, options: { neutral: true, oneCar: true } }];
   if ('group' in stage) {
     return cup.groups.flatMap((g) => g.days[stage.group].map(([home, away]) => ({ ...base, home, away, options: { neutral: true } })));
   }
@@ -146,6 +152,12 @@ export function cupFixtures(format: SportFormat, cup: Cup, stageIndex: number): 
 export function recordCupResult(format: SportFormat, cup: Cup, fixture: Fixture, outcome: MatchOutcome, rng: Rng): void {
   const f = cupFormat(format, cup.id);
   const stage = cupStages(format, cup.id)[fixture.stage!];
+  if (outcome.race) {
+    cup.placed = outcome.race.order.map((c) => c.clubId);
+    cup.winner = cup.placed[0];
+    cup.rounds.push({ name: f.rounds[0].name, ties: [{ home: cup.placed[0], away: cup.placed[1], winner: cup.placed[0] }] });
+    return;
+  }
   if ('group' in stage) {
     const group = cup.groups.find((g) => g.table.some((r) => r.clubId === fixture.home))!;
     recordResult(group.table, fixture.home, fixture.away, outcome);
@@ -197,6 +209,7 @@ function knockoutFromGroups(cup: Cup): CupTie[] {
 export function cupRun(format: SportFormat, cup: Cup, clubId: number): string | null {
   if (!cup.entrants.includes(clubId)) return null;
   if (cup.winner === clubId) return 'Winners';
+  if (cup.placed) return ordinal(cup.placed.indexOf(clubId) + 1);
   for (let r = cup.rounds.length - 1; r >= 0; r--) {
     if (cup.rounds[r].ties.some((t) => t.home === clubId || t.away === clubId)) return cup.rounds[r].name;
   }

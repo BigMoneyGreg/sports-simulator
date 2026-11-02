@@ -1935,3 +1935,58 @@ body.vscode-high-contrast .pin {
 .seg[data-name='duration'] button {
   flex: 1 0 calc(50% - 2px);
 }
+
+/* A race's running order, in place of the scoreboard. */
+.race-board {
+  text-align: center;
+}
+
+.race-board .running {
+  width: 100%;
+  margin-top: 6px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.running td {
+  padding: 1px 3px;
+  white-space: nowrap;
+}
+
+.running .pos {
+  width: 1.6em;
+  text-align: right;
+  color: var(--muted);
+}
+
+.running .team {
+  width: 3.6em;
+}
+
+.running .driver {
+  max-width: 0;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.running .gap {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.running tr.me td {
+  font-weight: 600;
+  background: var(--surface-2);
+  color: var(--vscode-foreground);
+}
+
+.running tr.out td {
+  opacity: 0.55;
+}
+
+/* "Reliability" needs more room than "Attack". */
+.clue.wide .clue-row {
+  grid-template-columns: 74px 36px 1fr;
+}

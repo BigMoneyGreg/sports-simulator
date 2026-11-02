@@ -34,9 +34,9 @@ export interface Feat {
 
 export const FEAT_TITLES: Record<FeatId, string> = {
   twoChampions: 'League 1 champions in two sports at once',
-  threeChampions: 'League 1 champions in all three sports at once',
+  threeChampions: 'League 1 champions in three sports at once',
   twoWorld: 'World champions in two sports',
-  threeWorld: 'World champions in all three sports',
+  threeWorld: 'World champions in three sports',
 };
 
 function isChampion(s: SeasonSummary): boolean {

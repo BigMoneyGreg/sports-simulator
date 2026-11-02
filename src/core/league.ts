@@ -1,6 +1,6 @@
 import type { SportFormat } from './format';
 import type { Rng } from './rng';
-import type { MatchOptions, MatchOutcome } from './sport';
+import type { MatchOptions, MatchOutcome, RaceResult } from './sport';
 
 export type RoundKind = 'league' | 'playoffSemi1' | 'playoffSemi2' | 'playoffFinal' | 'cup' | 'championship';
 
@@ -15,6 +15,8 @@ export interface Fixture {
   stage?: number;
   /** The second leg of a two-legged tie. */
   secondLeg?: boolean;
+  /** A race: everyone in it. `home` is the player's team if they're racing, and `away` only fills the shared shape. */
+  field?: number[];
 }
 
 export interface TableRow {
@@ -31,6 +33,8 @@ export interface TableRow {
   /** Cricket: balls faced and bowled, for net run rate. */
   ballsFaced?: number;
   ballsBowled?: number;
+  /** A race table: `won` is race wins, `lost` podiums, `goalsFor` grid places and `goalsAgainst` retirements. */
+  raced?: boolean;
 }
 
 /** Shuffles `ratings` (strongest first) within each of the sport's starting pots. */
@@ -110,6 +114,23 @@ function apply(row: TableRow, scored: number, conceded: number, result: number, 
     row.lost++;
     row.points += points ?? 0;
     row.form.push('L');
+  }
+}
+
+/** A race's points, wins, podiums and the two summer clues: grid places made, and cars that didn't finish. */
+export function recordRace(table: TableRow[], race: RaceResult): void {
+  for (const row of table) {
+    const cars = race.order.filter((c) => c.clubId === row.clubId);
+    if (!cars.length) continue;
+    row.raced = true;
+    row.played++;
+    row.points += cars.reduce((t, c) => t + c.points, 0);
+    row.goalsFor += cars.reduce((t, c) => t + race.fieldSize + 1 - c.grid, 0);
+    row.goalsAgainst += cars.filter((c) => c.out).length;
+    const best = Math.min(...cars.map((c) => c.place));
+    if (best === 1) row.won++;
+    if (best <= 3) row.lost++;
+    row.form.push(best === 1 ? 'W' : best <= 3 ? 'D' : 'L');
   }
 }
 

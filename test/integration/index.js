@@ -15,8 +15,8 @@ exports.run = async function run() {
   await new Promise((r) => setTimeout(r, 1500));
   // Hiding and showing sports and Honours while the box is open.
   const config = () => vscode.workspace.getConfiguration('sportsSimulator');
-  assert.deepStrictEqual(config().inspect('sports').defaultValue, { football: true, rugby: true, cricket: true });
-  await config().update('sports', { football: false, rugby: true, cricket: false }, vscode.ConfigurationTarget.Global);
+  assert.deepStrictEqual(config().inspect('sports').defaultValue, { football: true, rugby: true, cricket: true, grandprix: true });
+  await config().update('sports', { football: false, rugby: true, cricket: false, grandprix: false }, vscode.ConfigurationTarget.Global);
   await config().update('showHonours', false, vscode.ConfigurationTarget.Global);
   assert.strictEqual(config().get('sports').football, false);
   await new Promise((r) => setTimeout(r, 500));
@@ -29,7 +29,7 @@ exports.run = async function run() {
   await vscode.commands.executeCommand('workbench.action.quickPickManyToggle');
   await vscode.commands.executeCommand('workbench.action.acceptSelectedQuickOpenItem');
   await choosing;
-  assert.deepStrictEqual(config().inspect('sports').globalValue, { football: false, rugby: true, cricket: true });
+  assert.deepStrictEqual(config().inspect('sports').globalValue, { football: false, rugby: true, cricket: true, grandprix: true });
   assert.strictEqual(config().inspect('showHonours').globalValue, true);
   await config().update('sports', undefined, vscode.ConfigurationTarget.Global);
   await config().update('showHonours', undefined, vscode.ConfigurationTarget.Global);

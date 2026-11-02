@@ -7,7 +7,7 @@
  */
 import { allocatePoints, endSeason, focusAllocation, newCareer, nextRound, playRound, type Career, type Focus } from '../src/core/career';
 import { rating } from '../src/core/club';
-import { teamCount, type SportId } from '../src/core/format';
+import { teamCount } from '../src/core/format';
 import { goalRanks, sortTable, startRating } from '../src/core/league';
 import { Rng } from '../src/core/rng';
 import { tickMs, fullTimePause } from '../src/extension/game';
@@ -205,7 +205,7 @@ function careerRun(id: 'rugby' | 'cricket', sport: AnySport): void {
 }
 
 const only = process.argv.slice(2).find((a) => a === 'rugby' || a === 'cricket') as 'rugby' | 'cricket' | undefined;
-for (const id of (only ? [only] : ['rugby', 'cricket']) as Exclude<SportId, 'football'>[]) {
+for (const id of (only ? [only] : ['rugby', 'cricket']) as ('rugby' | 'cricket')[]) {
   console.log(`\n==== ${id} ====`);
   worldRun(id, SPORTS[id]);
   firstSeasonRun(SPORTS[id]);

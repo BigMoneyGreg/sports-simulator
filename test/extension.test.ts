@@ -141,7 +141,7 @@ describe('the extension, played through its messages', () => {
     run(30_000);
     fake.pick = (items) => items.filter((i) => i.id !== 'football');
     await fake.commands.get('sportsSimulator.chooseSports')!();
-    expect(fake.box.rows.map((r: { id: string }) => r.id)).toEqual(['rugby', 'cricket']);
+    expect(fake.box.rows.map((r: { id: string }) => r.id)).toEqual(['rugby', 'cricket', 'grandprix']);
     expect(fake.status.text).toMatch(/🏉/);
     fake.pick = (items) => items;
     const saved = () => JSON.parse(readFileSync(join(dir, 'career.json'), 'utf8')).live.matches[0].minute;
@@ -149,7 +149,7 @@ describe('the extension, played through its messages', () => {
     run(60_000);
     expect(saved()).toBe(minute);
     await fake.commands.get('sportsSimulator.chooseSports')!();
-    expect(fake.box.rows).toHaveLength(3);
+    expect(fake.box.rows).toHaveLength(4);
     const line = row('football').line;
     run(10_000);
     fake.send({ type: 'ready' });
