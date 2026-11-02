@@ -12,8 +12,15 @@ export const fake = {
   pick: null as null | ((items: any[]) => any),
   status: { text: '', visible: false, command: '' },
   view: null as any,
+  windowState: { focused: true, active: true },
+  windowListeners: [] as ((state: { focused: boolean; active: boolean }) => void)[],
+  /** The window changes, as VS Code would report it. */
+  setWindow(state: { focused: boolean; active: boolean }) {
+    fake.windowState = state;
+    for (const fn of fake.windowListeners) fn(state);
+  },
   reset() {
-    Object.assign(fake, { config: {}, configListeners: [], commands: new Map(), provider: null, posts: [], toWebview: null, toasts: [], warnings: [], infos: [], pick: null, view: null });
+    Object.assign(fake, { config: {}, configListeners: [], commands: new Map(), provider: null, posts: [], toWebview: null, toasts: [], warnings: [], infos: [], pick: null, view: null, windowState: { focused: true, active: true }, windowListeners: [] });
     fake.status = { text: '', visible: false, command: '' };
   },
   /** Opens the box, as the player would. */
@@ -55,7 +62,9 @@ export const Uri = { joinPath: (base: unknown, ...parts: string[]) => ({ base, p
 export const env = { language: 'en', clipboard: { writeText: async () => {} } };
 
 export const window = {
-  state: { focused: true },
+  get state() {
+    return fake.windowState;
+  },
   createStatusBarItem: () => ({
     set command(c: string) {
       fake.status.command = c;
@@ -81,7 +90,10 @@ export const window = {
     fake.provider = provider;
     return noop;
   },
-  onDidChangeWindowState: () => noop,
+  onDidChangeWindowState: (fn: (typeof fake.windowListeners)[number]) => {
+    fake.windowListeners.push(fn);
+    return noop;
+  },
 };
 
 export const commands = {

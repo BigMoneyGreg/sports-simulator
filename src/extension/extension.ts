@@ -17,6 +17,8 @@ let ownership: Ownership | undefined;
 /** How long another window's shared status text counts as current (it's rewritten every match-minute while a match is on). */
 const LIVE_FRESH_MS = 30_000;
 const TOAST_MS = 10_000;
+/** VS Code can't tell if a window is on screen, only when it was last used. This long without that, the clocks stop. */
+export const AWAY_AFTER_MS = 5 * 60_000;
 
 export function activate(context: vscode.ExtensionContext): void {
   let warnedWrite = false;
@@ -94,7 +96,9 @@ export function activate(context: vscode.ExtensionContext): void {
     const decisions = listed().filter(waitingOnPlayer).length;
     // Starting a career and the summer choice show even with the score turned off: they're waiting on the player.
     const waiting = !listed().some((g) => g.career) || decisions > 0;
-    statusBar.update(config().get('statusBarScore', true) || waiting ? live.text : null, live.tooltip);
+    const text = away ? `⏸ ${live.text}` : live.text;
+    const tooltip = away ? `Stopped while you're away. Click back into VS Code to carry on.\n\n${live.tooltip}` : live.tooltip;
+    statusBar.update(config().get('statusBarScore', true) || waiting ? text : null, tooltip);
     sidebar.setInfo(live.description, decisions ? { value: decisions, tooltip: decisions === 1 ? (listed().some((g) => g.career?.pending) ? SEASON_OVER : 'World Championship over') : `${decisions} seasons over: decisions waiting` } : undefined);
   };
 
@@ -171,10 +175,14 @@ export function activate(context: vscode.ExtensionContext): void {
   function listed(): Game[] {
     return shownSports().map((id) => games[id]);
   }
-  function holdHidden(run: boolean): void {
-    for (const game of all()) game.setHeld(!shownSports().includes(game.sportId), run);
+  let lastUsed = Date.now();
+  /** Nobody has used this window for a while: its clocks stand still until someone does. */
+  let away = false;
+  /** Hidden sports and a window left alone both hold the clocks; neither touches the player's own pause. */
+  function holdClocks(run: boolean): void {
+    for (const game of all()) game.setHeld(away || !shownSports().includes(game.sportId), run);
   }
-  holdHidden(false);
+  holdClocks(false);
   // Shown straight away; the clocks only run once this window owns the game.
   for (const game of all()) game.load(storage.load(game.sportId), false);
 
@@ -192,7 +200,29 @@ export function activate(context: vscode.ExtensionContext): void {
   });
   ownership = owner;
 
+  /** The player is here: carry on if the clocks had stopped for them. */
+  function used(): void {
+    lastUsed = Date.now();
+    if (!away) return;
+    away = false;
+    holdClocks(owner.owning);
+    refresh();
+  }
+
+  /** Runs every poll, so it also catches up after the computer has been asleep. */
+  function checkAway(): void {
+    if (vscode.window.state.active) return used();
+    if (away || Date.now() - lastUsed < AWAY_AFTER_MS) return;
+    away = true;
+    holdClocks(owner.owning);
+    // Saved, so the other windows show where it stopped.
+    if (owner.owning) for (const game of all()) game.shutdown();
+    refresh();
+  }
+
   function handle(message: ToHost): void {
+    // A click inside the box doesn't count as using the window in VS Code's eyes.
+    if (message.type !== 'ready') used();
     switch (message.type) {
       case 'ready':
         refresh();
@@ -299,6 +329,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const followedSaves = new Map<SportId, number>();
   const poll = setInterval(() => {
+    checkAway();
     owner.poll();
     followed = storage.activeSport();
     if (owner.owning) return;
@@ -352,6 +383,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('sportsSimulator.togglePause', () => owner.whenOwner(() => currentGame().togglePause())),
     // The window you're working in runs the game; the others stand by.
     vscode.window.onDidChangeWindowState((state) => {
+      if (state.focused || state.active) used();
       if (state.focused) owner.claim();
     }),
     vscode.workspace.onDidChangeConfiguration((e) => {
@@ -360,7 +392,7 @@ export function activate(context: vscode.ExtensionContext): void {
         storage.setLastDuration(undefined);
         for (const game of all()) if (!game.career) game.setDuration(duration());
       }
-      if (e.affectsConfiguration('sportsSimulator.sports')) holdHidden(owner.owning);
+      if (e.affectsConfiguration('sportsSimulator.sports')) holdClocks(owner.owning);
       if (e.affectsConfiguration('sportsSimulator')) refresh();
     }),
   );

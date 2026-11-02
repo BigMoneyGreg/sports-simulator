@@ -54,7 +54,7 @@ To stop a career, press **End…** on its row. **End career** keeps it in Past c
 - Works by keyboard, with screen reader announcements and high contrast themes
 - Fits any size: shrink the box and it keeps just the essentials (club, league, position, form and controls)
 - Season reports, trophy cabinet, club history and records
-- Pauses when VS Code closes, so you never miss a match
+- Pauses when VS Code closes, and stops after 5 minutes without a click or key press, so you never miss a match
 - With several VS Code windows open, the game runs in the one you're working in, and moves to another when that one closes
 
 Player names are generated and fictional. Competitions are the game's own, not official tournaments.

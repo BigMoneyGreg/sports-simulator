@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { activate, deactivate } from '../src/extension/extension';
+import { activate, AWAY_AFTER_MS, deactivate } from '../src/extension/extension';
 import { chooseFocus, newCareer, playSeason } from '../src/core/career';
 import { SAVE_VERSION } from '../src/extension/game';
 import { footballSport } from '../src/sports/football';
@@ -154,6 +154,57 @@ describe('the extension, played through its messages', () => {
     run(10_000);
     fake.send({ type: 'ready' });
     expect(row('football').line).not.toBe(line);
+  });
+
+  describe('with nobody at the window', () => {
+    const minute = () => JSON.parse(readFileSync(join(dir, 'career.json'), 'utf8')).live.matches[0].minute;
+    const leave = () => fake.setWindow({ focused: false, active: false });
+
+    it('plays on for a while, then stops until the window is used again', () => {
+      start();
+      leave();
+      run(AWAY_AFTER_MS - 2_000);
+      expect(fake.status.text).not.toMatch(/⏸/);
+      run(4_000);
+      expect(fake.status.text).toMatch(/⏸/);
+      const stopped = minute();
+      run(60 * 60_000);
+      expect(minute()).toBe(stopped);
+      fake.setWindow({ focused: true, active: true });
+      expect(fake.status.text).not.toMatch(/⏸/);
+      run(60_000);
+      expect(minute()).not.toBe(stopped);
+    });
+
+    it('stops with the window still focused, and leaves the career unpaused', () => {
+      start();
+      fake.setWindow({ focused: true, active: false });
+      run(AWAY_AFTER_MS + 2_000);
+      expect(fake.status.text).toMatch(/⏸/);
+      expect(JSON.parse(readFileSync(join(dir, 'career.json'), 'utf8')).paused).toBe(false);
+    });
+
+    it('a click in the box brings it back', () => {
+      start();
+      leave();
+      run(AWAY_AFTER_MS + 2_000);
+      const stopped = minute();
+      open('rugby');
+      run(60_000);
+      expect(minute()).not.toBe(stopped);
+    });
+
+    it('a hidden sport stays held when the player returns', async () => {
+      start();
+      fake.pick = (items) => items.filter((i) => i.id !== 'football');
+      await fake.commands.get('sportsSimulator.chooseSports')!();
+      leave();
+      run(AWAY_AFTER_MS + 2_000);
+      const stopped = minute();
+      fake.setWindow({ focused: true, active: true });
+      run(60_000);
+      expect(minute()).toBe(stopped);
+    });
   });
 
   it('refuses to hide every sport', async () => {

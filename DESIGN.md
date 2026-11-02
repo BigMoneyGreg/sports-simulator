@@ -27,7 +27,7 @@ Everything else runs by itself: fixtures, matches, commentary, tables, scorers, 
 - **Glanceable, not demanding.** It should never need attention mid-match.
 - **One meaningful decision per season.** The summer question is the whole game, so it has to matter.
 - **History is the reward.** Trophies, records and club history are why people keep it installed.
-- **Nothing happens while you're away.** Closing VS Code pauses everything.
+- **Nothing happens while you're away.** Closing VS Code pauses everything, and so does leaving it alone for 5 minutes.
 - **Near-zero resource use.** It must never slow the editor.
 - **Small and finishable.** New ideas go to 🔵 LATER, not into version 1.
 
@@ -421,6 +421,7 @@ For your club's matches only. A result card **slides over the sidebar box itself
 
 - ▶/⏸ button in the sidebar box (plus a command)
 - **Closing VS Code pauses automatically.** On reopen, the game continues from the exact minute it stopped. Nothing is simulated while closed.
+- **Leaving VS Code alone stops the clocks too.** After 5 minutes with no click or key press in any window they stand still, with ⏸ in the status bar, and carry on at the next click or key press. It isn't a pause: the player's own ⏸ is untouched. VS Code can't say whether a window is on screen, so this is the nearest it can tell: a window can be in view and stop, or be hidden and run for up to 5 minutes more.
 
 ### End-of-season screen
 
@@ -498,7 +499,7 @@ The game uses real nations, not clubs: country names, flags and colours are free
 | UI | `WebviewViewProvider` registered in the Explorer; plain HTML/CSS with a small amount of TypeScript; uses VS Code theme colours for light and dark themes |
 | Saving | A file in the extension's global storage folder (the career follows you across all projects); saved at every goal, full-time and season end, when VS Code closes, and when another window takes over. Older saves in `globalState` carry over once |
 | Save versions | Every save carries a version. Changing the save's shape means raising `SAVE_VERSION` in `game.ts` **and** adding an upgrade to `MIGRATIONS`, so careers carry over. A save that still can't be read (a gap in the upgrades, or from a newer version) is never just dropped: it's kept whole as `career.v<N>.json`, its history archived, and the player told once |
-| Several windows | Every window shares one save, so only one runs the clock: the one you last focused. It takes over within a second or two: the old window saves and stops, then the new one loads that save and carries on. Other windows follow it: their status bar shows the running window's text (shared through a small `live.json`, rewritten only when it changes) and their box reloads the save whenever it changes, so goals and full time show everywhere. A lone window keeps running when unfocused |
+| Several windows | Every window shares one save, so only one runs the clock: the one you last focused. It takes over within a second or two: the old window saves and stops, then the new one loads that save and carries on. Other windows follow it: their status bar shows the running window's text (shared through a small `live.json`, rewritten only when it changes) and their box reloads the save whenever it changes, so goals and full time show everywhere. A lone window keeps running when unfocused, until nobody has used it for 5 minutes |
 | Performance | One tick per match-minute for all 50 matches (at most a few per second), no animation loop, idle when paused |
 
 ### Proposed structure
@@ -666,6 +667,7 @@ In rough priority order:
 | Hard has no boost | Matches its description; reaching 99 from the bottom becomes a near-impossible grind, and that's the point of Hard |
 | Match lengths 30s · 2 min · 5 min | Three clearly different paces; 1 minute dropped |
 | Pause when VS Code closes | You never miss matches; no catch-up simulation |
+| Stop after 5 minutes with no click or key press | A player came back to find every season finished. VS Code only reports focus and recent use, not whether a window is on screen. Stopping as soon as focus goes would freeze the game beside a browser, and focus alone misses walking away from a focused window. VS Code reports a window as unused about a minute after the last input, too soon to use directly, as people watch a match without touching anything |
 | Status bar goal call-out, rich hover, collapsed-box score and a badge for the summer choice | Most of the time the box is closed: these keep the game noticeable at a glance without a single extra notification |
 | One summer question in four styles (call-ups, assistant coach, formation, training camp), always attack v defence underneath; leavers matched to the loss; loss split 10–90%; Medium boost 7 | Named people give a sense of power without more decisions. More levers (fitness, mentality, home/away…) were rejected: their clues come from half-seasons and would mostly be luck. Leavers alone were no clue at the old 25–75% split; at 10–90% they make the top readable (66% → 76% right). Medium needed +2 to keep its climb on target |
 | No difficulty choice: one standard game (the old Medium), and the unused easy and hard settings removed before release | Extra options for the sake of it. Medium's tuning is the one measured hardest, and Easy's bigger boost pushed teams so high that the steep penalty above 99 made careers collapse |
