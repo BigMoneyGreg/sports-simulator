@@ -1,3 +1,4 @@
+import { finishWeight } from '../../core/finishing';
 import type { Rng } from '../../core/rng';
 import type { MatchOptions, MatchOutcome, SportModule, TeamSheet } from '../../core/sport';
 import { effectiveStats } from '../football/match';
@@ -75,6 +76,8 @@ export interface RugbyMatch {
 
 const PERIOD_END: Record<Exclude<Period, 'done'>, number> = { first: 40, second: 80, et1: 90, et2: 100 };
 const TRY_WEIGHT: Record<string, number> = { BACK3: 5, CEN: 3, LOOSE: 2, HOOK: 1.5, SH: 1.5, FH: 1, LOCK: 1, PROP: 0.8 };
+/** The set scorers, by shirt number: the wings first, then the full-back. */
+const ROLE_TRY_WEIGHT: Record<number, number> = { 11: 6, 14: 6, 24: 6, 15: 3 };
 const CARD_WEIGHT: Record<string, number> = { LOOSE: 3, LOCK: 3, PROP: 2, HOOK: 2, CEN: 2, BACK3: 1, SH: 1, FH: 1 };
 
 function venueFactor(venue: 'home' | 'away' | 'neutral'): number {
@@ -179,7 +182,7 @@ function playMinute(m: RugbyMatch, rng: Rng): void {
       const converted = rng.chance(TUNING.conversion);
       side.tries++;
       side.goals += converted ? 7 : 5;
-      m.events.push({ type: 'try', minute: m.minute, side: key, playerId: pick(side, rng, TRY_WEIGHT), converted, kicker: kicker(side), score: currentScore(m) });
+      m.events.push({ type: 'try', minute: m.minute, side: key, playerId: pickFinisher(side, rng), converted, kicker: kicker(side), score: currentScore(m) });
     } else if (rng.chance(side.penaltyRate * factor)) {
       side.goals += 3;
       m.events.push({ type: 'penalty', minute: m.minute, side: key, playerId: kicker(side), score: currentScore(m) });
@@ -214,6 +217,10 @@ function onField(side: Side): TeamSheet['lineup'] {
   const off = (id: number) => side.sentOff.includes(id) || side.binned.some((b) => b.id === id);
   const left = side.sheet.lineup.filter((p) => !off(p.id));
   return left.length ? left : side.sheet.lineup;
+}
+
+function pickFinisher(side: Side, rng: Rng): number {
+  return rng.weighted(onField(side), (p) => finishWeight(ROLE_TRY_WEIGHT[p.number ?? 0] ?? TRY_WEIGHT[p.position] ?? 1, p.id, side.sheet.standing)).id;
 }
 
 function pick(side: Side, rng: Rng, weights: Record<string, number>): number {

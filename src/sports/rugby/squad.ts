@@ -42,7 +42,7 @@ export function lineup(squad: Player[], unavailable: ReadonlySet<number> = new S
     const inPosition = squad.filter((pl) => pl.position === position);
     const available = inPosition.filter((pl) => !unavailable.has(pl.id));
     for (const p of (available.length >= starters ? available : inPosition).slice(0, starters)) {
-      out.push({ id: p.id, position: p.position });
+      out.push({ id: p.id, position: p.position, number: p.number });
     }
   }
   return out;

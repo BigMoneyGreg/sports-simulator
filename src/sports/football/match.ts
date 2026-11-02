@@ -1,3 +1,4 @@
+import { finishWeight } from '../../core/finishing';
 import type { Rng } from '../../core/rng';
 import type { MatchOptions, MatchOutcome, SportModule, TeamSheet } from '../../core/sport';
 
@@ -78,6 +79,8 @@ export interface FootballMatch {
 const PERIOD_END: Record<Exclude<Period, 'done'>, number> = { first: 45, second: 90, et1: 105, et2: 120 };
 
 const SCORER_WEIGHT: Record<string, number> = { GK: 0.02, DEF: 1, MID: 2.5, FWD: 6 };
+/** The set scorers, by shirt number: the main striker, then the other strikers and the wingers. */
+const ROLE_SCORER_WEIGHT: Record<number, number> = { 9: 7, 10: 5, 17: 5, 18: 5, 7: 3.5, 11: 3.5, 16: 2.5, 6: 1.5, 8: 1.5, 14: 1.5 };
 const CARD_WEIGHT: Record<string, number> = { GK: 0.4, DEF: 3, MID: 3, FWD: 1.5 };
 
 /**
@@ -212,12 +215,12 @@ function playMinute(m: FootballMatch, rng: Rng): void {
 
     if (rng.chance(rate)) {
       const ownGoal = rng.chance(TUNING.ownGoalShare);
-      const scorer = ownGoal ? pickPlayer(other, rng, { GK: 0.1, DEF: 4, MID: 1, FWD: 0.2 }) : pickPlayer(side, rng, SCORER_WEIGHT);
+      const scorer = ownGoal ? pickPlayer(other, rng, { GK: 0.1, DEF: 4, MID: 1, FWD: 0.2 }) : pickFinisher(side, rng);
       side.goals++;
       m.events.push({ type: 'goal', minute: m.minute, added: m.added, side: key, playerId: scorer, ownGoal, score: currentScore(m) });
     } else if (rng.chance(rate * TUNING.chancesPerGoal)) {
       const result = rng.weighted(['saved', 'wide', 'post', 'blocked'] as const, (r) => ({ saved: 4, wide: 4, post: 0.6, blocked: 2 })[r]);
-      m.events.push({ type: 'chance', minute: m.minute, added: m.added, side: key, playerId: pickPlayer(side, rng, SCORER_WEIGHT), result });
+      m.events.push({ type: 'chance', minute: m.minute, added: m.added, side: key, playerId: pickFinisher(side, rng), result });
     }
 
     if (rng.chance(TUNING.yellowsPerTeam / 90)) {
@@ -237,6 +240,12 @@ function sendOff(m: FootballMatch, key: SideKey, playerId: number, secondYellow:
   side.reds++;
   side.sentOff.push(playerId);
   m.events.push({ type: 'red', minute: m.minute, added: m.added, side: key, playerId, secondYellow });
+}
+
+function pickFinisher(side: Side, rng: Rng): number {
+  const remaining = side.sheet.lineup.filter((p) => !side.sentOff.includes(p.id));
+  const available = remaining.length > 0 ? remaining : side.sheet.lineup;
+  return rng.weighted(available, (p) => finishWeight(ROLE_SCORER_WEIGHT[p.number ?? 0] ?? SCORER_WEIGHT[p.position] ?? 1, p.id, side.sheet.standing)).id;
 }
 
 function pickPlayer(side: Side, rng: Rng, weights: Record<string, number>, factor: (id: number) => number = () => 1): number {

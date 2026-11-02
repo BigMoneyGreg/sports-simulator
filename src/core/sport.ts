@@ -18,8 +18,10 @@ export interface TeamSheet {
   defence: number;
   /** Attack minus defence as the side has settled into it; the lopsidedness penalty follows this. Defaults to the real gap. */
   settledLean?: number;
-  /** Starting line-up: player ids and positions. */
-  lineup: { id: number; position: string }[];
+  /** Where the team stands in its league, 0 (bottom) to 1 (top): a team doing well feeds its set scorers. */
+  standing?: number;
+  /** Starting line-up: player ids and positions. Matches saved before shirt numbers were added here go by position. */
+  lineup: { id: number; position: string; number?: number }[];
 }
 
 export interface MatchOptions {

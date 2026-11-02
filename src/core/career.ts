@@ -1,4 +1,5 @@
 import { AI_STYLES, clamp, MAX_STAT, MIN_STAT, rating, shiftRating, STATS, statsFor, type Club, type Stat, type Style } from './club';
+import { leagueStanding } from './finishing';
 import { FORMATS, teamCount, type SportFormat, type SportId } from './format';
 import {
   doubleRoundRobin,
@@ -411,7 +412,9 @@ export function playerInRound(career: Career, fixtures: Fixture[]): Fixture | un
 
 export function teamSheet(career: Career, clubId: number, sport: SportDefinition): TeamSheet {
   const c = career.clubs[clubId];
-  return { clubId, attack: c.attack, defence: c.defence, settledLean: c.settledLean, lineup: sport.lineup(c.squad, new Set(career.suspended)) };
+  const league = career.season.leagues.find((l) => l.table.some((r) => r.clubId === clubId));
+  const standing = league && leagueStanding(sortTable(league.table), clubId, (id) => rating(career.clubs[id]));
+  return { clubId, attack: c.attack, defence: c.defence, settledLean: c.settledLean, standing, lineup: sport.lineup(c.squad, new Set(career.suspended)) };
 }
 
 export interface RoundResult {
