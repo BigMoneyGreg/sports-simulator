@@ -1,3 +1,4 @@
+import type { Speed } from '../src/shared/view';
 import { describe, expect, it } from 'vitest';
 import { allocatePoints, chooseFocus, endSeason, focusAllocation, newCareer, nextRound, playRound, teamSheet, type Career } from '../src/core/career';
 import { rating } from '../src/core/club';
@@ -7,7 +8,7 @@ import { band, emptyTable, goalRanks, recordResult, sortTable, startRating, zone
 import { totalRating } from '../src/core/ratings';
 import { Rng } from '../src/core/rng';
 import type { TeamSheet } from '../src/core/sport';
-import { fitDuration, Game, tickMs, type SavedGame, type Scheduler } from '../src/extension/game';
+import { Game, tickMs, type SavedGame, type Scheduler } from '../src/extension/game';
 import { boxStatus, buildView, collapsedText, cycledSport, enabledSports, GoalWatch, seasonFinished, sportRows, statusGame, statusText, summerQuestion } from '../src/extension/viewModel';
 import { SPORTS } from '../src/sports';
 import { CRICKET_ORDER, CRICKET_RIVALS } from '../src/sports/cricket/data';
@@ -67,7 +68,6 @@ describe('formats', () => {
     expect(band(FOOTBALL, 1).max).toBe(99);
     expect(band(FOOTBALL, 5).min).toBe(1);
     expect(cupStages(FOOTBALL, 'championship')).toHaveLength(9);
-    expect(SPORTS.football.present.durations).toEqual(['30s', '2m', '5m', '10m']);
   });
 
   it('marks the zones of each sport', () => {
@@ -588,7 +588,7 @@ describe.each(NEW_SPORTS)('%s in the game', (id) => {
     const saves: (SavedGame | null)[] = [];
     const game = new Game({ save: (g) => saves.push(g && JSON.parse(JSON.stringify(g))), changed: () => {} }, clock.scheduler);
     game.selectSport(id);
-    game.setDuration(SPORTS[id].present.durations[0]);
+    game.speed = 'fastest';
     game.start({ rating: 55, seed: 21, team: 'ENG' });
     return { game, clock, saves };
   }
@@ -603,7 +603,6 @@ describe.each(NEW_SPORTS)('%s in the game', (id) => {
     expect(during.sport).toBe(id);
     expect(during.match).not.toBeNull();
     expect(during.match!.score).toHaveLength(2);
-    expect(during.header.durations).toEqual(SPORTS[id].present.durations);
     expect(statusText(game)).toMatch(/^(🏉|🏏) {2}/);
     expect(collapsedText(game)).toBeTruthy();
     while (phase() === 'live') clock.run();
@@ -667,26 +666,16 @@ describe.each(NEW_SPORTS)('%s in the game', (id) => {
   });
 });
 
-describe('match lengths', () => {
-  it('offers each sport its own, fitting a length it doesn\'t have to the next longer', () => {
-    expect(SPORTS.rugby.present.durations).toEqual(['90s', '5m', '15m', '30m']);
-    expect(SPORTS.cricket.present.durations).toEqual(['2m', '10m', '20m', '40m']);
-    expect(fitDuration(SPORTS.cricket, '30s')).toBe('2m');
-    expect(fitDuration(SPORTS.cricket, '90s')).toBe('2m');
-    expect(fitDuration(SPORTS.rugby, '30s')).toBe('90s');
-    expect(fitDuration(SPORTS.football, '40m')).toBe('10m');
-    expect(fitDuration(SPORTS.rugby, '1m' as never)).toBe('90s');
-    expect(fitDuration(SPORTS.football, '5m')).toBe('5m');
-  });
-
-  it('runs a tick by the sport\'s own clock', () => {
-    expect(tickMs(SPORTS.football, '2m')).toBeCloseTo(120000 / 90);
-    expect(tickMs(SPORTS.rugby, '90s')).toBeCloseTo(90000 / 80);
-    expect(tickMs(SPORTS.cricket, '2m')).toBe(500);
-  });
-
-  it('labels every length a sport offers with a season time', () => {
-    for (const id of SPORT_IDS) for (const d of SPORTS[id].present.durations) expect(SPORTS[id].present.terms.seasonLabels[d], `${id} ${d}`).toBeTruthy();
+describe('speed', () => {
+  it('plays every sport at its real length against football', () => {
+    const match = (id: SportId, speed: Speed) => tickMs(SPORTS[id], speed) * SPORTS[id].module.ticks;
+    expect(match('football', 'normal')).toBeCloseTo(600_000);
+    expect(match('football', 'fast')).toBeCloseTo(180_000);
+    expect(match('football', 'fastest')).toBeCloseTo(60_000);
+    // Rugby a little shorter, a T20 nearly twice as long, a Grand Prix shorter still.
+    expect(match('rugby', 'normal') / match('football', 'normal')).toBeCloseTo(100 / 110);
+    expect(match('cricket', 'normal') / match('football', 'normal')).toBeCloseTo(190 / 110);
+    expect(match('grandprix', 'normal') / match('football', 'normal')).toBeCloseTo(90 / 110);
   });
 });
 
@@ -718,25 +707,17 @@ describe('sports in the save', () => {
     expect(report!.rival).toMatch(new RegExp(`^${career.clubs[career.rival!].name} · \\d+W( \\d+D)? \\d+L$`));
   });
 
-  it('keeps each career\'s match length in its save', () => {
-    const saves: SavedGame[] = [];
+  it('takes no match length from an older save: one speed covers every sport', () => {
     const clock = manual();
-    const game = new Game({ save: (g) => void (g && saves.push(JSON.parse(JSON.stringify(g)))), changed: () => {} }, clock.scheduler);
+    const game = new Game({ save: () => {}, changed: () => {} }, clock.scheduler);
     game.selectSport('rugby');
     game.start({ rating: 55, seed: 31, team: 'WAL' });
-    game.setDuration('5m');
-    const saved = saves[saves.length - 1];
-    expect(saved.duration).toBe('5m');
+    const saved = { ...game.snapshot()!, duration: '5m' };
     const again = new Game({ save: () => {}, changed: () => {} }, clock.scheduler);
-    again.setDuration('15m');
+    again.setSpeed('fast');
     again.load(saved, false);
-    expect(again.duration).toBe('5m');
-    // An older save has none, and takes the default.
-    const { duration: _, ...older } = saved;
-    again.setDuration('15m');
-    again.load(null, false);
-    again.load(older, false);
-    expect(again.duration).toBe('15m');
+    expect(again.speed).toBe('fast');
+    expect(again.snapshot()).not.toHaveProperty('duration');
   });
 
   describe('several sports at once', () => {
@@ -922,7 +903,6 @@ describe('sports in the save', () => {
     expect(setup.screen === 'setup' && setup.setup.sport).toBe('cricket');
     expect(setup.screen === 'setup' && setup.setup.leagues).toBe(4);
     expect(setup.screen === 'setup' && setup.setup.nations).toHaveLength(32);
-    expect(game.duration).toBe('10m');
     game.load(rugbySave);
     expect(game.sportId).toBe('rugby');
     expect(game.career!.clubs[0].name).toBe('Wales');

@@ -26,7 +26,7 @@ const folder = join(profile, 'project');
 mkdirSync(storage, { recursive: true });
 mkdirSync(folder);
 // Not trusted, and no prompt to trust it: Restricted Mode, the way someone opening a stranger's folder gets it.
-writeFileSync(join(user, 'User', 'settings.json'), JSON.stringify({ 'security.workspace.trust.startupPrompt': 'never', 'security.workspace.trust.banner': 'never', 'security.workspace.trust.emptyWindow': false, 'workbench.startupEditor': 'none' }));
+writeFileSync(join(user, 'User', 'settings.json'), JSON.stringify({ 'security.workspace.trust.startupPrompt': 'never', 'security.workspace.trust.banner': 'never', 'security.workspace.trust.emptyWindow': false, 'workbench.startupEditor': 'none', 'sportsSimulator.speed': 'fastest' }));
 
 const seedFile = join(profile, 'seed.cjs');
 await build({ entryPoints: [join(root, 'test/e2e/seed.ts')], bundle: true, platform: 'node', format: 'cjs', outfile: seedFile, logLevel: 'error' });

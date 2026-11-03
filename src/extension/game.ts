@@ -22,7 +22,7 @@ import type { Fixture } from '../core/league';
 import { Rng } from '../core/rng';
 import type { SportId } from '../core/format';
 import { SPORTS, type AnySport } from '../sports';
-import type { Duration } from '../shared/view';
+import type { Speed } from '../shared/view';
 
 export const SAVE_VERSION = 9;
 
@@ -51,25 +51,18 @@ export function migrate(saved: SavedGame, migrations = MIGRATIONS): SavedGame | 
   return s.version === SAVE_VERSION ? s : null;
 }
 
-const DURATION_MS: Record<Duration, number> = { '30s': 30_000, '90s': 90_000, '2m': 120_000, '5m': 300_000, '10m': 600_000, '15m': 900_000, '20m': 1_200_000, '30m': 1_800_000, '40m': 2_400_000 };
+/** How long a football match takes at each speed; every other sport keeps its real length against football's. */
+const FOOTBALL_MS: Record<Speed, number> = { normal: 600_000, fast: 180_000, fastest: 60_000 };
+const FOOTBALL_MINUTES = 110;
 
-/** Real milliseconds per tick of a match: a match-minute, or in cricket an over. */
-export function tickMs(sport: AnySport, duration: Duration): number {
-  return DURATION_MS[duration] / sport.module.ticks;
-}
-
-/** The match length to use when this one isn't offered in the sport: the next longer, or else its longest. */
-export function fitDuration(sport: AnySport, duration: Duration): Duration {
-  const offered = sport.present.durations;
-  if (offered.includes(duration)) return duration;
-  // A length this version no longer has.
-  if (!DURATION_MS[duration]) return offered[0];
-  return offered.find((d) => DURATION_MS[d] >= DURATION_MS[duration]) ?? offered[offered.length - 1];
+/** Real milliseconds per tick of a match: a match-minute, an over, a lap. */
+export function tickMs(sport: AnySport, speed: Speed): number {
+  return (FOOTBALL_MS[speed] * sport.module.realMinutes) / FOOTBALL_MINUTES / sport.module.ticks;
 }
 
 /** How long the full-time result stays up before the next matchday. */
-export function fullTimePause(duration: Duration): number {
-  return duration === '30s' ? 3000 : 5000;
+export function fullTimePause(speed: Speed): number {
+  return speed === 'fastest' ? 3000 : 5000;
 }
 
 export interface LiveRound {
@@ -86,8 +79,8 @@ export interface SavedGame {
   career: Career;
   live: LiveRound | null;
   paused: boolean;
-  /** This career's match length; older saves go without and take the default. */
-  duration?: Duration;
+  /** Older saves kept a match length of their own; it's ignored now, as one speed covers every sport. */
+  duration?: string;
 }
 
 export interface Scheduler {
@@ -119,7 +112,7 @@ export class Game {
   lastMatch: { match: any; fixture: Fixture } | null = null;
   paused = false;
   phase: Phase = 'idle';
-  duration: Duration = '2m';
+  speed: Speed = 'normal';
   /** The sport being played, or chosen for the next career. */
   sportId: SportId = 'football';
   /** Hidden in the settings: the clock stands still, and `paused` stays as the player left it. Not saved. */
@@ -141,7 +134,6 @@ export class Game {
   selectSport(sport: SportId): void {
     this.stop();
     this.sportId = sport;
-    this.duration = fitDuration(this.sport, this.duration);
   }
 
   /** Loads a save; with `run` false it's only shown (another window is running the game). */
@@ -159,7 +151,6 @@ export class Game {
     }
     this.career = saved.career;
     this.sportId = saved.career.sport;
-    this.duration = fitDuration(this.sport, saved.duration ?? this.duration);
     this.live = saved.live;
     this.paused = saved.paused;
     if (!this.live && growWorld(this.career, this.sport) && run) this.save();
@@ -196,14 +187,12 @@ export class Game {
     this.save();
   }
 
-  setDuration(duration: Duration): void {
-    const before = this.duration;
-    this.duration = fitDuration(this.sport, duration);
-    if (this.career && this.duration !== before) this.save();
+  setSpeed(speed: Speed): void {
+    this.speed = speed;
     // Only a running clock is rescheduled: a window that's just showing the game must not start one.
     if (this.phase === 'live' && this.timer !== null) {
       this.stop();
-      this.schedule(() => this.tick(), tickMs(this.sport, this.duration));
+      this.schedule(() => this.tick(), tickMs(this.sport, this.speed));
     }
   }
 
@@ -259,10 +248,10 @@ export class Game {
       case 'worldOver':
         return;
       case 'live':
-        this.schedule(() => this.tick(), tickMs(this.sport, this.duration));
+        this.schedule(() => this.tick(), tickMs(this.sport, this.speed));
         return;
       case 'fullTime':
-        this.schedule(() => this.afterFullTime(), fullTimePause(this.duration));
+        this.schedule(() => this.afterFullTime(), fullTimePause(this.speed));
         return;
       case 'idle':
         this.nextMatchday();
@@ -313,7 +302,7 @@ export class Game {
       this.phase = 'live';
       this.save();
       this.tell(() => this.host.changed());
-      this.schedule(() => this.tick(), tickMs(sport, this.duration));
+      this.schedule(() => this.tick(), tickMs(sport, this.speed));
       return;
     }
   }
@@ -338,7 +327,7 @@ export class Game {
     }
     if (module.notable(mine) !== notableBefore) this.save();
     this.tell(() => this.host.changed());
-    this.schedule(() => this.tick(), tickMs(this.sport, this.duration));
+    this.schedule(() => this.tick(), tickMs(this.sport, this.speed));
   }
 
   private finishRound(): void {
@@ -356,7 +345,7 @@ export class Game {
     this.save();
     this.tell(() => this.host.fullTime?.(last.match, last.fixture));
     this.tell(() => this.host.changed());
-    this.schedule(() => this.afterFullTime(), fullTimePause(this.duration));
+    this.schedule(() => this.afterFullTime(), fullTimePause(this.speed));
   }
 
   /** Once the result has been up a while: on to the next matchday, unless another sport's turn comes first. */
@@ -385,7 +374,7 @@ export class Game {
 
   snapshot(): SavedGame | null {
     if (!this.career) return null;
-    return { version: SAVE_VERSION, career: this.career, live: this.live, paused: this.paused, duration: this.duration };
+    return { version: SAVE_VERSION, career: this.career, live: this.live, paused: this.paused };
   }
 
   private save(): void {

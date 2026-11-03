@@ -9,7 +9,7 @@ First release.
 - **Grand Prix racing:** 30 nations in 3 leagues of 10, the most successful racing countries first, or enter any country as a new team. Each team runs two drivers over 16 races, lap by lap, with pit stops, safety cars and retirements; a drivers' title beside the teams'; speed or reliability each summer; and a one-car-each Race of Nations every four years
 - **Cricket (T20):** 32 nations in 4 leagues of 8, including the West Indies. Follow it ball by ball on a real scorecard, with this over; wickets and the chase ("need 34 from 18 balls"); net run rate; super overs; run scorers and wicket takers; matches from 2 minutes
 - Each sport has its own career, cups, summer questions and records
-- Play several sports in one shared season, with only one match on at a time: the sport furthest behind plays next, and the summers come together at the year's end. Each sport's World Championship falls in a different year. The live match is the box's main screen, with one pause for everything, and each sport has a tab for its tables, fixtures, cups and team, and each career keeps its own match length
+- Play several sports in one shared season, with only one match on at a time: the sport furthest behind plays next, and the summers come together at the year's end. Each sport's World Championship falls in a different year. The live match is the box's main screen, with one pause for everything, and each sport has a tab for its tables, fixtures, cups and team
 - **Honours:** past careers, greatest teams, all-time records for each sport, and honours for success across sports
 - Only want one sport? Press **Choose sports…** in the box and untick the rest, Honours too if you like. A hidden career waits where it was
 - Ratings follow the gaps in real rankings: a clear elite that's hard to catch, and close leagues at the bottom. Nations rise and fade over the years, with golden generations and bad spells
@@ -34,7 +34,8 @@ First release.
 - Each season report lists the top five scorers across all leagues, cups aside: try scorers in rugby, run scorers and wicket takers in cricket
 - Players get the most common names in their own country, now and then borrowing a surname from a neighbour, and real stars' names are blocked
 - Status bar: your live score, week and league place, with *GOAL!*, *TRY!* or *WICKET!* as it happens. With several careers it shows each sport's week and place in turn, 5 seconds each, and a click opens the one on show
-- Setup: pick or type your country, then its starting league and match length. The default gives a season of about 20 to 25 minutes in every sport
+- Setup: pick or type your country, then its starting league
+- One speed for every sport (›, ›› or ›››: a football match in about 10, 3 or 1 minute), with each match its real length against the others
 - With several VS Code windows open, the game runs in the one you're working in, and moves to another when that one closes
 - Works in Restricted Mode, and on your own machine when you're connected to a remote one
 - Works by keyboard, with screen reader announcements and high contrast themes

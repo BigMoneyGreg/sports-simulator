@@ -294,6 +294,7 @@ export const rugby: SportModule<RugbyMatch> = {
   isFinished,
   outcome,
   ticks: 80,
+  realMinutes: 100,
   countsLive: (m) => m.minute !== 0,
   alerts: (m) => [m.home.tries, m.away.tries],
   notable: (m) => m.home.tries + m.away.tries + m.home.reds + m.away.reds,

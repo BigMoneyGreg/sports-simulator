@@ -1,7 +1,8 @@
 import {
-  DURATION_LABELS,
+  SPEED_LABELS,
+  SPEED_NAMES,
+  SPEEDS,
   type CupView,
-  type Duration,
   type FixtureView,
   type Focus,
   type FullTimeView,
@@ -15,6 +16,7 @@ import {
   type PlayoffView,
   type SeasonEndView,
   type SetupView,
+  type Speed,
   type SportRowView,
   type TableView,
   type TeamBadge,
@@ -59,6 +61,8 @@ let honours: string | null = null;
 let live: LiveCardView | null = null;
 /** Whether the live card's full report is unfolded, kept between updates. */
 let reportOpen = false;
+/** The speed last shown, for the card while nothing is live. */
+let lastSpeed: Speed = 'normal';
 /** A question open in the box: red steps can't be done by VS Code's own pop-ups. */
 let ask: { kind: 'career'; step: 'choose' | 'reset' } | { kind: 'honours'; step: 'first' | 'final' } | null = null;
 const askBox = document.createElement('div');
@@ -76,7 +80,6 @@ const setup = {
   /** The whole list shows until a country is picked, and again when the search box is clicked to change it. */
   browsing: false,
   league: 3,
-  duration: '2m' as Duration,
   /** Defaults are taken from the host once; option clicks must not reset them. */
   initialised: false,
 };
@@ -178,7 +181,6 @@ function renderSetup(v: SetupView): void {
   tierShort = v.terms.race?.tier ?? 'L';
   if (setup.sport !== v.sport) Object.assign(setup, { sport: v.sport, team: '', search: '', league: Math.min(3, v.leagues), initialised: false });
   if (!setup.initialised) {
-    setup.duration = v.duration;
     const suggested = v.nations.find((n) => n.code === v.suggested);
     if (suggested && !setup.team) Object.assign(setup, { team: suggested.code, league: suggested.tier });
     setup.initialised = true;
@@ -199,7 +201,6 @@ function renderSetup(v: SetupView): void {
 
     ${chosen ? `<div class="field">Starting league ${seg('league', leagueOptions, String(setup.league))}</div>` : ''}
 
-    <div class="field">Match length ${seg('duration', v.durations.map((d): Option => [d, DURATION_LABELS[d], v.terms.seasonLabels[d]]), setup.duration)}</div>
 
     ${chosen ? '<button type="button" id="start" class="primary">Start career</button>' : ''}
   </div>`;
@@ -299,7 +300,10 @@ function renderLive(): void {
     return;
   }
   const playing = careers.some((r) => !r.paused);
-  const pause = `<button type="button" id="pause" class="chip icon" title="${playing ? 'Pause every sport' : 'Play'}" aria-label="${playing ? 'Pause every sport' : 'Play'}">${playing ? '⏸' : '▶'}</button>`;
+  const speed = live?.speed ?? lastSpeed;
+  lastSpeed = speed;
+  const next = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length];
+  const pause = `<span class="live-controls"><button type="button" id="speed" class="chip speed" data-next="${next}" title="${SPEED_NAMES[speed]}. Click for ${SPEED_NAMES[next].split(':')[0].toLowerCase()}." aria-label="Speed: ${SPEED_NAMES[speed]}">${SPEED_LABELS[speed]}</button><button type="button" id="pause" class="chip icon" title="${playing ? 'Pause every sport' : 'Play'}" aria-label="${playing ? 'Pause every sport' : 'Play'}">${playing ? '⏸' : '▶'}</button></span>`;
   const m = live?.match;
   const head = (icon: string, title: string, sub: string) => `<div class="live-head">${icon}<span class="live-title">${title}</span><span class="muted small fit-line live-sub">${esc(sub)}</span>${pause}</div>`;
   if (!live || !m) {
@@ -433,7 +437,7 @@ function focusKey(el: Element): string | null {
 function renderGame(v: GameView): void {
   if (panel.dataset.mode !== 'game') {
     // A career has just started, from further down the setup screen: its header comes into view, below the live card.
-    scrollToPanel = true;
+    if (panel.dataset.mode === 'setup') scrollToPanel = true;
     panel.innerHTML = '<div id="top"></div><div id="main"></div>';
     panel.dataset.mode = 'game';
   }
@@ -539,12 +543,10 @@ function turnTag(v: GameView): string {
 function headerHtml(v: GameView): string {
   const h = v.header;
   const dots = h.form.map((f) => `<span class="dot ${f.result}" title="${esc(f.title)}">${esc(f.label ?? f.result)}</span>`).join('');
-  const next = h.durations[(h.durations.indexOf(h.duration) + 1) % h.durations.length];
   return `<header class="head card" data-accent="${esc(h.club.colours[0])}">
     <div class="head-line"><div class="club">${swatch(h.club, 'crest')}<div class="name">${esc(h.club.name)}</div></div><span class="form" role="group" aria-label="Form, latest last">${dots}</span></div>
     <div class="head-line"><div class="muted small where">${turnTag(v)}${ordinal(h.position)} · ${v.terms.race?.tier ?? 'L'}${h.tier} · <span title="League games played">played ${h.played}/${h.games}</span></div>
       <span class="controls">
-        <button type="button" id="speed" class="chip" data-next="${next}" title="Match length: ${DURATION_LABELS[h.duration]} (${(v.terms.seasonLabels[h.duration] ?? '').toLowerCase()}). Click for ${DURATION_LABELS[next]}." aria-label="Match length ${DURATION_LABELS[h.duration]}"><span>⏱</span><span class="wide"> ${DURATION_LABELS[h.duration]}</span></button>
       </span></div>
   </header>`;
 }
@@ -1027,11 +1029,11 @@ app.addEventListener('click', (e) => {
     ask = { kind: 'career', step: 'choose' };
     render();
   } else if (button.id === 'speed') {
-    send({ type: 'setDuration', sport: openSport(), duration: button.dataset.next as Duration });
+    send({ type: 'setSpeed', speed: button.dataset.next as Speed });
   } else if (button.id === 'pause') {
     send({ type: 'togglePause' });
   } else if (button.id === 'start' && setup.team) {
-    send({ type: 'startCareer', sport: openSport(), team: setup.team, league: setup.league, duration: setup.duration });
+    send({ type: 'startCareer', sport: openSport(), team: setup.team, league: setup.league });
   } else if (button.dataset.team && view?.screen === 'setup') {
     setup.team = button.dataset.team;
     setup.search = '';
@@ -1043,7 +1045,6 @@ app.addEventListener('click', (e) => {
     const group = button.closest('.seg')!.getAttribute('data-name')!;
     const value = button.dataset.value!;
     if (group === 'league') setup.league = Number(value);
-    if (group === 'duration') setup.duration = value as Duration;
     if (view?.screen === 'setup') renderSetup(view.setup);
   }
 });

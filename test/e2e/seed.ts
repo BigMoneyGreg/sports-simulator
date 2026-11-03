@@ -21,7 +21,7 @@ const step = () => queue.shift()!.fn();
 const moments: string[] = [];
 const game = new Game({ save: () => {}, changed: () => {} }, scheduler);
 game.selectSport('rugby');
-game.setDuration('90s');
+game.setSpeed('fastest');
 game.start({ rating: 55, seed: 21, team: 'WAL' });
 while (game.phase !== 'seasonOver') {
   if (game.phase === 'live') moments.push(JSON.stringify(game.snapshot()));
@@ -34,13 +34,13 @@ writeFileSync(process.argv[2], moments[moments.length - 40]);
 const world = new Game({ save: () => {}, changed: () => {} }, scheduler);
 queue.length = 0;
 world.selectSport('cricket');
-world.setDuration('2m');
+world.setSpeed('fastest');
 const career = newCareer({ rating: 95, seed: 9, team: 'IND' }, SPORTS.cricket);
 // Cricket's World Championship follows its second season.
 for (let season = 0; season < 2; season++) {
   playSeason(career, SPORTS.cricket);
   chooseFocus(career, 'attack');
 }
-world.load(JSON.parse(JSON.stringify({ version: SAVE_VERSION, career, live: null, paused: false, duration: '2m' })));
+world.load(JSON.parse(JSON.stringify({ version: SAVE_VERSION, career, live: null, paused: false })));
 while (world.phase !== 'worldOver') step();
 writeFileSync(process.argv[3], JSON.stringify(world.snapshot()));

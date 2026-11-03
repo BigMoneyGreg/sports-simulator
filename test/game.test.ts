@@ -1,3 +1,4 @@
+import type { Speed } from '../src/shared/view';
 import { footballSport } from '../src/sports/football';
 import { chooseFocus, newCareer, playSeason } from '../src/core/career';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -10,10 +11,12 @@ function setup() {
   const fullTime = vi.fn();
   const changed = vi.fn();
   const game = new Game({ save: (g) => saves.push(g && JSON.parse(JSON.stringify(g))), changed, seasonOver, fullTime });
+  // A football match in 3 minutes: `minute` below is one match-minute at this speed.
+  game.speed = 'fast';
   return { game, saves, seasonOver, fullTime, changed };
 }
 
-const minute = tickMs(footballSport, '2m');
+const minute = tickMs(footballSport, 'fast');
 
 describe('game clock', () => {
   beforeEach(() => vi.useFakeTimers());
@@ -73,6 +76,7 @@ describe('game clock', () => {
       if (failing) throw new Error('EPERM: rename');
     };
     const game = new Game({ save: fail, changed: fail });
+    game.speed = 'fast';
     game.start({ rating: 50, seed: 2 });
     vi.advanceTimersByTime(minute * 5);
     failing = true;
@@ -140,7 +144,7 @@ describe('game clock', () => {
 
   it('plays a whole season, waits at the end, and moves on after allocation', () => {
     const { game, seasonOver } = setup();
-    game.duration = '30s';
+    game.speed = 'fastest';
     game.start({ rating: 50, seed: 5 });
     vi.advanceTimersByTime(60 * 60 * 1000);
     expect(game.phase).toBe('seasonOver');
@@ -207,7 +211,7 @@ describe('season end view', () => {
 
   it('reports the season and carries on once the player answers', () => {
     const { game } = setup();
-    game.duration = '30s';
+    game.speed = 'fastest';
     game.start({ rating: 30, seed: 9 });
     vi.advanceTimersByTime(60 * 60 * 1000);
     const v = buildView(game);
@@ -305,12 +309,12 @@ describe('the World Championship as its own mini season', () => {
   });
 });
 
-describe('match length', () => {
-  it('never changes results: 30 sec, 2 min and 5 min play identically', () => {
-    const play = (duration: '30s' | '2m' | '5m') => {
+describe('speed', () => {
+  it('never changes results: every speed plays identically', () => {
+    const play = (speed: Speed) => {
       let pending: (() => void) | null = null;
       const game = new Game({ save: () => {}, changed: () => {} }, { setTimeout: (fn) => ((pending = fn), 1), clearTimeout: () => (pending = null) });
-      game.duration = duration;
+      game.speed = speed;
       game.start({ rating: 50, seed: 77 });
       for (let i = 0; i < 2000 && game.career!.season.round < 10 && pending; i++) {
         const fn: () => void = pending;
@@ -319,9 +323,9 @@ describe('match length', () => {
       }
       return JSON.stringify(game.career!.season.leagues.map((l) => l.table));
     };
-    const short = play('30s');
-    expect(play('2m')).toBe(short);
-    expect(play('5m')).toBe(short);
+    const short = play('fastest');
+    expect(play('fast')).toBe(short);
+    expect(play('normal')).toBe(short);
   });
 });
 

@@ -4,10 +4,12 @@
 import type { SportId } from '../core/format';
 import type { InningsCard, SportTerms } from '../core/sport';
 
-export type Duration = '30s' | '90s' | '2m' | '5m' | '10m' | '15m' | '20m' | '30m' | '40m';
-/** Every match length in any sport; each sport offers its own few. */
-export const DURATIONS: Duration[] = ['30s', '90s', '2m', '5m', '10m', '15m', '20m', '30m', '40m'];
-export const DURATION_LABELS: Record<Duration, string> = { '30s': '30 sec', '90s': '1½ min', '2m': '2 min', '5m': '5 min', '10m': '10 min', '15m': '15 min', '20m': '20 min', '30m': '30 min', '40m': '40 min' };
+/** One speed for every sport: each match lasts its real length, scaled so a football match takes 10, 3 or 1 minute. */
+export type Speed = 'normal' | 'fast' | 'fastest';
+export const SPEEDS: Speed[] = ['normal', 'fast', 'fastest'];
+/** Chevrons, not ▶, so they can't be mistaken for play beside the pause. */
+export const SPEED_LABELS: Record<Speed, string> = { normal: '›', fast: '››', fastest: '›››' };
+export const SPEED_NAMES: Record<Speed, string> = { normal: 'Normal: a football match takes about 10 min', fast: 'Fast: about 3 min', fastest: 'Fastest: about 1 min' };
 export type Focus = 'attack' | 'defence';
 export type Zone = 'champion' | 'promotion' | 'playoff' | 'relegation' | null;
 
@@ -219,9 +221,6 @@ export interface HeaderView {
   paused: boolean;
   season: number;
   round: string;
-  duration: Duration;
-  /** Speeds the header button cycles through. */
-  durations: Duration[];
 }
 
 /** One sport in the box's list: the least worth knowing while it's minimised. */
@@ -266,8 +265,6 @@ export interface SetupView {
   nations: NationOption[];
   /** Picked to start with, from VS Code's display language. */
   suggested?: string;
-  duration: Duration;
-  durations: Duration[];
 }
 
 export interface PlayoffTieView {
@@ -430,10 +427,11 @@ export type PanelId = SportId | 'honours';
 
 export type ToHost =
   | { type: 'ready' }
-  | { type: 'startCareer'; sport: SportId; team: string; league: number; duration: Duration }
+  | { type: 'startCareer'; sport: SportId; team: string; league: number }
   /** Pauses every sport, or plays them all again. */
   | { type: 'togglePause' }
-  | { type: 'setDuration'; sport: SportId; duration: Duration }
+  /** One speed for every sport. */
+  | { type: 'setSpeed'; speed: Speed }
   /** Opens this in the list, closing whichever was open; null minimises them all. */
   | { type: 'openPanel'; panel: PanelId | null }
   | { type: 'chooseFocus'; sport: SportId; focus: Focus }
@@ -458,6 +456,7 @@ export interface LiveCardView {
   terms: SportTerms;
   match: LiveMatchView | null;
   fullTime: FullTimeView | null;
+  speed: Speed;
 }
 
 /** `live`: the match on, or null when none is; left out when it hasn't changed. */

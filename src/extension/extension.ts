@@ -4,7 +4,7 @@ import { SPORT_IDS, type SportId } from '../core/format';
 import { startRating } from '../core/league';
 import { Rng } from '../core/rng';
 import { newFeats, FEAT_TITLES, type CareerSummary } from '../core/honours';
-import { DURATIONS, type Duration, type LiveCardView, type PanelId, type ToHost } from '../shared/view';
+import { SPEEDS, type LiveCardView, type PanelId, type Speed, type ToHost } from '../shared/view';
 import { Game } from './game';
 import { Ownership, POLL_MS } from './ownership';
 import { SidebarProvider } from './sidebar';
@@ -36,10 +36,10 @@ export function activate(context: vscode.ExtensionContext): void {
   const statusBar = new StatusBar();
 
   const config = () => vscode.workspace.getConfiguration('sportsSimulator');
-  /** A new career's length: the one the last career started at, until the player changes the setting. */
-  const duration = (): Duration => {
-    const value = storage.lastDuration() ?? config().get<string>('matchDuration', '30s');
-    return (DURATIONS as string[]).includes(value) ? (value as Duration) : '30s';
+  /** One speed for every sport, kept in the settings so every window agrees. */
+  const speed = (): Speed => {
+    const value = config().get<string>('speed', 'normal');
+    return (SPEEDS as string[]).includes(value) ? (value as Speed) : 'normal';
   };
 
   const shownSports = () => enabledSports(config().get('sports'));
@@ -123,7 +123,7 @@ export function activate(context: vscode.ExtensionContext): void {
   function liveCard(game: Game): LiveCardView {
     const v = buildView(game, { fullTimeOverlay: config().get('fullTimeOverlay', true), language: vscode.env.language });
     const shown = v.screen === 'game' ? v : null;
-    return { sport: game.sportId, name: game.sport.present.terms.name, terms: game.sport.present.terms, match: shown?.match ?? null, fullTime: shown?.fullTime ?? null };
+    return { sport: game.sportId, name: game.sport.present.terms.name, terms: game.sport.present.terms, match: shown?.match ?? null, fullTime: shown?.fullTime ?? null, speed: speed() };
   }
 
   function openView() {
@@ -188,7 +188,7 @@ export function activate(context: vscode.ExtensionContext): void {
       },
     });
     game.selectSport(sport);
-    game.setDuration(duration());
+    game.setSpeed(speed());
     return game;
   }
 
@@ -319,12 +319,6 @@ export function activate(context: vscode.ExtensionContext): void {
         const { team, league } = message;
         owner.whenOwner(() => {
           if (game.career) return;
-          if (DURATIONS.includes(message.duration)) {
-            game.setDuration(message.duration);
-            // The next new career starts from the same length.
-            storage.setLastDuration(message.duration);
-            for (const other of all()) if (!other.career) other.setDuration(duration());
-          }
           const seed = (Date.now() ^ (Math.random() * 2 ** 31)) >>> 0;
           const tier = Math.min(sport.format.leagues, Math.max(1, Math.round(league)));
           // Somewhere in the league, weighted towards mid-table, attack and defence level: the summers shape it from there.
@@ -336,9 +330,9 @@ export function activate(context: vscode.ExtensionContext): void {
       case 'togglePause':
         owner.whenOwner(pauseAll);
         return;
-      case 'setDuration':
-        if (DURATIONS.includes(message.duration)) owner.whenOwner(() => games[message.sport].setDuration(message.duration));
-        refresh();
+      case 'setSpeed':
+        // The settings change reaches every window, and each sets its clocks from it.
+        if (SPEEDS.includes(message.speed)) void config().update('speed', message.speed, vscode.ConfigurationTarget.Global);
         return;
       case 'openPanel':
         openPanel(message.panel);
@@ -394,7 +388,6 @@ export function activate(context: vscode.ExtensionContext): void {
   function clearCareer(game: Game): void {
     storage.clearHonoursFrom(game.sportId);
     game.reset();
-    game.setDuration(duration());
   }
 
   /** The box has already asked, in red, twice. Running careers carry on, but what they've already won can't earn an honour again. */
@@ -466,11 +459,7 @@ export function activate(context: vscode.ExtensionContext): void {
       if (state.focused) owner.claim();
     }),
     vscode.workspace.onDidChangeConfiguration((e) => {
-      // The setting is the length new careers start from; a career under way keeps its own.
-      if (e.affectsConfiguration('sportsSimulator.matchDuration')) {
-        storage.setLastDuration(undefined);
-        for (const game of all()) if (!game.career) game.setDuration(duration());
-      }
+      if (e.affectsConfiguration('sportsSimulator.speed')) for (const game of all()) game.setSpeed(speed());
       if (e.affectsConfiguration('sportsSimulator.sports')) {
         // A hidden sport can't keep the turn.
         turn = pickTurn();

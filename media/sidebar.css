@@ -2028,7 +2028,6 @@ body.vscode-high-contrast .tab {
 
 .live-head .chip {
   flex: none;
-  margin-left: auto;
 }
 
 /* The scoreboard sits inside the card, not as a card of its own, and the card's head already says where it is. */
@@ -2065,4 +2064,21 @@ body.vscode-high-contrast .tab {
 /* The sport tabs stay pinned above a panel scrolled into view. */
 #panel {
   scroll-margin-top: 40px;
+}
+
+.live-controls {
+  display: flex;
+  flex: none;
+  gap: 3px;
+  margin-left: auto;
+}
+
+.chip.speed {
+  min-width: 2.4em;
+  letter-spacing: -2px;
+}
+
+.chip.speed {
+  letter-spacing: 0;
+  font-weight: 700;
 }

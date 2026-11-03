@@ -335,6 +335,7 @@ export const football: SportModule<FootballMatch> = {
   isFinished,
   outcome,
   ticks: 90,
+  realMinutes: 110,
   countsLive: (m) => m.minute !== 0,
   alerts: (m) => [m.home.goals, m.away.goals],
   notable: (m) => m.home.goals + m.away.goals + m.home.reds + m.away.reds,

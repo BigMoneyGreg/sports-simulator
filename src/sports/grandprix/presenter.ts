@@ -34,7 +34,6 @@ export const grandPrixPresenter: SportPresenter<RaceMatch> = {
       "Every summer some of the team move on, and the car loses ground, more in speed or in reliability. Who's leaving shows where most of it went: drivers and designers for speed, mechanics and engineers for reliability. Your season shows where you were already short.",
       "Whatever the question, one answer strengthens the car's speed and the other its reliability. A fast car that keeps stopping scores nothing, and a car that always finishes can still be too slow.",
     ],
-    seasonLabels: { '90s': 'Season ~25 min', '5m': 'Season ~1½ hr', '15m': 'Season ~4 hr', '30m': 'Season ~8 hr' },
     race: { tier: 'GP', matchTab: 'Race', lostShort: 'Pod', lostLong: 'Podiums', scored: 'Average grid', conceded: 'Retirements', matches: 'races', worldName: 'Race of Nations' },
   },
   questions: {
@@ -43,7 +42,6 @@ export const grandPrixPresenter: SportPresenter<RaceMatch> = {
     formation: { prompt: "What does next year's car chase?", titles: { attack: 'Raw speed', defence: 'Bulletproof reliability' } },
     training: { prompt: 'Where does the winter budget go?', titles: { attack: 'Wind tunnel time', defence: 'Engine testing' } },
   },
-  durations: ['90s', '5m', '15m', '30m'],
   clock: (m) => (m.lap >= m.laps ? 'FT' : m.lap === 0 ? 'Grid' : `L${m.lap}/${m.laps}`),
   timeline(m, ctx) {
     const items: TimelineItem[] = [];

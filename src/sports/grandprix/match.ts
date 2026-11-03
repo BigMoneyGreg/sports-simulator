@@ -266,6 +266,7 @@ export const grandPrix: SportModule<RaceMatch> = {
   isFinished,
   outcome,
   ticks: TUNING.laps,
+  realMinutes: 90,
   countsLive: (m) => m.lap > 0,
   // Green for passing someone or being passed in red. A car stopping counts as a place lost.
   alerts: (m) => [m.home.gained, m.home.lost + m.events.filter((e) => e.type === 'out' && e.clubId === m.home.clubId).length],

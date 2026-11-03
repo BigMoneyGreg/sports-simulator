@@ -1,5 +1,4 @@
 import type { Rng } from './rng';
-import type { Duration } from '../shared/view';
 
 /** A player in a squad. Positions are sport-specific codes (e.g. GK, DEF). */
 export interface Player {
@@ -89,6 +88,8 @@ export interface SportModule<M> {
   outcome(match: M): MatchOutcome;
   /** Ticks in a normal match: how a match length turns into a clock speed. */
   ticks: number;
+  /** How long a real match takes, in minutes, breaks included: every sport is played at the same pace against real life. */
+  realMinutes: number;
   /** Whether the live tables should fold in this match's score as it stands. */
   countsLive(match: M): boolean;
   /** How many big moments went each side's way, for the flash and status bar: goals, tries, wickets. */
@@ -141,8 +142,6 @@ export interface SportTerms {
   deciderLabel: string;
   /** "Every summer some players retire…" and "Whatever the question…". */
   howTo: [string, string];
-  /** Roughly how long a whole season takes at each match length. */
-  seasonLabels: Partial<Record<Duration, string>>;
   /** A second tally beside the main one: cricket's wickets, rugby's points including kicks. */
   secondTally?: { one: string; many: string };
   /** The words a sport of races uses where a match sport has its own. */
@@ -187,8 +186,6 @@ export interface RaceRow {
 export interface SportPresenter<M> {
   terms: SportTerms;
   questions: QuestionCopy;
-  /** Match lengths offered, shortest first. */
-  durations: Duration[];
   clock(match: M): string;
   /** The clock where space is tight, if it has a shorter form. */
   shortClock?(match: M): string;

@@ -27,7 +27,6 @@ export const rugbyPresenter: SportPresenter<RugbyMatch> = {
       "Whatever the question, one answer strengthens the attack and the other the defence. Let one side fall too far behind and opponents exploit it, and at the top there's less room for a weak side.",
     ],
     secondTally: { one: 'Top points scorer', many: 'Top points scorers' },
-    seasonLabels: { '90s': 'Season ~25 min', '5m': 'Season ~1½ hr', '15m': 'Season ~4 hr', '30m': 'Season ~8 hr' },
   },
   questions: {
     callUp: { prompt: 'Retirements leave gaps. Who gets the call?' },
@@ -35,7 +34,6 @@ export const rugbyPresenter: SportPresenter<RugbyMatch> = {
     formation: { prompt: 'Time for a new game plan?', titles: { attack: 'Run it wide', defence: 'Tighten up' } },
     training: { prompt: 'What does the summer camp work on?', titles: { attack: 'Attack moves', defence: 'Defensive drills' } },
   },
-  durations: ['90s', '5m', '15m', '30m'],
   clock(m) {
     if (m.period === 'done') return m.penalties ? 'FT (kicks)' : 'FT';
     const last = m.events[m.events.length - 1];

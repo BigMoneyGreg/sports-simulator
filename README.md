@@ -13,7 +13,7 @@ International football, rugby and cricket sims that live in a small box in your 
 
 ## How to play
 
-1. **Start a career.** Open the Sports Simulator box in the Explorer. Pick a sport, your country, the league it starts in (its usual level is marked; L1 is the top) and a match length. Your team starts balanced; its character comes from the summers.
+1. **Start a career.** Open the Sports Simulator box in the Explorer. Pick a sport, your country, and the league it starts in (its usual level is marked; L1 is the top). Your team starts balanced; its character comes from the summers.
 2. **Let it play.** Matches play live while VS Code is open. The table moves as goals go in. Pause any time with ⏸.
 3. **Read the results.** You never see ratings. Every summer players retire or are dropped and your squad loses strength, more at one end of the pitch than the other. Where you ranked for goals scored and conceded, and who's leaving, are the clues. Let one side fall behind and it catches up with you over a season or two, and a fix takes a season or two to settle.
 4. **Answer the summer question.** Call up a striker or a defender, appoint a coach, change formation or set the training camp: one answer strengthens the attack, the other the defence. Then press **Start next season**. Read it well and you climb; guess and you'll drift down. Finish above expectations and you have more to build with.
@@ -30,8 +30,9 @@ International football, rugby and cricket sims that live in a small box in your 
 | Table | 3 for a win, 1 for a draw, goal difference | 4 for a win, 2 for a draw, bonus points for four tries and for losing by 7 or fewer, points difference | 2 for a win, net run rate; ties go to a super over | 25-18-15-12-10-8-6-4-2-1 per car, and a drivers' title |
 | Nations Cup | Top 64 | Top 32 | Top 16 | None |
 | World Championship | 40 teams, with a host | 16 teams, with a host | 12 teams, with a host | Race of Nations: one car each from GP1 and GP2 |
-| Match lengths | 30 sec, 2, 5, 10 min | 1½, 5, 15, 30 min | 2, 10, 20, 40 min | 1½, 5, 15, 30 min a race |
-| Season at those lengths | ~25 min, ~1½ hr, ~3¾ hr, ~7½ hr | ~25 min, ~1½ hr, ~4 hr, ~8 hr | ~30 min, ~2½ hr, ~5 hr, ~10 hr | ~25 min, ~1½ hr, ~4 hr, ~8 hr |
+| Real match length (each plays at this against the others) | 110 min | 100 min | 190 min | 90 min |
+
+**Speed.** One speed covers every sport, and each match keeps its real length against the others: at › a football match takes about 10 minutes, at ›› about 3 and at ››› about 1, with a rugby match a little shorter, a T20 nearly twice as long and a Grand Prix shorter still. A year with all four sports takes about 16 hours, 5 hours or 1¾ hours.
 
 Play one sport or all four in one shared season. Only one match is on at a time: whichever sport is furthest behind in its season plays next, so they keep in step, and the summers come together at the end of the year. Each sport's World Championship falls in a different year. The box's main screen is the live match, whichever sport it's in, with one pause for everything; its full report folds away underneath. Below it is a tab for each sport, with a dot on the one playing, for its tables, fixtures, cups and team. Start a career from its tab; end or reset it from the foot of its Team tab. Each career keeps its own match length.
 
@@ -65,7 +66,7 @@ Player names are generated and fictional. Competitions are the game's own, not o
 |---|---|---|
 | `sportsSimulator.sports` | all on | The sports to show, also set from **Choose sports…** in the box. Hiding one with a career under way stops its clock and keeps the career, which carries on from the same moment when you show it again. |
 | `sportsSimulator.showHonours` | `true` | Show the Honours row and a notification for each honour earned. Honours and records still count while it's off. |
-| `sportsSimulator.matchDuration` | `30s` | Real time one match takes in a new career (see the table above); a career under way keeps its own, set from the ⏱ button. If your sport doesn't offer this length, the next longer one is used, so the default gives a season of about 20 to 25 minutes in every sport. Starting a career at another length makes that the default until you change this setting. |
+| `sportsSimulator.speed` | `normal` | How fast every sport plays: `normal` (›, a football match in about 10 minutes), `fast` (››, about 3) or `fastest` (›››, about 1). Also set from the › button beside the pause. |
 | `sportsSimulator.fullTimeOverlay` | `true` | Show the full-time result over the box for a few seconds after your match. |
 | `sportsSimulator.statusBarScore` | `true` | Show your live score in the status bar. With several careers it shows each sport's week and league place in turn instead, for 5 seconds each. Click it to open the box at the sport on show. |
 

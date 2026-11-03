@@ -339,6 +339,7 @@ export const cricket: SportModule<CricketMatch> = {
   isFinished,
   outcome,
   ticks: 240,
+  realMinutes: 190,
   // Half a game of cricket says nothing about who's winning it, so only finished matches move the table.
   countsLive: (m) => m.period === 'done',
   alerts: (m) => [m.away.wickets, m.home.wickets],

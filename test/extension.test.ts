@@ -18,7 +18,7 @@ describe('the extension, played through its messages', () => {
   let state: ReturnType<typeof memento>;
   let subscriptions: { dispose(): void }[];
 
-  const start = (sport = 'football', team = 'SCO', duration = '30s') => fake.send({ type: 'startCareer', sport, team, league: 3, duration });
+  const start = (sport = 'football', team = 'SCO') => fake.send({ type: 'startCareer', sport, team, league: 3 });
   const row = (id: string) => fake.box.rows.find((r: { id: string }) => r.id === id);
   const run = (ms: number) => vi.advanceTimersByTime(ms);
   const open = (panel: string | null) => fake.send({ type: 'openPanel', panel });
@@ -37,6 +37,8 @@ describe('the extension, played through its messages', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     fake.reset();
+    // The quickest speed, so whole seasons play out in test time.
+    fake.config.speed = 'fastest';
     dir = mkdtempSync(join(tmpdir(), 'ss-extension-'));
     state = memento();
     launch();
@@ -47,22 +49,19 @@ describe('the extension, played through its messages', () => {
     vi.useRealTimers();
   });
 
-  it('offers a new player the shortest length, and starts a career', () => {
-    expect(fake.box.view.setup.duration).toBe('30s');
+  it('starts a career', () => {
     start();
     expect(row('football').club).toBe('Scotland');
     expect(fake.status.text).toMatch(/^⚽ {2}/);
   });
 
-  it('remembers the length a career started at without touching the settings', () => {
-    start('football', 'SCO', '5m');
-    expect(fake.config.matchDuration).toBeUndefined();
-    fake.send({ type: 'resetCareer', sport: 'football' });
-    expect(fake.box.view.setup.duration).toBe('5m');
-    // Changing the setting afterwards wins.
-    fake.configListeners.forEach((fn) => fn({ affectsConfiguration: (k) => k === 'sportsSimulator.matchDuration' }));
-    fake.send({ type: 'ready' });
-    expect(fake.box.view.setup.duration).toBe('30s');
+  it('has one speed for every sport, set from the box and kept in the settings', () => {
+    start();
+    start('rugby', 'WAL');
+    fake.send({ type: 'setSpeed', speed: 'fast' });
+    expect(fake.config.speed).toBe('fast');
+    fake.send({ type: 'setSpeed', speed: 'warp' as never });
+    expect(fake.config.speed).toBe('fast');
   });
 
   it('announces a World Championship, and on Continue starts the league', () => {
@@ -73,7 +72,8 @@ describe('the extension, played through its messages', () => {
     }
     close();
     fake.reset();
-    writeFileSync(join(dir, 'career.json'), JSON.stringify({ version: SAVE_VERSION, career: c, live: null, paused: false, duration: '30s' }));
+    fake.config.speed = 'fastest';
+    writeFileSync(join(dir, 'career.json'), JSON.stringify({ version: SAVE_VERSION, career: c, live: null, paused: false }));
     launch();
     expect(fake.toasts[0]).toMatch(/^Football: the World Championship begins\. Brazil are in Group [A-Z]\.( Brazil are the hosts\.| Hosted by [A-Za-z .'-]+\.)$/);
     open('rugby');
@@ -111,7 +111,7 @@ describe('the extension, played through its messages', () => {
   it('Reset honours clears past careers and leaves a running career alone', () => {
     start();
     fake.send({ type: 'endCareer', sport: 'football' });
-    start('rugby', 'WAL', '90s');
+    start('rugby', 'WAL');
     fake.send({ type: 'ready' });
     expect(fake.box.honours).toBe('1 past career');
     fake.send({ type: 'resetHonours' });
@@ -121,7 +121,7 @@ describe('the extension, played through its messages', () => {
   });
 
   it('says when a season ends if that sport is not open, waits for the answer, then carries on', () => {
-    start('rugby', 'WAL', '90s');
+    start('rugby', 'WAL');
     // Another sport open: the live one isn't on screen, so its season end gets a message.
     open('cricket');
     run(50 * 60_000);
@@ -138,7 +138,7 @@ describe('the extension, played through its messages', () => {
 
   it('Choose sports hides a sport, holds its career where it is, and brings it back', async () => {
     start();
-    start('rugby', 'WAL', '90s');
+    start('rugby', 'WAL');
     run(30_000);
     fake.pick = (items) => items.filter((i) => i.id !== 'football');
     await fake.commands.get('sportsSimulator.chooseSports')!();
@@ -164,7 +164,7 @@ describe('the extension, played through its messages', () => {
 
     it('plays one match at a time, taking turns', () => {
       start();
-      start('rugby', 'WAL', '90s');
+      start('rugby', 'WAL');
       let both = 0;
       const seen = new Set<string>();
       for (let s = 0; s < 600; s++) {
@@ -183,7 +183,7 @@ describe('the extension, played through its messages', () => {
 
     it('keeps them in step: the sport furthest behind in its season goes next', () => {
       start();
-      start('rugby', 'WAL', '90s');
+      start('rugby', 'WAL');
       run(20 * 60_000);
       fake.send({ type: 'ready' });
       // 38 football weeks to 14 rugby ones: each about the same share of the way through.
@@ -193,7 +193,7 @@ describe('the extension, played through its messages', () => {
 
     it('meets at the summer: a sport whose summer is answered waits for the others', () => {
       start();
-      start('rugby', 'WAL', '90s');
+      start('rugby', 'WAL');
       for (let m = 0; m < 240 && !(row('football').waiting && row('rugby').waiting); m++) run(60_000);
       fake.send({ type: 'ready' });
       expect(row('football').waiting && row('rugby').waiting).toBe(true);
@@ -211,7 +211,7 @@ describe('the extension, played through its messages', () => {
 
     it('one pause stops every sport, and play starts them all again', () => {
       start();
-      start('rugby', 'WAL', '90s');
+      start('rugby', 'WAL');
       run(60_000);
       fake.send({ type: 'togglePause' });
       fake.send({ type: 'ready' });
@@ -296,7 +296,7 @@ describe('the extension, played through its messages', () => {
 
   it('a click on the status bar opens the sport on show', async () => {
     start();
-    start('rugby', 'WAL', '90s');
+    start('rugby', 'WAL');
     run(5000);
     const shown = fake.status.text.includes('Rugby') ? 'rugby' : 'football';
     await fake.commands.get('sportsSimulator.openShown')!();

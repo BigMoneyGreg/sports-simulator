@@ -154,7 +154,7 @@ describe('on screen', () => {
   const start = () => {
     const game = new Game({ save: () => {}, changed: () => {} }, noTimers);
     game.selectSport('grandprix');
-    game.duration = '90s';
+    game.speed = 'fastest';
     game.start({ rating: 50, seed: 8, team: 'SCO' });
     return game;
   };
@@ -172,7 +172,8 @@ describe('on screen', () => {
     expect(v.fixtures[0]).toMatchObject({ label: 'R1', venue: 'Melbourne', current: true });
     expect(v.cups.cup).toBeNull();
     expect(statusText(game)).toMatch(/^🏎  SCO (P\d+|DNF) (P\d+|DNF) L10\/50 · Wk 1\/16 · \d+(st|nd|rd|th) in GP\d$/);
-    expect(tickMs(sport, '90s')).toBe(1800);
+    // A race is 90 real minutes to football's 110: at the quickest, 49 seconds.
+    expect(tickMs(sport, 'fastest') * 50).toBeCloseTo((60_000 * 90) / 110);
   });
 
   it('shows the result, and the season report, once it finishes', () => {

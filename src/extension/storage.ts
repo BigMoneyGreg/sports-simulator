@@ -3,7 +3,6 @@ import * as path from 'node:path';
 import type * as vscode from 'vscode';
 import { SPORT_IDS, type SportId } from '../core/format';
 import type { Feat } from '../core/honours';
-import type { Duration } from '../shared/view';
 import type { SavedGame } from './game';
 import type { Lock, LockStore } from './ownership';
 
@@ -11,7 +10,6 @@ const ARCHIVE_KEY = 'sportsSimulator.archive';
 const FEATS_KEY = 'sportsSimulator.feats';
 const HONOURS_FROM_KEY = 'sportsSimulator.honoursFrom';
 /** The length the last career was started at, for the next new one. */
-const LAST_DURATION_KEY = 'sportsSimulator.lastDuration';
 
 /** What the player should hear about when the disk lets the game down. */
 export interface StorageProblems {
@@ -184,14 +182,6 @@ export class Storage implements LockStore {
     } catch {
       return null;
     }
-  }
-
-  lastDuration(): Duration | undefined {
-    return this.memento.get<Duration>(LAST_DURATION_KEY);
-  }
-
-  setLastDuration(duration: Duration | undefined): void {
-    void this.memento.update(LAST_DURATION_KEY, duration);
   }
 
   read(): Lock {

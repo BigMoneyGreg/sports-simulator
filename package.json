@@ -123,21 +123,20 @@
           "default": true,
           "description": "Show the Honours row in the box and a notification for each honour earned. Honours and records still count while this is off."
         },
-        "sportsSimulator.matchDuration": {
+        "sportsSimulator.speed": {
           "type": "string",
           "enum": [
-            "30s",
-            "90s",
-            "2m",
-            "5m",
-            "10m",
-            "15m",
-            "20m",
-            "30m",
-            "40m"
+            "normal",
+            "fast",
+            "fastest"
           ],
-          "default": "30s",
-          "description": "Real time one match takes in a new career; a career under way keeps its own, set from the ⏱ button. If the sport doesn't offer this length, the next longer one is used, so the default gives a season of about 25 minutes in every sport. Starting a career at another length makes that the default until you change this setting."
+          "enumDescriptions": [
+            "› A football match takes about 10 minutes",
+            "›› About 3 minutes",
+            "››› About 1 minute"
+          ],
+          "default": "normal",
+          "description": "How fast every sport plays. Each match lasts its real length against the others: a rugby match a little shorter than a football one, a T20 match nearly twice as long. Also set from the › button beside the pause in the box."
         },
         "sportsSimulator.fullTimeOverlay": {
           "type": "boolean",

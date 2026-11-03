@@ -125,7 +125,7 @@ for (const [sport, team, seed] of [['rugby', 'WAL', 7], ['cricket', 'SRI', 7], [
     chooseFocus(c, 'attack');
   }
   const g = new Game({ save: () => {}, changed: () => {} }, manual);
-  g.load(JSON.parse(JSON.stringify({ version: SAVE_VERSION, career: c, live: null, paused: false, duration: '2m' })));
+  g.load(JSON.parse(JSON.stringify({ version: SAVE_VERSION, career: c, live: null, paused: false })));
   run(40);
   views.world = { view: buildView(g), tab: 'match' };
   while (g.phase !== 'worldOver') run();
@@ -139,7 +139,7 @@ for (const entry of Object.values(views)) {
   entry.open = sport;
   entry.rows = [football, sport === 'rugby' && v.screen === 'setup' ? rugbyNone : rugby, cricketWaiting, grandprix].map((r) => ({ ...r, live: v.screen === 'game' && r.id === sport && !v.seasonEnd }));
   // The live card: this sport's match, if it has one on.
-  entry.live = v.screen === 'game' && v.match ? { sport, name: SPORTS[sport].present.terms.name, terms: v.terms, match: v.match, fullTime: v.fullTime } : null;
+  entry.live = v.screen === 'game' && v.match ? { sport, name: SPORTS[sport].present.terms.name, terms: v.terms, match: v.match, fullTime: v.fullTime, speed: 'fast' as const } : null;
 }
 // Reading another sport's table while football's match is on.
 views.otherLive = { ...views.rugby_table, rows: [{ ...football, live: true }, rugby, cricketWaiting, grandprix], live: views.match.live };
