@@ -48,11 +48,22 @@ export function potShuffle(format: SportFormat, ratings: number[], rng: Rng): nu
   return out;
 }
 
-/** Rating band for each league, the world spread across 0–99: in football League 1 is 80–99, League 5 is 0–19. */
+/** The world's rating for each world rank, strongest first, following the sport's curve. */
+export function ladder(format: SportFormat): number[] {
+  const { curve } = format;
+  return Array.from({ length: format.leagues * format.leagueSize }, (_, i) => {
+    const rank = i + 1;
+    const after = curve.findIndex(([r]) => r >= rank);
+    const [r1, v1] = curve[Math.max(0, after - 1)];
+    const [r2, v2] = curve[after];
+    return r2 === r1 ? v2 : v1 + ((v2 - v1) * (rank - r1)) / (r2 - r1);
+  });
+}
+
+/** Rating band for each league: from the curve's value at its last place to its value at its first. */
 export function band(format: SportFormat, tier: number): { min: number; max: number } {
-  const width = 100 / format.leagues;
-  const min = (format.leagues - tier) * width;
-  return { min, max: min + width - 1 };
+  const ratings = ladder(format);
+  return { min: ratings[tier * format.leagueSize - 1], max: ratings[(tier - 1) * format.leagueSize] };
 }
 
 /**
@@ -185,7 +196,7 @@ export function startRating(format: SportFormat, tier: number, rng: Rng): number
   const r = rng.next();
   const from = r < 0.5 ? 8 : r < 0.75 ? 4 : 12;
   const { min, max } = band(format, tier);
-  return Math.round(min + (((max + 1 - min) / 20) * (from + rng.int(0, 3))));
+  return Math.round(min + ((max - min) / 20) * (from + rng.int(0, 3)));
 }
 
 export type Zone = 'champion' | 'promotion' | 'playoff' | 'relegation' | null;

@@ -25,6 +25,12 @@ export interface Club {
   defence: number;
   /** Player only: attack minus defence as the team has settled into it, catching up with the real shape a little each summer. */
   settledLean?: number;
+  /** AI only: the strength this nation is built to return to, which drifts over the years. Set at the first summer in older saves. */
+  level?: number;
+  /** AI only: where `level` began, which a long drift slowly comes back to. */
+  base?: number;
+  /** AI only: a golden generation, or a bad spell: how much `level` moves each year, and for how many more. */
+  era?: { rate: number; years: number };
   squad: Player[];
   isPlayer: boolean;
 }

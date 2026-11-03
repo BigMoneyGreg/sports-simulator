@@ -45,7 +45,7 @@ describe('the summer question', () => {
 
   it('never asks the same style twice running, and calls players up most often', () => {
     const styles: string[] = [];
-    summers(4, 40, (c) => styles.push(c.pending!.question!.style));
+    summers(4, 80, (c) => styles.push(c.pending!.question!.style));
     for (let i = 1; i < styles.length; i++) expect(styles[i]).not.toBe(styles[i - 1]);
     const count = (s: string) => styles.filter((x) => x === s).length;
     for (const s of ['coach', 'formation', 'training']) {

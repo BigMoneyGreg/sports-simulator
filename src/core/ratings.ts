@@ -23,8 +23,23 @@ export const RATING_TUNING = {
   /** Fraction of the distance outside its band an AI club is pulled back each season. */
   bandPull: 0.8,
   /** AI clubs above this rating lose this share of the excess each season (stars get poached). */
-  aiCeiling: 93,
+  aiCeiling: 99,
   aiCeilingPull: 0.3,
+  /** Share of the distance back to its own level an AI club covers each summer. */
+  levelPull: 0.45,
+  /** The most an AI club's rating can move in a summer, up or down. */
+  maxSwing: 6,
+  /** Standard deviation of a level's yearly drift, and the share of the way back to where it began that it comes each year. */
+  levelDrift: 0.6,
+  levelReturn: 0.04,
+  /** The chance a nation starts a golden generation or a bad spell in any summer, how many years it lasts and how much it moves the level each year. */
+  eraChance: 0.04,
+  eraYears: [4, 8] as [number, number],
+  eraRate: [1.5, 3] as [number, number],
+  /** Player only: the share of a net rise kept, falling from 1 at the first rating to the floor at the second. Closing on the elite gets harder. */
+  climbStart: 60,
+  climbTop: 95,
+  climbFloor: 0.1,
   /** Rating an AI club gains on promotion (investment), so promoted sides can compete. */
   promotedBoost: 4,
   /** Points the player allocates per point of rating gained (1 point = +1 to a stat). */
@@ -66,14 +81,41 @@ export function plateau(value: number): number {
  * Rating regained at the end of a season (on top of the flat decline):
  * average gain + performance against expectation + top/bottom bonus + extra
  * (AI noise or the player's boost). An AI club's net rise is
- * flattened near 99; the player's isn't, but their boost shrinks while they
+ * flattened near 99; the player's is too, more gently, and their boost shrinks while they
  * hold the title.
  */
 export function seasonGain(format: SportFormat, tier: number, expected: number, actual: number, currentRating: number, extra = 0, isPlayer = false): number {
   const performance = expected - actual;
   const gain = RATING_TUNING.averageGain + format.performanceMultiplier * performance + positionBonus(format, tier, actual) + extra;
   const net = gain - RATING_TUNING.decline;
-  return RATING_TUNING.decline + (net > 0 && !isPlayer ? net * plateau(currentRating) : net);
+  if (net <= 0) return RATING_TUNING.decline + net;
+  return RATING_TUNING.decline + net * (isPlayer ? climb(currentRating) : plateau(currentRating));
+}
+
+/** Player only: the share of a net rise kept at this rating. */
+export function climb(value: number): number {
+  const { climbStart, climbTop, climbFloor } = RATING_TUNING;
+  if (value <= climbStart) return 1;
+  return Math.max(climbFloor, 1 - ((1 - climbFloor) * (value - climbStart)) / (climbTop - climbStart));
+}
+
+/** A nation's strength over the years: a slow drift, and now and then a golden generation or a bad spell. */
+export function driftLevel(club: Club, rng: Rng): number {
+  const { levelDrift, levelReturn, eraChance, eraYears, eraRate } = RATING_TUNING;
+  const level = club.level ?? rating(club);
+  const base = club.base ?? level;
+  club.base = base;
+  if (!club.era && rng.chance(eraChance)) {
+    const rate = eraRate[0] + (eraRate[1] - eraRate[0]) * rng.next();
+    club.era = { rate: rng.chance(0.5) ? rate : -rate, years: rng.int(eraYears[0], eraYears[1]) };
+  }
+  let next = level + rng.normal(0, levelDrift) + levelReturn * (base - level);
+  if (club.era) {
+    next += club.era.rate;
+    if (--club.era.years <= 0) delete club.era;
+  }
+  club.level = Math.min(99, Math.max(1, next));
+  return club.level;
 }
 
 /**

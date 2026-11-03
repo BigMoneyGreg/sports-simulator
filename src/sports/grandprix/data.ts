@@ -1,11 +1,11 @@
 /**
- * The 30 nations in Grand Prix racing's world, most successful first: world
- * titles, then race wins, as of 2026. England, Scotland and the rest of Britain
+ * The 30 nations in Grand Prix racing's world, ten to a league, most successful
+ * first: world titles, race wins and a nation's place in the sport's history. England, Scotland and the rest of Britain
  * race apart here, as they do in the game's other sports.
  */
 export const GRAND_PRIX_ORDER: string[] = [
-  ...['ENG', 'GER', 'BRA', 'FIN', 'AUT', 'FRA', 'NED', 'AUS', 'ESP', 'SCO'],
-  ...['ITA', 'ARG', 'USA', 'CAN', 'NZL', 'MEX', 'BEL', 'SWE', 'SUI', 'RSA'],
+  ...['ENG', 'GER', 'ITA', 'BRA', 'FRA', 'FIN', 'AUT', 'NED', 'ESP', 'AUS'],
+  ...['SCO', 'ARG', 'USA', 'CAN', 'NZL', 'MEX', 'BEL', 'SWE', 'SUI', 'RSA'],
   ...['POL', 'JPN', 'COL', 'DEN', 'NIR', 'IRL', 'THA', 'VEN', 'CHN', 'HUN'],
 ];
 

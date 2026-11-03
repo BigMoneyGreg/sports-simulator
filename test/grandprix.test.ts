@@ -70,7 +70,7 @@ describe('the world', () => {
   it('is 30 real nations, the most successful first, with real rivals', () => {
     expect(GRAND_PRIX_ORDER).toHaveLength(30);
     expect(new Set(GRAND_PRIX_ORDER).size).toBe(30);
-    expect(GRAND_PRIX_ORDER.slice(0, 3)).toEqual(['ENG', 'GER', 'BRA']);
+    expect(GRAND_PRIX_ORDER.slice(0, 3)).toEqual(['ENG', 'GER', 'ITA']);
     for (const code of GRAND_PRIX_ORDER) expect(nation(code).name).toBeTruthy();
     for (const rival of Object.values(GRAND_PRIX_RIVALS)) expect(nation(rival).name).toBeTruthy();
   });
@@ -80,7 +80,7 @@ describe('the world', () => {
     expect(peru?.tier).toBe(3);
     expect(sport.nations().find((n) => n.short === 'ENG')?.tier).toBe(1);
     // The racing nations come first in the picker, most successful at the top.
-    expect(sport.nations().slice(0, 3).map((n) => n.short)).toEqual(['ENG', 'GER', 'BRA']);
+    expect(sport.nations().slice(0, 3).map((n) => n.short)).toEqual(['ENG', 'GER', 'ITA']);
     const c = newCareer({ rating: 10, seed: 3, team: 'PER' }, sport);
     expect(c.clubs[c.playerClubId].name).toBe('Peru');
     expect(c.clubs).toHaveLength(30);

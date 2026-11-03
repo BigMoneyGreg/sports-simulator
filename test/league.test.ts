@@ -14,7 +14,7 @@ import {
   type Career,
 } from '../src/core/career';
 import { MAX_STAT, MIN_STAT, rating, shiftRating, statsFor, STYLE_TUNING, type Club } from '../src/core/club';
-import { band, doubleRoundRobin, emptyTable, goalRanks, recordResult, sortTable, startRating, zone } from '../src/core/league';
+import { band, ladder, doubleRoundRobin, emptyTable, goalRanks, recordResult, sortTable, startRating, zone } from '../src/core/league';
 import { applyDecline, normalise, plateau, positionBonus, RATING_TUNING, seasonGain, totalRating } from '../src/core/ratings';
 import { Rng } from '../src/core/rng';
 import { footballSport } from '../src/sports/football';
@@ -68,9 +68,13 @@ describe('table', () => {
     expect(zone(FOOTBALL, 5, 20)).toBe(null);
   });
 
-  it('has bands of 20 from League 1 (80–99) down to League 5 (0–19)', () => {
-    expect(band(FOOTBALL, 1)).toEqual({ min: 80, max: 99 });
-    expect(band(FOOTBALL, 5)).toEqual({ min: 0, max: 19 });
+  it('follows the curve: wide leagues at the top, close ones at the bottom', () => {
+    expect(band(FOOTBALL, 1).max).toBe(99);
+    expect(band(FOOTBALL, 5).min).toBe(1);
+    const widths = [1, 2, 3, 4, 5].map((t) => band(FOOTBALL, t).max - band(FOOTBALL, t).min);
+    expect(widths[0]).toBeGreaterThan(widths[4] * 1.5);
+    // Each league starts where the one above stops, or just below it.
+    for (const t of [2, 3, 4, 5]) expect(band(FOOTBALL, t).max).toBeLessThanOrEqual(band(FOOTBALL, t - 1).min);
   });
 });
 
@@ -98,8 +102,15 @@ describe('ratings', () => {
     expect(seasonGain(FOOTBALL, 1, 1, 10, 95) - 10).toBe(-9);
   });
 
-  it('leaves the player’s rises unflattened', () => {
-    expect(seasonGain(FOOTBALL, 1, 10, 1, 95, 0, true) - 10).toBe(9);
+  it('leaves the player’s rises alone until the climb nears the elite, then shrinks them', () => {
+    expect(seasonGain(FOOTBALL, 1, 10, 1, 50, 0, true) - 10).toBe(9);
+    const near = seasonGain(FOOTBALL, 1, 10, 1, 80, 0, true) - 10;
+    const top = seasonGain(FOOTBALL, 1, 10, 1, 95, 0, true) - 10;
+    expect(near).toBeLessThan(9);
+    expect(top).toBeLessThan(near);
+    expect(top).toBeGreaterThan(0);
+    // A fall isn't softened.
+    expect(seasonGain(FOOTBALL, 1, 1, 10, 95, 0, true) - 10).toBe(-9);
   });
 
   it('gives the reigning League 1 champion the smaller boost, and the full one once the title is lost', () => {
@@ -150,12 +161,13 @@ describe('ratings', () => {
 describe('career', () => {
   const start = (rating = 50, seed = 1) => newCareer({ rating, seed }, footballSport);
 
-  it('uses every rating from 0 to 99 exactly once at the start', () => {
+  it('puts every team on the curve, with the player taking the nearest place', () => {
     const c = start(85);
-    const ratings = c.clubs.map((cl) => rating(cl)).sort((a, b) => a - b);
-    expect(ratings).toEqual(Array.from({ length: 100 }, (_, i) => i));
-    // The AI's own total, without the player.
-    expect(c.totalRating).toBe(4950 - 85);
+    const slots = ladder(FOOTBALL);
+    const taken = slots.reduce((best, r, i) => (Math.abs(r - 85) < Math.abs(slots[best] - 85) ? i : best), 0);
+    const ai = c.clubs.filter((x) => !x.isPlayer).map((cl) => rating(cl)).sort((a, b) => b - a);
+    slots.filter((_, i) => i !== taken).forEach((r, i) => expect(ai[i]).toBeCloseTo(r, 6));
+    expect(c.totalRating).toBeCloseTo(ai.reduce((t, r) => t + r, 0), 6);
     expect(rating(c.clubs[c.playerClubId])).toBe(85);
   });
 
@@ -170,8 +182,8 @@ describe('career', () => {
       }
     });
     expect(c.season.leagues[4].clubIds).toContain(c.playerClubId);
-    // 14 is the 6th-highest rating in League 5 (19, 18, 17, 16, 15 above it).
-    expect(c.season.expected[c.playerClubId]).toBe(6);
+    const above = c.season.leagues[4].clubIds.filter((id) => rating(c.clubs[id]) > 14).length;
+    expect(c.season.expected[c.playerClubId]).toBe(above + 1);
   });
 
   it('accepts an uneven split that averages the rating, rejects one that does not', () => {
@@ -229,6 +241,7 @@ describe('career', () => {
 
   it('keeps the AI total fixed across many seasons, whatever the player gains or loses', () => {
     const c = start(30, 7);
+    const total = c.totalRating;
     for (let season = 0; season < 6; season++) {
       playSeason(c, footballSport);
       // 10 a summer, more once the player is high up.
@@ -236,7 +249,7 @@ describe('career', () => {
       const d = c.pending!.declineByStat;
       expect(d.attack + d.defence).toBeCloseTo(2 * c.pending!.decline);
       allocatePoints(c, evenSplit(c));
-      expect(totalRating(c.clubs.filter((x) => !x.isPlayer))).toBeCloseTo(4950 - 30, 6);
+      expect(totalRating(c.clubs.filter((x) => !x.isPlayer))).toBeCloseTo(total, 6);
       for (const club of c.clubs) {
         for (const s of ['attack', 'defence'] as const) {
           expect(club[s]).toBeGreaterThanOrEqual(MIN_STAT);
@@ -368,9 +381,11 @@ describe('summer focus', () => {
 describe('league picker', () => {
   it('starts the player mid-table in whichever league they choose', () => {
     for (const tier of [1, 2, 3, 4, 5]) {
-      const c = newCareer({ rating: band(FOOTBALL, tier).min + 10, seed: tier }, footballSport);
+      const { min, max } = band(FOOTBALL, tier);
+      const c = newCareer({ rating: (min + max) / 2, seed: tier }, footballSport);
       expect(c.season.leagues[tier - 1].clubIds).toContain(c.playerClubId);
-      expect(c.season.expected[c.playerClubId]).toBe(10);
+      expect(c.season.expected[c.playerClubId]).toBeGreaterThanOrEqual(5);
+      expect(c.season.expected[c.playerClubId]).toBeLessThanOrEqual(15);
     }
   });
 });
@@ -382,14 +397,16 @@ describe('starting position', () => {
     for (let i = 0; i < 4000; i++) {
       const tier = 1 + (i % 5);
       const r = startRating(FOOTBALL, tier, rng);
-      const pos = r - band(FOOTBALL, tier).min;
-      expect(pos).toBeGreaterThanOrEqual(4);
-      expect(pos).toBeLessThanOrEqual(15);
-      counts[pos < 8 ? 'low' : pos < 12 ? 'mid' : 'high']++;
+      const { min, max } = band(FOOTBALL, tier);
+      // How far up the league's band, with room for rounding to a whole rating.
+      const pos = (r - min) / (max - min);
+      expect(pos).toBeGreaterThanOrEqual(0.15);
+      expect(pos).toBeLessThanOrEqual(0.85);
+      counts[pos < 0.39 ? 'low' : pos < 0.61 ? 'mid' : 'high']++;
     }
-    expect(counts.mid / 4000).toBeCloseTo(0.5, 1);
-    expect(counts.low / 4000).toBeCloseTo(0.25, 1);
-    expect(counts.high / 4000).toBeCloseTo(0.25, 1);
+    expect(counts.mid / 4000).toBeGreaterThan(0.35);
+    expect(counts.low / 4000).toBeGreaterThan(0.1);
+    expect(counts.high / 4000).toBeGreaterThan(0.1);
   });
 
 });

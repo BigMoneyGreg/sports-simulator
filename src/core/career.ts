@@ -1,10 +1,11 @@
 import { AI_STYLES, clamp, MAX_STAT, MIN_STAT, rating, shiftRating, STATS, statsFor, type Club, type Stat, type Style } from './club';
-import { leagueStanding } from './finishing';
+import { finishing, leagueStanding } from './finishing';
 import { FORMATS, teamCount, type SportFormat, type SportId } from './format';
 import {
   doubleRoundRobin,
   potShuffle,
   emptyTable,
+  ladder as worldLadder,
   recordRace,
   recordResult,
   sortTable,
@@ -12,7 +13,7 @@ import {
   type RoundKind,
   type TableRow,
 } from './league';
-import { applyDecline, bandPull, expectedPositions, normalise, positionBonus, RATING_TUNING, seasonGain, totalRating } from './ratings';
+import { applyDecline, bandPull, driftLevel, expectedPositions, normalise, positionBonus, RATING_TUNING, seasonGain, totalRating } from './ratings';
 import { CHAMPIONSHIP_EVERY, cupFixtures, cupRun, cupStages, drawChampionship, drawCup, recordCupResult, type Cup, type CupId } from './cups';
 import { emptyRecords, recordMatch, recordSeasonGoals, type Records } from './records';
 import { Rng } from './rng';
@@ -262,8 +263,8 @@ export function newCareer(options: CareerOptions, sport: SportDefinition): Caree
   const world = sport.world(rng, count, options.team);
   const identities = [world.player, ...world.others];
 
-  // One team on each rating, spread evenly across 0–99; the player takes the place of the nearest.
-  const ladder = Array.from({ length: count }, (_, i) => ((count - 1 - i) * 100) / count);
+  // One team on each rating, on the sport's curve; the player takes the place of the nearest.
+  const ladder = worldLadder(format);
   const taken = ladder.reduce((best, r, i) => (Math.abs(r - chosen) < Math.abs(ladder[best] - chosen) ? i : best), 0);
   const aiRatings = potShuffle(format, ladder.filter((_, i) => i !== taken), rng);
   const clubs: Club[] = identities.map((identity, id) => {
@@ -275,6 +276,7 @@ export function newCareer(options: CareerOptions, sport: SportDefinition): Caree
       ...identity,
       style,
       ...stats,
+      ...(isPlayer ? {} : { level: aiRatings[id - 1], base: aiRatings[id - 1] }),
       squad: sport.generateSquad(rng, id * 100, identity),
       isPlayer,
       ...(isPlayer && format.startingLean ? { settledLean: format.startingLean } : {}),
@@ -645,7 +647,12 @@ export function endSeason(career: Career, sport: SportDefinition): SeasonEnd {
     const gain = seasonGain(format, tier, s.expected[club.id], position[club.id], rating(club), rng.normal(0, RATING_TUNING.aiNoise));
     const promotedNow = newTierOf[club.id] < tier;
     const boost = promotedNow ? RATING_TUNING.promotedBoost : 0;
-    Object.assign(club, statsFor(clamp(rating(club) - RATING_TUNING.decline + gain + boost, MIN_STAT, MAX_STAT), club.style));
+    const before = rating(club);
+    const form = before - RATING_TUNING.decline + gain + boost;
+    // A season's result moves a nation, but its own level brings it back, and nothing moves it far in one summer.
+    const target = form + RATING_TUNING.levelPull * (driftLevel(club, rng) - form);
+    const swing = clamp(target - before, -RATING_TUNING.maxSwing, RATING_TUNING.maxSwing);
+    Object.assign(club, statsFor(clamp(before + swing, MIN_STAT, MAX_STAT), club.style));
     bandPull(format, club, newTierOf[club.id]);
   }
 
@@ -712,7 +719,7 @@ function planTurnover(career: Career, club: Club, sport: SportDefinition, rng: R
   for (let i = 0; i < count; i++) {
     const side: Stat | null = fromAttack === null ? null : i < fromAttack ? 'attack' : 'defence';
     const pool = side ? candidates.filter((p) => sport.role(p).side === side) : candidates;
-    const leaver = rng.weighted(pool.length ? pool : candidates, (p) => season - (p.joined ?? 1) + 1);
+    const leaver = rng.weighted(pool.length ? pool : candidates, (p) => leavingChance(career, club, p));
     out.push(leaver);
     candidates.splice(candidates.indexOf(leaver), 1);
   }
@@ -723,6 +730,17 @@ function planTurnover(career: Career, club: Club, sport: SportDefinition, rng: R
     incoming.push({ id: career.nextPlayerId++, name, position: leaver.position, number: leaver.number, joined: season + 1 });
   }
   return { clubId: club.id, out: out.map((p) => p.id), in: incoming };
+}
+
+/**
+ * How likely a player is to go: long servants most of all, but a team hangs on
+ * to its best finishers, and to whoever carried it this season.
+ */
+function leavingChance(career: Career, club: Club, player: Player): number {
+  const s = career.season;
+  const scored = club.squad.reduce((t, p) => t + (s.scorers[p.id] ?? 0), 0);
+  const share = scored ? (s.scorers[player.id] ?? 0) / scored : 0;
+  return (s.number - (player.joined ?? 1) + 1) / (finishing(player.id) ** 3 * (1 + 4 * share));
 }
 
 /** Draws the summer's question (not last summer's style) and, for call-ups and a new coach, the people in it. */

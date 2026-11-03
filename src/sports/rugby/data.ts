@@ -1,15 +1,16 @@
 /**
  * The 48 nations in rugby's world, strongest first: the men's world rankings of
- * July 2026. Pots straddling a league line let a team just outside League 1
+ * November 2026, nudged a little for history. Pots straddling a league line let a team just outside League 1
  * (Australia, say) start in it.
  */
 export const RUGBY_ORDER: string[] = [
-  ...['RSA', 'NZL', 'FRA', 'IRL', 'ITA', 'SCO', 'ENG', 'ARG'],
-  ...['AUS', 'FIJ', 'WAL', 'JPN', 'URU', 'CHI', 'POR', 'GEO'],
-  ...['ESP', 'USA', 'ROU', 'TGA', 'SAM', 'BEL', 'CAN', 'ZIM'],
-  ...['NAM', 'HKG', 'ALG', 'SUI', 'NED', 'GER', 'POL', 'KEN'],
-  ...['PAR', 'BRA', 'UAE', 'KOR', 'SWE', 'CZE', 'LTU', 'LUX'],
-  ...['CRO', 'UKR', 'DEN', 'FIN', 'LVA', 'AND', 'MDA', 'AUT'],
+  ...['RSA', 'NZL', 'IRL', 'FRA', 'ENG', 'SCO'],
+  ...['AUS', 'ARG', 'WAL', 'FIJ', 'ITA', 'JPN'],
+  ...['GEO', 'POR', 'USA', 'ESP', 'ROU', 'SAM', 'TGA', 'URU'],
+  ...['CHI', 'CAN', 'BEL', 'HKG', 'ZIM', 'NAM', 'NED', 'SUI'],
+  ...['CZE', 'POL', 'PAR', 'BRA', 'GER', 'SWE', 'KEN', 'KOR'],
+  ...['UAE', 'ALG', 'LTU', 'LUX', 'CRO', 'UKR', 'DEN', 'FIN'],
+  ...['LVA', 'AND', 'MDA', 'AUT'],
 ];
 
 /** Real rugby rivalries; anyone else takes their nearest neighbour in the world. */

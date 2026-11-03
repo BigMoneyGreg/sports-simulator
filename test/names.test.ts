@@ -73,7 +73,7 @@ describe('the starting world', () => {
     for (let seed = 1; seed <= 20; seed++) {
       const c = newCareer({ rating: 50, seed, team: 'KEN' }, footballSport);
       const byName = new Map(c.clubs.map((x) => [x.short, x]));
-      for (const code of WORLD_ORDER.slice(0, 8)) expect(rating(byName.get(code)!)).toBeGreaterThanOrEqual(91);
+      for (const code of WORLD_ORDER.slice(0, 8)) expect(rating(byName.get(code)!)).toBeGreaterThanOrEqual(80);
       for (const code of WORLD_ORDER.slice(0, 16)) expect(tierOf(c, byName.get(code)!.id)).toBe(1);
       for (const code of WORLD_ORDER.slice(24, 36)) expect(tierOf(c, byName.get(code)!.id)).toBe(2);
       tops.add(c.clubs.reduce((a, b) => (rating(b) > rating(a) ? b : a)).short);
@@ -90,12 +90,12 @@ describe('the starting world', () => {
     expect([...tiers].sort()).toEqual([1, 2]);
   });
 
-  it('puts the player in the league of their rating and uses every rating once', () => {
+  it('puts the player in the league of their rating and every team on its own rating', () => {
     const c = newCareer({ rating: 10, seed: 3, team: 'ENG' }, footballSport);
     expect(c.clubs[0].name).toBe('England');
     expect(tierOf(c, 0)).toBe(5);
     expect(rating(c.clubs[0])).toBeGreaterThanOrEqual(band(FOOTBALL, 5).min);
-    expect(new Set(c.clubs.map((x) => Math.round(rating(x)))).size).toBe(100);
+    expect(new Set(c.clubs.map((x) => rating(x))).size).toBe(100);
     expect(c.clubs.filter((x) => x.short === 'ENG')).toHaveLength(1);
   });
 
