@@ -27,7 +27,7 @@ describe('the summer question', () => {
   it("draws the player's leavers mostly from the end of the pitch that lost most", () => {
     const attackLeavers = { attackHit: [] as number[], defenceHit: [] as number[] };
     for (const seed of [1, 2]) {
-      summers(seed, 15, (c) => {
+      summers(seed, 25, (c) => {
         const d = c.pending!.declineByStat;
         const share = d.attack / (d.attack + d.defence);
         const out = leavers(c);

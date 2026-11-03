@@ -37,9 +37,9 @@ export const RATING_TUNING = {
   eraYears: [4, 8] as [number, number],
   eraRate: [1.5, 3] as [number, number],
   /** Player only: the share of a net rise kept, falling from 1 at the first rating to the floor at the second. Closing on the elite gets harder. */
-  climbStart: 60,
+  climbStart: 55,
   climbTop: 95,
-  climbFloor: 0.1,
+  climbFloor: 0,
   /** Rating an AI club gains on promotion (investment), so promoted sides can compete. */
   promotedBoost: 4,
   /** Points the player allocates per point of rating gained (1 point = +1 to a stat). */
@@ -88,8 +88,14 @@ export function seasonGain(format: SportFormat, tier: number, expected: number, 
   const performance = expected - actual;
   const gain = RATING_TUNING.averageGain + format.performanceMultiplier * performance + positionBonus(format, tier, actual) + extra;
   const net = gain - RATING_TUNING.decline;
+  if (isPlayer) {
+    // Only the steady rise shrinks near the elite. What the season earned against expectation is kept in full,
+    // so reading the summer well still pays at the top.
+    const steady = RATING_TUNING.averageGain + extra - RATING_TUNING.decline;
+    return RATING_TUNING.decline + net - (steady > 0 ? steady * (1 - climb(currentRating)) : 0);
+  }
   if (net <= 0) return RATING_TUNING.decline + net;
-  return RATING_TUNING.decline + net * (isPlayer ? climb(currentRating) : plateau(currentRating));
+  return RATING_TUNING.decline + net * plateau(currentRating);
 }
 
 /** Player only: the share of a net rise kept at this rating. */

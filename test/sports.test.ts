@@ -75,9 +75,9 @@ describe('formats', () => {
     expect(zone(RUGBY, 2, 3)).toBe(null);
     expect(zone(RUGBY, 2, 7)).toBe('relegation');
     expect(zone(RUGBY, 6, 8)).toBe(null);
-    expect(zone(CRICKET, 2, 1)).toBe('promotion');
-    expect(zone(CRICKET, 2, 2)).toBe(null);
-    expect(zone(CRICKET, 2, 6)).toBe('relegation');
+    expect(zone(CRICKET, 2, 2)).toBe('promotion');
+    expect(zone(CRICKET, 2, 3)).toBe(null);
+    expect(zone(CRICKET, 2, 7)).toBe('relegation');
     expect(zone(CRICKET, 1, 1)).toBe('champion');
   });
 
@@ -107,7 +107,7 @@ describe('formats', () => {
 describe('world data', () => {
   const worlds = [
     ['rugby', RUGBY_ORDER, RUGBY_RIVALS, 48],
-    ['cricket', CRICKET_ORDER, CRICKET_RIVALS, 30],
+    ['cricket', CRICKET_ORDER, CRICKET_RIVALS, 32],
   ] as const;
 
   it.each(worlds)('%s: a world of distinct real nations with real rivals', (_id, order, rivals, count) => {
@@ -383,7 +383,7 @@ describe('cricket', () => {
     expect(statusText(game)).toMatch(/Ov \d+\.\d · Wk /);
     while (game.live?.matches[game.live.player].period !== 'second') clock.run(1);
     clock.run(3);
-    expect(collapsedText(game)).toMatch(/[A-Z]{3} \d+(\/\d)?–\d+\/\d [A-Z]{3} \d+\.\d$/);
+    expect(collapsedText(game)).toMatch(/[A-Z]{3} \d+(\/\d)?–\d+(\/\d)? [A-Z]{3} \d+\.\d$/);
   });
 
   it('copes with a match saved before there was a scorecard', () => {
@@ -919,8 +919,8 @@ describe('sports in the save', () => {
     game.load(null);
     const setup = buildView(game);
     expect(setup.screen === 'setup' && setup.setup.sport).toBe('cricket');
-    expect(setup.screen === 'setup' && setup.setup.leagues).toBe(5);
-    expect(setup.screen === 'setup' && setup.setup.nations).toHaveLength(30);
+    expect(setup.screen === 'setup' && setup.setup.leagues).toBe(4);
+    expect(setup.screen === 'setup' && setup.setup.nations).toHaveLength(32);
     expect(game.duration).toBe('10m');
     game.load(rugbySave);
     expect(game.sportId).toBe('rugby');

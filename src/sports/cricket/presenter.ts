@@ -75,7 +75,7 @@ export const cricketPresenter: SportPresenter<CricketMatch> = {
       "Whatever the question, one answer strengthens the batting and the other the bowling. Let one fall too far behind and opponents exploit it, and at the top there's less room for a weak side.",
     ],
     secondTally: { one: 'Top wicket taker', many: 'Top wicket takers' },
-    seasonLabels: { '2m': 'Season ~20 min', '10m': 'Season ~1¾ hr', '20m': 'Season ~3½ hr', '40m': 'Season ~7 hr' },
+    seasonLabels: { '2m': 'Season ~30 min', '10m': 'Season ~2½ hr', '20m': 'Season ~5 hr', '40m': 'Season ~10 hr' },
   },
   questions: {
     callUp: { prompt: 'Retirements leave gaps. Who gets the call?' },

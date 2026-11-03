@@ -1,14 +1,13 @@
 /**
- * The 30 nations in cricket's world, strongest first: the men's T20 rankings of
- * October 2026. Pots straddling a league line let a team just outside a league
+ * The 32 nations in cricket's world, strongest first: the men's T20 rankings of
+ * November 2026, with Kenya in for its World Cup history. Pots straddling a league line let a team just outside a league
  * (the West Indies, say) start in it.
  */
 export const CRICKET_ORDER: string[] = [
-  ...['ENG', 'IND', 'AUS', 'NZL', 'RSA', 'PAK'],
-  ...['WIN', 'BAN', 'SRI', 'AFG', 'IRL', 'ZIM'],
-  ...['USA', 'NEP', 'NED', 'NAM', 'SCO', 'UAE'],
-  ...['OMA', 'CAN', 'UGA', 'PNG', 'ITA', 'HKG'],
-  ...['MAS', 'KUW', 'ESP', 'QAT', 'JER', 'BHR'],
+  ...['ENG', 'IND', 'AUS', 'NZL', 'RSA', 'PAK', 'WIN', 'BAN'],
+  ...['SRI', 'AFG', 'IRL', 'ZIM', 'USA', 'NEP', 'NED', 'NAM'],
+  ...['SCO', 'UAE', 'OMA', 'CAN', 'UGA', 'PNG', 'ITA', 'HKG'],
+  ...['MAS', 'KUW', 'ESP', 'QAT', 'JER', 'BHR', 'KSA', 'KEN'],
 ];
 
 /** Real cricket rivalries; anyone else takes their nearest neighbour in the world. */

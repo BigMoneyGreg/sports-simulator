@@ -103,12 +103,14 @@ describe('ratings', () => {
   });
 
   it('leaves the player’s rises alone until the climb nears the elite, then shrinks them', () => {
-    expect(seasonGain(FOOTBALL, 1, 10, 1, 50, 0, true) - 10).toBe(9);
-    const near = seasonGain(FOOTBALL, 1, 10, 1, 80, 0, true) - 10;
-    const top = seasonGain(FOOTBALL, 1, 10, 1, 95, 0, true) - 10;
-    expect(near).toBeLessThan(9);
+    const boost = RATING_TUNING.playerBoost;
+    expect(seasonGain(FOOTBALL, 1, 10, 1, 50, boost, true) - 10).toBe(9 + boost);
+    const near = seasonGain(FOOTBALL, 1, 10, 1, 80, boost, true) - 10;
+    const top = seasonGain(FOOTBALL, 1, 10, 1, 95, boost, true) - 10;
+    expect(near).toBeLessThan(9 + boost);
     expect(top).toBeLessThan(near);
-    expect(top).toBeGreaterThan(0);
+    // What the season earned against expectation is kept, so reading the summer still pays at the top.
+    expect(top).toBeGreaterThanOrEqual(9);
     // A fall isn't softened.
     expect(seasonGain(FOOTBALL, 1, 1, 10, 95, 0, true) - 10).toBe(-9);
   });

@@ -1,6 +1,6 @@
 import { AI_STYLES, clamp, MAX_STAT, MIN_STAT, rating, shiftRating, STATS, statsFor, type Club, type Stat, type Style } from './club';
 import { finishing, leagueStanding, streakOf } from './finishing';
-import { FORMATS, teamCount, type SportFormat, type SportId } from './format';
+import { FORMATS, OLDER_FORMATS, teamCount, type SportFormat, type SportId } from './format';
 import {
   doubleRoundRobin,
   potShuffle,
@@ -22,9 +22,41 @@ import type { GoalRecord, MatchOutcome, Player, SportModule, SportPresenter, Tea
 export const CAREER_VERSION = 8;
 export const PLAYER_CLUB_ID = 0;
 
-/** The format of the sport this career is in. */
-export function formatOf(career: Pick<Career, 'sport'>): SportFormat {
-  return FORMATS[career.sport];
+/** The format of the sport this career is in, or the older one its season is still being played under. */
+export function formatOf(career: Pick<Career, 'sport'> & { season?: Pick<Season, 'leagues'> }): SportFormat {
+  const format = FORMATS[career.sport];
+  const leagues = career.season?.leagues.length;
+  if (!leagues || leagues === format.leagues) return format;
+  return OLDER_FORMATS[career.sport]?.find((f) => f.leagues === leagues) ?? format;
+}
+
+/**
+ * A career saved before its sport's world grew starts the next season in the
+ * new shape: the missing nations join at the bottom, and the leagues are cut
+ * again from the order they were about to start in. Only between seasons.
+ */
+export function growWorld(career: Career, sport: SportDefinition): boolean {
+  const format = sport.format;
+  if (formatOf(career) === format || career.pending || career.season.round !== 0) return false;
+  const rng = new Rng(career.rng);
+  const count = teamCount(format);
+  const present = new Set(career.clubs.map((c) => c.short));
+  const { others } = sport.world(rng, count, career.clubs[career.playerClubId].short);
+  const missing = others.filter((c) => !present.has(c.short)).slice(0, count - career.clubs.length);
+  const ratings = worldLadder(format);
+  for (const [k, identity] of missing.entries()) {
+    const value = ratings[count - missing.length + k];
+    const style: Style = rng.pick(AI_STYLES);
+    const id = career.clubs.length;
+    career.clubs.push({ id, ...identity, style, ...statsFor(value, style), level: value, base: value, squad: sport.generateSquad(rng, career.nextPlayerId, identity), isPlayer: false });
+    career.nextPlayerId += 100;
+  }
+  const order = [...career.season.leagues.flatMap((l) => l.clubIds), ...career.clubs.slice(career.clubs.length - missing.length).map((c) => c.id)];
+  const leagues = Array.from({ length: format.leagues }, (_, t) => order.slice(t * format.leagueSize, (t + 1) * format.leagueSize));
+  career.totalRating = totalRating(career.clubs.filter((c) => !c.isPlayer));
+  career.season = newSeason(format, career.season.number, leagues, order, career.clubs, rng);
+  career.rng = rng.state;
+  return true;
 }
 
 export interface ClubIdentity {

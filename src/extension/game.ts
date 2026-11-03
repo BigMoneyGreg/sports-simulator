@@ -5,6 +5,7 @@ import {
   chooseFocus,
   type Focus,
   completeRound,
+  growWorld,
   createFixtureMatch,
   endSeason,
   isSeasonOver,
@@ -159,6 +160,7 @@ export class Game {
     this.duration = fitDuration(this.sport, saved.duration ?? this.duration);
     this.live = saved.live;
     this.paused = saved.paused;
+    if (!this.live && growWorld(this.career, this.sport) && run) this.save();
     this.phase = this.career.pending ? 'seasonOver' : this.career.worldEnd?.played ? 'worldOver' : this.live ? 'live' : 'idle';
     if (run) this.run();
   }
@@ -237,6 +239,7 @@ export class Game {
   }
 
   private nextSeason(): void {
+    growWorld(this.career!, this.sport);
     this.phase = 'idle';
     this.save();
     this.tell(() => this.host.changed());

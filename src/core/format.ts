@@ -85,6 +85,24 @@ export const RUGBY: SportFormat = {
 
 export const CRICKET: SportFormat = {
   id: 'cricket',
+  leagues: 4,
+  leagueSize: 8,
+  promoted: 2,
+  playoffs: false,
+  relegated: 2,
+  startingPots: [4, 10, 14, 20, 26, 32],
+  curve: [[1, 99], [2, 96], [3, 93], [4, 90], [6, 84], [8, 78], [12, 58], [13, 50], [18, 40], [19, 30], [24, 16], [32, 1]],
+  performanceMultiplier: 2.5,
+  startingLean: 14,
+  topBonus: [6, 3, 0],
+  bottomBonus: [0, -3, -6],
+  cup: { entrants: 16, after: [2, 5, 8, 11] },
+  championship: { entrants: 12, groupSize: 3 },
+};
+
+/** Cricket before its leagues grew to eight: careers part-way through a season finish it this way. */
+export const CRICKET_SIX: SportFormat = {
+  id: 'cricket',
   leagues: 5,
   leagueSize: 6,
   promoted: 1,
@@ -120,6 +138,9 @@ export const GRAND_PRIX: SportFormat = {
 };
 
 export const FORMATS: Record<SportId, SportFormat> = { football: FOOTBALL, rugby: RUGBY, cricket: CRICKET, grandprix: GRAND_PRIX };
+
+/** Formats a sport has had before, for careers saved part-way through a season under them. */
+export const OLDER_FORMATS: Partial<Record<SportId, SportFormat[]>> = { cricket: [CRICKET_SIX] };
 
 export function teamCount(format: SportFormat): number {
   return format.leagues * format.leagueSize;

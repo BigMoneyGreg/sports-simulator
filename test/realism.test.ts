@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allocatePoints, focusAllocation, newCareer, playSeason, teamSheet, type Career } from '../src/core/career';
+import { allocatePoints, focusAllocation, formatOf, growWorld, newCareer, playSeason, teamSheet, type Career } from '../src/core/career';
 import { cupFixtures, drawChampionship } from '../src/core/cups';
 import { finishing, streakForm, streakOf } from '../src/core/finishing';
 import { Game } from '../src/extension/game';
@@ -12,7 +12,7 @@ import { classified, createMatch as createRace, isFinished as raceDone, step as 
 import { createMatch as createRugby, isFinished as rugbyDone, outcome as rugbyOutcome, step as rugbyStep } from '../src/sports/rugby/match';
 import { generateSquad as rugbySquad, lineup as rugbyLineup } from '../src/sports/rugby/squad';
 import { rating } from '../src/core/club';
-import { FORMATS, SPORT_IDS } from '../src/core/format';
+import { CRICKET_SIX, FORMATS, SPORT_IDS } from '../src/core/format';
 import { ladder } from '../src/core/league';
 import { climb, driftLevel, RATING_TUNING } from '../src/core/ratings';
 import { Rng } from '../src/core/rng';
@@ -113,7 +113,7 @@ describe('a nation over the years', () => {
 describe('the player closing on the elite', () => {
   it('keeps less of a rise the higher they are', () => {
     expect(climb(40)).toBe(1);
-    expect(climb(60)).toBe(1);
+    expect(climb(RATING_TUNING.climbStart)).toBe(1);
     expect(climb(80)).toBeLessThan(0.6);
     expect(climb(95)).toBeCloseTo(RATING_TUNING.climbFloor);
     expect(climb(200)).toBe(RATING_TUNING.climbFloor);
@@ -291,5 +291,38 @@ describe('Grand Prix tracks', () => {
     const v = buildView(game);
     if (v.screen !== 'game') throw new Error('expected a game');
     expect(v.match!.competition).toMatch(/^GP\d$/);
+  });
+});
+
+describe('cricket growing to eight-team leagues', () => {
+  /** A career as it was saved before: five leagues of six, part-way through the season. */
+  const oldCareer = () => {
+    const c = newCareer({ rating: 40, seed: 6, team: 'SCO' }, { ...SPORTS.cricket, format: CRICKET_SIX, world: (rng, count, code) => SPORTS.cricket.world(rng, count, code) });
+    c.clubs = c.clubs.slice(0, 30);
+    return c;
+  };
+
+  it('finishes a season saved in the old shape under the old rules', () => {
+    const c = oldCareer();
+    expect(formatOf(c)).toBe(CRICKET_SIX);
+    const end = playSeason(c, SPORTS.cricket);
+    expect(end.nextLeagues.map((l) => l.length)).toEqual([6, 6, 6, 6, 6]);
+  });
+
+  it('grows to four leagues of eight as the next season starts, keeping the career', () => {
+    const c = oldCareer();
+    const name = c.clubs[c.playerClubId].name;
+    const end = playSeason(c, SPORTS.cricket);
+    allocatePoints(c, focusAllocation(c.clubs[c.playerClubId], end.points, 'attack'));
+    expect(growWorld(c, SPORTS.cricket)).toBe(true);
+    expect(c.clubs).toHaveLength(32);
+    expect(c.season.leagues.map((l) => l.clubIds.length)).toEqual([8, 8, 8, 8]);
+    expect(new Set(c.season.leagues.flatMap((l) => l.clubIds)).size).toBe(32);
+    expect(c.clubs[c.playerClubId].name).toBe(name);
+    expect(c.history).toHaveLength(1);
+    expect(formatOf(c)).toBe(FORMATS.cricket);
+    // Nothing more to do once it's grown, and the season plays as normal.
+    expect(growWorld(c, SPORTS.cricket)).toBe(false);
+    expect(playSeason(c, SPORTS.cricket).nextLeagues.map((l) => l.length)).toEqual([8, 8, 8, 8]);
   });
 });

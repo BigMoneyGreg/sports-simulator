@@ -7,7 +7,7 @@ First release.
 - **Four sports:** international football, rugby, T20 cricket and Grand Prix racing, each with its own career, leagues, cups, summer questions and records
 - **Rugby:** 48 nations in 6 leagues of 8. Tries, conversions, penalties, drop goals and sin bins; bonus points; kicking contests in knockouts; matches from 1 minute
 - **Grand Prix racing:** 30 nations in 3 leagues of 10, the most successful racing countries first, or enter any country as a new team. Each team runs two drivers over 16 races, lap by lap, with pit stops, safety cars and retirements; a drivers' title beside the teams'; speed or reliability each summer; and a one-car-each Race of Nations every four years
-- **Cricket (T20):** 30 nations in 5 leagues of 6, including the West Indies. Follow it ball by ball on a real scorecard, with this over; wickets and the chase ("need 34 from 18 balls"); net run rate; super overs; run scorers and wicket takers; matches from 2 minutes
+- **Cricket (T20):** 32 nations in 4 leagues of 8, including the West Indies. Follow it ball by ball on a real scorecard, with this over; wickets and the chase ("need 34 from 18 balls"); net run rate; super overs; run scorers and wicket takers; matches from 2 minutes
 - Each sport has its own career, cups, summer questions and records
 - Play several sports at once: the box lists them, one open in full and the others minimised to one line. Start, pause or end each on its own, and each keeps its own match length
 - **Honours:** past careers, greatest teams, all-time records for each sport, and honours for success across sports
