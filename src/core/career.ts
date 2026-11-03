@@ -14,7 +14,7 @@ import {
   type TableRow,
 } from './league';
 import { applyDecline, bandPull, driftLevel, expectedPositions, normalise, positionBonus, RATING_TUNING, seasonGain, totalRating } from './ratings';
-import { CHAMPIONSHIP_EVERY, cupFixtures, cupRun, cupStages, drawChampionship, drawCup, recordCupResult, type Cup, type CupId } from './cups';
+import { cupFixtures, cupRun, cupStages, drawChampionship, drawCup, recordCupResult, worldAfter, type Cup, type CupId } from './cups';
 import { emptyRecords, recordMatch, recordSeasonGoals, type Records } from './records';
 import { Rng } from './rng';
 import type { GoalRecord, MatchOutcome, Player, SportModule, SportPresenter, TeamSheet } from './sport';
@@ -384,7 +384,7 @@ function newSeason(format: SportFormat, number: number, leagues: number[][], sta
   });
   if (format.playoffs) for (let stage = 0; stage < 3; stage++) calendar.push({ kind: 'playoff', stage });
   // Every fourth season is followed by the World Championship, for those who finished it in Leagues 1 and 2.
-  const worldYear = number > 1 && (number - 1) % CHAMPIONSHIP_EVERY === 0;
+  const worldYear = number > 1 && worldAfter(format, number - 1);
   if (worldYear) calendar.unshift(...cupStages(format, 'championship').map((_, stage): Slot => ({ kind: 'championship', stage })));
   return {
     number,

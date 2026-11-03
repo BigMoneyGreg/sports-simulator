@@ -36,7 +36,8 @@ queue.length = 0;
 world.selectSport('cricket');
 world.setDuration('2m');
 const career = newCareer({ rating: 95, seed: 9, team: 'IND' }, SPORTS.cricket);
-for (let season = 0; season < 4; season++) {
+// Cricket's World Championship follows its second season.
+for (let season = 0; season < 2; season++) {
   playSeason(career, SPORTS.cricket);
   chooseFocus(career, 'attack');
 }

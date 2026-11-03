@@ -7,8 +7,20 @@ import type { MatchOutcome } from './sport';
 export type CupId = 'cup' | 'championship';
 
 export const CUP_NAMES: Record<CupId, string> = { cup: 'Nations Cup', championship: 'World Championship' };
-/** The World Championship is played in the summer of every fourth season. */
+/** The World Championship is played in the summer of every fourth season, each sport in a different year. */
 export const CHAMPIONSHIP_EVERY = 4;
+
+/** Whether a World Championship follows this season. */
+export function worldAfter(format: SportFormat, season: number): boolean {
+  return (season + format.worldOffset) % CHAMPIONSHIP_EVERY === 0;
+}
+
+/** The next season, from this one on, that a World Championship follows. */
+export function nextWorldAfter(format: SportFormat, season: number): number {
+  let n = season;
+  while (!worldAfter(format, n)) n++;
+  return n;
+}
 
 const GROUP_NAMES = 'ABCDEFGH';
 

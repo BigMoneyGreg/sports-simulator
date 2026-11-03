@@ -151,9 +151,73 @@ describe('the extension, played through its messages', () => {
     await fake.commands.get('sportsSimulator.chooseSports')!();
     expect(fake.box.rows).toHaveLength(4);
     const line = row('football').line;
-    run(10_000);
+    // Rugby's match is on, so football waits for it to finish before carrying on.
+    run(150_000);
     fake.send({ type: 'ready' });
     expect(row('football').line).not.toBe(line);
+  });
+
+  describe('several sports in one season', () => {
+    // A row's line has a match clock (59', Ov 3.2) only while its match is on.
+    const onNow = () => ['football', 'rugby'].filter((id) => /\d+'|Ov \d/.test(row(id)?.line ?? ''));
+
+    it('plays one match at a time, taking turns', () => {
+      start();
+      start('rugby', 'WAL', '90s');
+      let both = 0;
+      const seen = new Set<string>();
+      for (let s = 0; s < 600; s++) {
+        run(1000);
+        fake.send({ type: 'ready' });
+        const now = onNow();
+        if (now.length > 1) both++;
+        now.forEach((id) => seen.add(id));
+      }
+      expect(both).toBe(0);
+      expect([...seen].sort()).toEqual(['football', 'rugby']);
+      expect(row('football').progress).toBeGreaterThan(0);
+      expect(row('rugby').progress).toBeGreaterThan(0);
+      expect(Math.abs(row('football').progress - row('rugby').progress)).toBeLessThan(0.2);
+    });
+
+    it('keeps them in step: the sport furthest behind in its season goes next', () => {
+      start();
+      start('rugby', 'WAL', '90s');
+      run(20 * 60_000);
+      fake.send({ type: 'ready' });
+      // 38 football weeks to 14 rugby ones: each about the same share of the way through.
+      expect(row('football').progress).toBeGreaterThan(0.1);
+      expect(Math.abs(row('football').progress - row('rugby').progress)).toBeLessThan(0.2);
+    });
+
+    it('meets at the summer: a sport whose summer is answered waits for the others', () => {
+      start();
+      start('rugby', 'WAL', '90s');
+      for (let m = 0; m < 240 && !(row('football').waiting && row('rugby').waiting); m++) run(60_000);
+      fake.send({ type: 'ready' });
+      expect(row('football').waiting && row('rugby').waiting).toBe(true);
+      fake.send({ type: 'chooseFocus', sport: 'football', focus: 'attack' });
+      run(10 * 60_000);
+      fake.send({ type: 'ready' });
+      expect(row('football').progress).toBe(0);
+      fake.send({ type: 'chooseFocus', sport: 'rugby', focus: 'defence' });
+      run(10 * 60_000);
+      fake.send({ type: 'ready' });
+      expect(row('football').progress).toBeGreaterThan(0);
+      expect(row('rugby').progress).toBeGreaterThan(0);
+      expect(Math.abs(row('football').progress - row('rugby').progress)).toBeLessThan(0.2);
+    });
+
+    it('a paused sport steps aside, and the others carry on', () => {
+      start();
+      start('rugby', 'WAL', '90s');
+      fake.send({ type: 'togglePause', sport: 'football' });
+      const before = row('rugby').progress;
+      run(10 * 60_000);
+      fake.send({ type: 'ready' });
+      expect(row('rugby').progress).toBeGreaterThan(before + 0.1);
+      expect(row('football').line).toMatch(/^⏸/);
+    });
   });
 
   describe('with nobody at the window', () => {

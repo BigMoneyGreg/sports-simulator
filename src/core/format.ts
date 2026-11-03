@@ -45,6 +45,8 @@ export interface SportFormat {
     after: number[];
   };
   championship: { entrants: number; groupSize: number };
+  /** Which seasons the World Championship follows: every fourth, shifted by this, so the sports take turns. */
+  worldOffset: number;
   /** A sport of races, not matches: every round is one race per league, so there are no pairings, cups or draws. */
   race?: { rounds: number; tracks: string[] };
 }
@@ -64,6 +66,7 @@ export const FOOTBALL: SportFormat = {
   // After matchdays 6, 12, … 36: the final before the last two league rounds.
   cup: { entrants: 64, after: [5, 11, 17, 23, 29, 35] },
   championship: { entrants: 40, groupSize: 5 },
+  worldOffset: 0,
 };
 
 export const RUGBY: SportFormat = {
@@ -81,6 +84,7 @@ export const RUGBY: SportFormat = {
   bottomBonus: [0, -3, -6],
   cup: { entrants: 32, after: [1, 4, 6, 9, 11] },
   championship: { entrants: 16, groupSize: 4 },
+  worldOffset: 1,
 };
 
 export const CRICKET: SportFormat = {
@@ -98,6 +102,7 @@ export const CRICKET: SportFormat = {
   bottomBonus: [0, -3, -6],
   cup: { entrants: 16, after: [2, 5, 8, 11] },
   championship: { entrants: 12, groupSize: 3 },
+  worldOffset: 2,
 };
 
 /** Cricket before its leagues grew to eight: careers part-way through a season finish it this way. */
@@ -116,6 +121,7 @@ export const CRICKET_SIX: SportFormat = {
   bottomBonus: [0, -3, -6],
   cup: { entrants: 16, after: [1, 3, 5, 7] },
   championship: { entrants: 12, groupSize: 3 },
+  worldOffset: 2,
 };
 
 export const GRAND_PRIX: SportFormat = {
@@ -134,6 +140,7 @@ export const GRAND_PRIX: SportFormat = {
   cup: { entrants: 0, after: [] },
   // One car per nation from Leagues 1 and 2, for one race.
   championship: { entrants: 20, groupSize: 20 },
+  worldOffset: 3,
   race: { rounds: 16, tracks: ['Melbourne', 'Bahrain', 'Suzuka', 'Shanghai', 'Barcelona', 'Monaco', 'Montreal', 'Silverstone', 'Spielberg', 'Budapest', 'Spa', 'Zandvoort', 'Monza', 'Singapore', 'Austin', 'Interlagos'] },
 };
 

@@ -104,6 +104,8 @@ export interface GameHost {
   /** A World Championship the player is in has begun. */
   worldStarted?(): void;
   worldOver?(end: WorldEnd): void;
+  /** The player's match is over: true if another sport takes its turn now, and this one waits. */
+  turnOver?(): boolean;
   /** A save that couldn't be brought up to date: keep it somewhere before a new career replaces it. */
   unreadable?(saved: SavedGame): void;
 }
@@ -173,6 +175,8 @@ export class Game {
     this.paused = false;
     this.phase = 'idle';
     this.save();
+    // Shown at once, even if another sport's match has the turn and this one waits.
+    this.tell(() => this.host.changed());
     this.run();
   }
 
@@ -258,7 +262,7 @@ export class Game {
         this.schedule(() => this.tick(), tickMs(this.sport, this.duration));
         return;
       case 'fullTime':
-        this.schedule(() => this.nextMatchday(), fullTimePause(this.duration));
+        this.schedule(() => this.afterFullTime(), fullTimePause(this.duration));
         return;
       case 'idle':
         this.nextMatchday();
@@ -352,7 +356,14 @@ export class Game {
     this.save();
     this.tell(() => this.host.fullTime?.(last.match, last.fixture));
     this.tell(() => this.host.changed());
-    this.schedule(() => this.nextMatchday(), fullTimePause(this.duration));
+    this.schedule(() => this.afterFullTime(), fullTimePause(this.duration));
+  }
+
+  /** Once the result has been up a while: on to the next matchday, unless another sport's turn comes first. */
+  private afterFullTime(): void {
+    let handedOver = false;
+    this.tell(() => (handedOver = this.host.turnOver?.() ?? false));
+    if (!handedOver) this.nextMatchday();
   }
 
   // -- helpers --------------------------------------------------------------

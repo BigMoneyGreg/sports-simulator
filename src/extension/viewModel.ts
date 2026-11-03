@@ -1,6 +1,6 @@
 import { currentSlot, FOCUSES, formatOf, fullHistory, leagueRounds, type WorldEnd, type SeasonEnd, type Career, type Focus, type PlayerMatch, type Playoff, type SeasonRecord, type Slot } from '../core/career';
 import { SPORT_IDS, type SportId } from '../core/format';
-import { CHAMPIONSHIP_EVERY, CUP_NAMES, cupFixtures, cupRun, cupStages, stageLabel, stillIn, type Cup, type CupId, type CupTie } from '../core/cups';
+import { CUP_NAMES, nextWorldAfter, cupFixtures, cupRun, cupStages, stageLabel, stillIn, type Cup, type CupId, type CupTie } from '../core/cups';
 import { better, emptyRecords, topScorers, type MatchRecord } from '../core/records';
 import { FEAT_TITLES, greatest, trophies, type CareerSummary, type Feat } from '../core/honours';
 import { difference, goalRanks, recordRace, recordResult, runRateAgainst, runRateFor, sortTable, zone, type Fixture, type TableRow } from '../core/league';
@@ -769,7 +769,7 @@ function fixtureView(career: Career, slot: Slot, f: Pick<Fixture, 'home' | 'away
 
 function buildCups(career: Career, live: boolean): CupsView {
   const s = career.season;
-  const next = Math.ceil(s.number / CHAMPIONSHIP_EVERY) * CHAMPIONSHIP_EVERY;
+  const next = nextWorldAfter(formatOf(career), s.number);
   const who = formatOf(career).race ? 'its GP1 and GP2 qualify · one car each' : 'its Leagues 1–2 qualify';
   const upcoming = next === s.number ? `After this season · ${who}` : `Next: after Season ${next} · ${who}`;
   let championship: CupView;

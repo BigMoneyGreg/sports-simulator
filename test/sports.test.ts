@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { allocatePoints, chooseFocus, endSeason, focusAllocation, newCareer, nextRound, playRound, teamSheet, type Career } from '../src/core/career';
 import { rating } from '../src/core/club';
-import { cupStages } from '../src/core/cups';
+import { cupStages, worldAfter } from '../src/core/cups';
 import { CRICKET, FOOTBALL, FORMATS, RUGBY, SPORT_IDS, teamCount, type SportId } from '../src/core/format';
 import { band, emptyTable, goalRanks, recordResult, sortTable, startRating, zone } from '../src/core/league';
 import { totalRating } from '../src/core/ratings';
@@ -517,7 +517,8 @@ describe.each(NEW_SPORTS)('%s careers', (id) => {
       expect(s.calendar.some((x) => x.kind === 'playoff')).toBe(false);
       expect(s.playoffs).toEqual([]);
       expect(s.cup.winner).toBeDefined();
-      if (s.number > 1 && s.number % 4 === 1) {
+      // Each sport has its World Championship in its own years.
+      if (s.number > 1 && worldAfter(f, s.number - 1)) {
         championships++;
         expect(s.championship?.winner).toBeDefined();
         expect(s.championship?.entrants).toHaveLength(f.championship.entrants);

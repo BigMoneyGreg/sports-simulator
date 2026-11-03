@@ -9,7 +9,7 @@ First release.
 - **Grand Prix racing:** 30 nations in 3 leagues of 10, the most successful racing countries first, or enter any country as a new team. Each team runs two drivers over 16 races, lap by lap, with pit stops, safety cars and retirements; a drivers' title beside the teams'; speed or reliability each summer; and a one-car-each Race of Nations every four years
 - **Cricket (T20):** 32 nations in 4 leagues of 8, including the West Indies. Follow it ball by ball on a real scorecard, with this over; wickets and the chase ("need 34 from 18 balls"); net run rate; super overs; run scorers and wicket takers; matches from 2 minutes
 - Each sport has its own career, cups, summer questions and records
-- Play several sports at once: the box lists them, one open in full and the others minimised to one line. Start, pause or end each on its own, and each keeps its own match length
+- Play several sports in one shared season, with only one match on at a time: the sport furthest behind plays next, and the summers come together at the year's end. Each sport's World Championship falls in a different year. The box lists them, one open in full and the others minimised to one line. Start, pause or end each on its own, and each keeps its own match length
 - **Honours:** past careers, greatest teams, all-time records for each sport, and honours for success across sports
 - Only want one sport? Press **Choose sports…** in the box and untick the rest, Honours too if you like. A hidden career waits where it was
 - Ratings follow the gaps in real rankings: a clear elite that's hard to catch, and close leagues at the bottom. Nations rise and fade over the years, with golden generations and bad spells

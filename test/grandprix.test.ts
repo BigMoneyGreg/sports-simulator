@@ -122,9 +122,9 @@ describe('a season', () => {
     expect(c.season.number).toBe(2);
   });
 
-  it('runs a Race of Nations with one car each, on four-year cycles', () => {
+  it('runs a Race of Nations with one car each, after the first season and then every four', () => {
     const c = newCareer({ rating: 95, seed: 8, team: 'SCO' }, sport);
-    for (let n = 0; n < 4; n++) {
+    for (let n = 0; n < 1; n++) {
       const end = playSeason(c, sport);
       allocatePoints(c, focusAllocation(c.clubs[c.playerClubId], end.points, 'attack'));
     }

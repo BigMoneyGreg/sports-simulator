@@ -136,7 +136,14 @@ export function activate(context: vscode.ExtensionContext): void {
       save: (g) => {
         if (owner.owning) storage.save(g, sport);
       },
-      changed: () => refresh(sport),
+      changed: () => {
+        takeTurns();
+        refresh(sport);
+      },
+      turnOver: () => {
+        takeTurns(game);
+        return turn !== sport;
+      },
       seasonOver: (end) => {
         checkHonours();
         if (!(sidebar.visible && open === sport)) toast(seasonFinished(game, end));
@@ -178,9 +185,49 @@ export function activate(context: vscode.ExtensionContext): void {
   let lastUsed = Date.now();
   /** Nobody has used this window for a while: its clocks stand still until someone does. */
   let away = false;
-  /** Hidden sports and a window left alone both hold the clocks; neither touches the player's own pause. */
+  /** The sport whose match is on: one at a time, so every sport can be followed. None while every career waits on the player. */
+  let turn: SportId | null = null;
+
+  /** Hidden sports, a window left alone and another sport's turn all hold a clock; none touches the player's own pause. */
   function holdClocks(run: boolean): void {
-    for (const game of all()) game.setHeld(away || !shownSports().includes(game.sportId), run);
+    for (const game of all()) game.setHeld(away || !shownSports().includes(game.sportId) || game.sportId !== turn, run);
+  }
+
+  /** How far through its season a career is, 0 to 1. */
+  function progress(game: Game): number {
+    const s = game.career!.season;
+    return s.calendar.length ? s.round / s.calendar.length : 1;
+  }
+
+  /**
+   * Whose turn it is. A match under way finishes first; then whichever sport is
+   * furthest through its season the least goes next, so they keep in step. A
+   * sport about to start a new season waits until every other has finished its
+   * own, so the summers come together. `free`: a sport whose match has just
+   * finished, now free to hand over.
+   */
+  function pickTurn(free?: Game): SportId | null {
+    const careers = listed().filter((g) => g.career && !g.paused);
+    const current = turn && careers.find((g) => g.sportId === turn);
+    if (current && current !== free && (current.phase === 'live' || current.phase === 'fullTime')) return turn;
+    const ready = careers.filter((g) => !waitingOnPlayer(g));
+    // Still finishing last year's season, or waiting on its summer: either way, the year isn't over. A sport
+    // only just into the new year isn't: once the summers are all answered, everyone starts together.
+    const unfinished = (g: Game) => waitingOnPlayer(g) || (progress(g) > 0.5 && progress(g) < 1);
+    // A brand-new career joins straight away and catches up; only a finished season's next one waits.
+    const waits = (g: Game) => g.career!.season.number > 1 && g.career!.season.round === 0 && g.phase !== 'live' && careers.some((o) => o !== g && unfinished(o));
+    // A match left on from before goes first, wherever it is.
+    const live = ready.filter((g) => g.phase === 'live' && g !== free);
+    const pool = live.length ? live : ready.filter((g) => !waits(g));
+    if (!pool.length) return null;
+    return pool.reduce((a, b) => (progress(b) < progress(a) ? b : a)).sportId;
+  }
+
+  function takeTurns(free?: Game): void {
+    const next = pickTurn(free);
+    if (next === turn) return;
+    turn = next;
+    holdClocks(owner.owning);
   }
   holdClocks(false);
   // Shown straight away; the clocks only run once this window owns the game.
@@ -189,7 +236,12 @@ export function activate(context: vscode.ExtensionContext): void {
   const owner = new Ownership(`${process.pid}-${Math.random().toString(36).slice(2)}`, storage, {
     start: () => {
       followed = storage.activeSport();
+      // Every clock waits until the turn is worked out, so only one match starts.
+      turn = null;
+      for (const game of all()) game.setHeld(true, false);
       for (const game of all()) game.load(storage.load(game.sportId));
+      turn = pickTurn();
+      holdClocks(true);
       checkHonours();
       refresh();
     },
@@ -392,7 +444,11 @@ export function activate(context: vscode.ExtensionContext): void {
         storage.setLastDuration(undefined);
         for (const game of all()) if (!game.career) game.setDuration(duration());
       }
-      if (e.affectsConfiguration('sportsSimulator.sports')) holdClocks(owner.owning);
+      if (e.affectsConfiguration('sportsSimulator.sports')) {
+        // A hidden sport can't keep the turn.
+        turn = pickTurn();
+        holdClocks(owner.owning);
+      }
       if (e.affectsConfiguration('sportsSimulator')) refresh();
     }),
   );
