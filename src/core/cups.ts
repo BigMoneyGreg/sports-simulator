@@ -77,6 +77,8 @@ export interface Cup {
   winner?: number;
   /** A race's finishing order, by team. */
   placed?: number[];
+  /** The World Championship's host, who plays at home all the way. */
+  host?: number;
 }
 
 /** One matchday of a cup: a group matchday, or a knockout round. */
@@ -106,14 +108,15 @@ export function drawCup(format: SportFormat, season: number, entrants: number[],
 export function drawChampionship(format: SportFormat, season: number, entrants: number[], rng: Rng): Cup {
   const { entrants: needed, groupSize } = format.championship;
   if (entrants.length !== needed) throw new Error(`the championship needs ${needed} entrants`);
-  if (format.race) return { id: 'championship', season, entrants: [...entrants], groups: [], rounds: [] };
+  const host = rng.pick(entrants);
+  if (format.race) return { id: 'championship', season, entrants: [...entrants], groups: [], rounds: [], host };
   const groupCount = needed / groupSize;
   const pots = Array.from({ length: groupSize }, (_, p) => rng.shuffle(entrants.slice(p * groupCount, (p + 1) * groupCount)));
   const groups = Array.from({ length: groupCount }, (_, g) => {
     const ids = pots.map((pot) => pot[g]);
     return { name: GROUP_NAMES[g], table: emptyTable(ids), days: singleRoundRobin(ids) };
   });
-  return { id: 'championship', season, entrants: [...entrants], groups, rounds: [] };
+  return { id: 'championship', season, entrants: [...entrants], groups, rounds: [], host };
 }
 
 /** Everyone plays everyone once; with an odd number, one team rests each matchday. */
@@ -138,14 +141,20 @@ function singleRoundRobin(ids: number[]): [number, number][][] {
 export function cupFixtures(format: SportFormat, cup: Cup, stageIndex: number): Fixture[] {
   const stage = cupStages(format, cup.id)[stageIndex];
   const base = { tier: 0, kind: cup.id, stage: stageIndex } as const;
-  if (format.race) return [{ ...base, home: cup.entrants[0], away: cup.entrants[1], field: cup.entrants, options: { neutral: true, oneCar: true } }];
+  if (format.race) return [{ ...base, home: cup.entrants[0], away: cup.entrants[1], field: cup.entrants, options: { neutral: true, oneCar: true, ...(cup.host !== undefined ? { host: cup.host } : {}) } }];
   if ('group' in stage) {
-    return cup.groups.flatMap((g) => g.days[stage.group].map(([home, away]) => ({ ...base, home, away, options: { neutral: true } })));
+    return cup.groups.flatMap((g) =>
+      g.days[stage.group].map(([home, away]) => {
+        // The host plays at home; everyone else's matches are at neutral grounds.
+        const hosted = away === cup.host;
+        return { ...base, home: hosted ? away : home, away: hosted ? home : away, options: { neutral: !hosted && home !== cup.host } };
+      }),
+    );
   }
   const roundFormat = cupFormat(format, cup.id).rounds[stage.round];
   const round = cup.rounds[stage.round];
   if (!round) return [];
-  return round.ties.map((tie) => ({ ...base, home: tie.home, away: tie.away, options: { neutral: roundFormat.neutral, knockout: { aggregate: [0, 0] } } }));
+  return round.ties.map((tie) => ({ ...base, home: tie.home, away: tie.away, options: { neutral: roundFormat.neutral && tie.home !== cup.host, knockout: { aggregate: [0, 0] } } }));
 }
 
 /** Records a cup result and, once a stage is complete, draws what comes next. */
@@ -181,8 +190,13 @@ export function recordCupResult(format: SportFormat, cup: Cup, fixture: Fixture,
     return;
   }
   // The cup is drawn afresh each round; the championship follows its bracket.
-  const ties = cup.id === 'cup' ? openDraw(winners, rng) : pairUp(winners).map(([home, away]) => ({ home, away }));
+  const ties = cup.id === 'cup' ? openDraw(winners, rng) : pairUp(winners).map(([home, away]) => hostAtHome(cup, { home, away }));
   cup.rounds.push({ name: next.name, ties });
+}
+
+/** The host is always the home side of its tie. */
+function hostAtHome(cup: Cup, tie: CupTie): CupTie {
+  return tie.away === cup.host ? { home: tie.away, away: tie.home } : tie;
 }
 
 function pairUp(ids: number[]): [number, number][] {
@@ -199,7 +213,7 @@ function knockoutFromGroups(cup: Cup): CupTie[] {
   for (const swap of [false, true]) {
     for (let g = 0; g < placed.length; g += 2) {
       const [first, second] = swap ? [placed[g + 1][0], placed[g][1]] : [placed[g][0], placed[g + 1][1]];
-      ties.push({ home: first, away: second });
+      ties.push(hostAtHome(cup, { home: first, away: second }));
     }
   }
   return ties;

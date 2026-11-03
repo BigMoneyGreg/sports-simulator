@@ -29,6 +29,21 @@ export function finishWeight(roleWeight: number, playerId: number, standing = 1)
   return (roleWeight < 0.1 ? roleWeight : roleWeight ** sharing) * finishing(playerId);
 }
 
+/** How much a team's recent results lift or drop its next match: the best run of form is worth this share. */
+const STREAK_EFFECT = 0.05;
+
+/** A match's form multiplier from a team's recent results. */
+export function streakForm(sheet: { streak?: number }): number {
+  return 1 + STREAK_EFFECT * (sheet.streak ?? 0);
+}
+
+/** A run of form, -1 to 1, from a table row's last five results. */
+export function streakOf(form: ('W' | 'D' | 'L')[]): number {
+  const recent = form.slice(-5);
+  if (!recent.length) return 0;
+  return recent.reduce((t, r) => t + (r === 'W' ? 1 : r === 'L' ? -1 : 0), 0) / recent.length;
+}
+
 /** Where a team stands, 0 to 1: its league place and points difference, with its strength standing in early on. */
 export function leagueStanding(sorted: { clubId: number; played: number; goalsFor: number; goalsAgainst: number }[], clubId: number, strengths: (id: number) => number): number {
   const last = sorted.length - 1;

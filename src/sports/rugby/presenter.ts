@@ -26,6 +26,7 @@ export const rugbyPresenter: SportPresenter<RugbyMatch> = {
       "Every summer some players retire or are dropped, and the squad loses strength, more among the backs or the forwards. Who's leaving shows where most of it went; your season shows where you were already short.",
       "Whatever the question, one answer strengthens the attack and the other the defence. Let one side fall too far behind and opponents exploit it, and at the top there's less room for a weak side.",
     ],
+    secondTally: { one: 'Top points scorer', many: 'Top points scorers' },
     seasonLabels: { '90s': 'Season ~25 min', '5m': 'Season ~1½ hr', '15m': 'Season ~4 hr', '30m': 'Season ~8 hr' },
   },
   questions: {

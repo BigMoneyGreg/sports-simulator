@@ -1,6 +1,7 @@
 import type { SportPresenter, TimelineItem } from '../../core/sport';
 import { ordinal } from '../../shared/format';
 import { surname } from '../football/names';
+import { TRACK_TRAITS } from './data';
 import { classified, type RaceMatch } from './match';
 
 const place = (m: RaceMatch, clubId: number): string[] =>
@@ -34,7 +35,7 @@ export const grandPrixPresenter: SportPresenter<RaceMatch> = {
       "Whatever the question, one answer strengthens the car's speed and the other its reliability. A fast car that keeps stopping scores nothing, and a car that always finishes can still be too slow.",
     ],
     seasonLabels: { '90s': 'Season ~25 min', '5m': 'Season ~1½ hr', '15m': 'Season ~4 hr', '30m': 'Season ~8 hr' },
-    race: { matchTab: 'Race', lostShort: 'Pod', lostLong: 'Podiums', scored: 'Average grid', conceded: 'Retirements', matches: 'races', worldName: 'Race of Nations' },
+    race: { tier: 'GP', matchTab: 'Race', lostShort: 'Pod', lostLong: 'Podiums', scored: 'Average grid', conceded: 'Retirements', matches: 'races', worldName: 'Race of Nations' },
   },
   questions: {
     callUp: { prompt: 'People are moving on. Who do you bring in?' },
@@ -53,6 +54,9 @@ export const grandPrixPresenter: SportPresenter<RaceMatch> = {
       switch (e.type) {
         case 'start':
           line('Start', 'Lights out');
+          break;
+        case 'rain':
+          line('Start', 'Rain on the track');
           break;
         case 'overtake':
           line(at(e.lap), `${name(e.driverId)} up to ${ordinal(e.place)}`);
@@ -86,11 +90,12 @@ export const grandPrixPresenter: SportPresenter<RaceMatch> = {
     const [one, two] = place(m, m.home.clubId);
     return [one ?? '', two ?? ''];
   },
-  situation: (m) => (m.safetyCar > 0 ? 'Safety car' : undefined),
+  situation: (m) => [m.wet ? 'Wet race' : '', m.safetyCar > 0 ? 'Safety car' : ''].filter(Boolean).join(' · ') || undefined,
   race(m, ctx) {
     const order = classified(m);
     const first = order[0];
     return {
+      note: TRACK_TRAITS[m.track ?? '']?.note,
       rows: order.map((c, i) => ({
         place: i + 1,
         clubId: c.clubId,

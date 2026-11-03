@@ -1,3 +1,4 @@
+import { finishing, streakForm } from '../../core/finishing';
 import type { Rng } from '../../core/rng';
 import type { MatchOptions, MatchOutcome, SportModule, TeamSheet } from '../../core/sport';
 import { effectiveStats } from '../football/match';
@@ -99,8 +100,8 @@ export function overLabel(balls: number): string {
 
 export function createMatch(home: TeamSheet, away: TeamSheet, options: MatchOptions, rng: Rng): CricketMatch {
   const neutral = options.neutral ?? false;
-  const homeForm = 1 + rng.range(-1, 1) * TUNING.formSpread;
-  const awayForm = 1 + rng.range(-1, 1) * TUNING.formSpread;
+  const homeForm = (1 + rng.range(-1, 1) * TUNING.formSpread) * streakForm(home);
+  const awayForm = (1 + rng.range(-1, 1) * TUNING.formSpread) * streakForm(away);
   const h = effectiveStats(home);
   const a = effectiveStats(away);
   const homeRates = ballRates(h.attack, a.defence, neutral ? 'neutral' : 'home');
@@ -177,9 +178,11 @@ function bowl(m: CricketMatch, rng: Rng, bowler: number): void {
   const p = phase(over);
   const c = chase(m, side, { runs: side.runRate * p.runs });
   const batterAt = m.striker;
-  const mean = side.runRate * p.runs * c.runs * TUNING.orderRuns[batterAt];
-  const wicketChance = side.wicketRate * p.wicket * c.wicket * TUNING.orderWicket[batterAt];
   const batter = side.sheet.lineup[batterAt].id;
+  // Hidden ability: a good batter scores faster and lasts longer, and a good bowler takes more wickets.
+  const skill = Math.sqrt(finishing(batter));
+  const mean = side.runRate * p.runs * c.runs * TUNING.orderRuns[batterAt] * skill;
+  const wicketChance = (side.wicketRate * p.wicket * c.wicket * TUNING.orderWicket[batterAt] * Math.sqrt(finishing(bowler))) / skill;
   if (side.balls % 6 === 0) m.thisOver = [];
   side.balls++;
   (side.ballsBy ??= {})[batter] = (side.ballsBy[batter] ?? 0) + 1;

@@ -1,5 +1,5 @@
 import { AI_STYLES, clamp, MAX_STAT, MIN_STAT, rating, shiftRating, STATS, statsFor, type Club, type Stat, type Style } from './club';
-import { finishing, leagueStanding } from './finishing';
+import { finishing, leagueStanding, streakOf } from './finishing';
 import { FORMATS, teamCount, type SportFormat, type SportId } from './format';
 import {
   doubleRoundRobin,
@@ -335,7 +335,8 @@ function newSeason(format: SportFormat, number: number, leagues: number[][], sta
     for (const [id, pos] of expectedPositions(clubIds.map((id) => clubs[id]))) expected[id] = pos;
     if (format.race) {
       const field = playerFirst(clubIds, clubs);
-      for (const round of schedule) round.push({ tier, home: field[0], away: field[1], field, kind: 'league', options: { neutral: true } });
+      const { tracks } = format.race;
+      schedule.forEach((round, r) => round.push({ tier, home: field[0], away: field[1], field, kind: 'league', options: { neutral: true, track: tracks[r % tracks.length] } }));
     } else {
       doubleRoundRobin(clubIds, rng).forEach((round, r) => {
         for (const [home, away] of round) schedule[r].push({ tier, home, away, kind: 'league', options: {} });
@@ -431,7 +432,8 @@ export function teamSheet(career: Career, clubId: number, sport: SportDefinition
   const c = career.clubs[clubId];
   const league = career.season.leagues.find((l) => l.table.some((r) => r.clubId === clubId));
   const standing = league && leagueStanding(sortTable(league.table), clubId, (id) => rating(career.clubs[id]));
-  return { clubId, attack: c.attack, defence: c.defence, settledLean: c.settledLean, standing, lineup: sport.lineup(c.squad, new Set(career.suspended)) };
+  const row = league?.table.find((r) => r.clubId === clubId);
+  return { clubId, attack: c.attack, defence: c.defence, settledLean: c.settledLean, standing, streak: row ? streakOf(row.form) : 0, lineup: sport.lineup(c.squad, new Set(career.suspended)) };
 }
 
 /** A fixture's match, with the whole field if it's a race. */
@@ -651,9 +653,10 @@ export function endSeason(career: Career, sport: SportDefinition): SeasonEnd {
     const form = before - RATING_TUNING.decline + gain + boost;
     // A season's result moves a nation, but its own level brings it back, and nothing moves it far in one summer.
     const target = form + RATING_TUNING.levelPull * (driftLevel(club, rng) - form);
-    const swing = clamp(target - before, -RATING_TUNING.maxSwing, RATING_TUNING.maxSwing);
-    Object.assign(club, statsFor(clamp(before + swing, MIN_STAT, MAX_STAT), club.style));
+    Object.assign(club, statsFor(clamp(target, MIN_STAT, MAX_STAT), club.style));
     bandPull(format, club, newTierOf[club.id]);
+    const swing = clamp(rating(club) - before, -RATING_TUNING.maxSwing, RATING_TUNING.maxSwing);
+    Object.assign(club, statsFor(before + swing, club.style));
   }
 
   // Player club: decline now; the gain comes back as points to allocate.

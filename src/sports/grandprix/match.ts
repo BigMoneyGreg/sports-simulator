@@ -2,6 +2,7 @@ import { finishing } from '../../core/finishing';
 import type { Rng } from '../../core/rng';
 import type { GoalRecord, MatchOptions, MatchOutcome, RaceResult, SportModule, TeamSheet } from '../../core/sport';
 import { effectiveStats } from '../football/match';
+import { TRACK_TRAITS } from './data';
 
 export const TUNING = {
   laps: 50,
@@ -20,7 +21,7 @@ export const TUNING = {
   qualifyingSpread: 0.4,
   gridGap: 0.25,
   /** The chance a car stops on any lap at the field's average reliability, and how quickly that falls with more. */
-  stopPerLap: 0.0032,
+  stopPerLap: 0.0027,
   stopScale: 22,
   /** The pit stop's cost in seconds, and how much slicker a reliable team's crew is per point. */
   pitLoss: 22,
@@ -30,6 +31,14 @@ export const TUNING = {
   safetyCarChance: 0.5,
   safetyCarLaps: 3,
   safetyCarBunch: 0.35,
+  /** The chance of rain anywhere without its own, and how much it spreads the field, lifts the best drivers and causes stops. */
+  rain: 0.12,
+  rainSpread: 1.5,
+  rainDriver: 1.6,
+  rainStops: 1.5,
+  /** A run of form, and being at home in the Race of Nations, in seconds a lap. */
+  streakPace: 0.08,
+  hostPace: 0.1,
 };
 
 /** Points for the top ten. */
@@ -62,6 +71,7 @@ export interface Car {
 
 export type RaceEvent =
   | { type: 'start'; lap: number }
+  | { type: 'rain'; lap: number }
   | { type: 'overtake'; lap: number; driverId: number; clubId: number; place: number }
   | { type: 'lost'; lap: number; driverId: number; clubId: number; place: number }
   | { type: 'pit'; lap: number; driverId: number; clubId: number }
@@ -76,6 +86,8 @@ export interface RaceMatch {
   laps: number;
   cars: Car[];
   safetyCar: number;
+  wet: boolean;
+  track?: string;
   events: RaceEvent[];
   /** The team followed closely (the player's, if they're in this race), and one other to fit the shared match shape. */
   home: { clubId: number; goals: number; gained: number; lost: number };
@@ -93,15 +105,25 @@ export function createMatch(home: TeamSheet, away: TeamSheet, options: MatchOpti
   const mean = (of: (s: { attack: number; defence: number }) => number) => stats.reduce((t, s) => t + of(s), 0) / stats.length;
   const speed = mean((s) => s.attack);
   const reliable = mean((s) => s.defence);
+  const traits = TRACK_TRAITS[options.track ?? ''] ?? {};
+  const wet = rng.chance(traits.rain ?? TUNING.rain);
+  const speedShare = traits.speed ?? 1;
+  const driverShare = (traits.driver ?? 1) * (wet ? TUNING.rainDriver : 1);
+  const stops = (traits.wear ?? 1) * (wet ? TUNING.rainStops : 1);
   const cars: Car[] = field.flatMap((sheet, i) =>
     sheet.lineup.slice(0, options.oneCar ? 1 : 2).map((driver) => {
-      const edge = TUNING.pacePerPoint * (stats[i].attack - speed) + TUNING.driverPace * Math.log(finishing(driver.id)) + (driver.number === 1 ? TUNING.leadDriver : 0);
+      const edge =
+        speedShare * TUNING.pacePerPoint * (stats[i].attack - speed) +
+        driverShare * TUNING.driverPace * Math.log(finishing(driver.id)) +
+        (driver.number === 1 ? TUNING.leadDriver : 0) +
+        TUNING.streakPace * (sheet.streak ?? 0) +
+        (sheet.clubId === options.host ? TUNING.hostPace : 0);
       return {
         clubId: sheet.clubId,
         driverId: driver.id,
         edge,
-        day: gauss(rng) * TUNING.daySpread,
-        stopRate: TUNING.stopPerLap * Math.exp(-(stats[i].defence - reliable) / TUNING.stopScale),
+        day: gauss(rng) * TUNING.daySpread * (wet ? TUNING.rainSpread : 1),
+        stopRate: stops * TUNING.stopPerLap * Math.exp(-(stats[i].defence - reliable) / TUNING.stopScale),
         pitCost: TUNING.pitLoss - TUNING.pitPerPoint * (stats[i].defence - reliable),
         pitLap: rng.int(16, 34),
         time: 0,
@@ -126,7 +148,9 @@ export function createMatch(home: TeamSheet, away: TeamSheet, options: MatchOpti
     laps: TUNING.laps,
     cars,
     safetyCar: 0,
-    events: [{ type: 'start', lap: 0 }],
+    wet,
+    ...(options.track ? { track: options.track } : {}),
+    events: wet ? [{ type: 'start', lap: 0 }, { type: 'rain', lap: 0 }] : [{ type: 'start', lap: 0 }],
     home: { clubId: home.clubId, goals: 0, gained: 0, lost: 0 },
     away: { clubId: away.clubId, goals: 0, gained: 0, lost: 0 },
   };
@@ -161,7 +185,7 @@ export function step(m: RaceMatch, rng: Rng): void {
       m.events.push({ type: 'out', lap: m.lap, driverId: car.driverId, clubId: car.clubId, why: car.out });
       continue;
     }
-    car.time += TUNING.baseLap + (neutral ? 0 : gauss(rng) * TUNING.lapSpread - car.edge - car.day);
+    car.time += TUNING.baseLap + (neutral ? 0 : gauss(rng) * TUNING.lapSpread * (m.wet ? TUNING.rainSpread : 1) - car.edge - car.day);
     if (!car.pitted && m.lap >= car.pitLap) {
       car.pitted = true;
       car.pitting = true;

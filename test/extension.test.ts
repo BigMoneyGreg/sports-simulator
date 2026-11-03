@@ -75,7 +75,7 @@ describe('the extension, played through its messages', () => {
     fake.reset();
     writeFileSync(join(dir, 'career.json'), JSON.stringify({ version: SAVE_VERSION, career: c, live: null, paused: false, duration: '30s' }));
     launch();
-    expect(fake.toasts[0]).toMatch(/^Football: the World Championship begins\. Brazil are in Group [A-Z]\.$/);
+    expect(fake.toasts[0]).toMatch(/^Football: the World Championship begins\. Brazil are in Group [A-Z]\.( Brazil are the hosts\.| Hosted by [A-Za-z .'-]+\.)$/);
     open(null);
     run(30 * 60_000);
     expect(fake.toasts[1]).toMatch(/^Football: .*World Championship/);

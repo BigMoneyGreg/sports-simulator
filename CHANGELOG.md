@@ -12,6 +12,10 @@ First release.
 - Play several sports at once: the box lists them, one open in full and the others minimised to one line. Start, pause or end each on its own, and each keeps its own match length
 - **Honours:** past careers, greatest teams, all-time records for each sport, and honours for success across sports
 - Only want one sport? Press **Choose sports…** in the box and untick the rest, Honours too if you like. A hidden career waits where it was
+- Ratings follow the gaps in real rankings: a clear elite that's hard to catch, and close leagues at the bottom. Nations rise and fade over the years, with golden generations and bad spells
+- World Championships have a host who plays at home, and teams carry hot and cold runs of form
+- Rugby adds a top points scorer list, so kickers get their due, and cricket's batters and bowlers have their own hidden ability
+- Grand Prix tracks each reward something different, and some races are wet. Its leagues are GP1, GP2 and GP3
 - Teams have set scorers: strikers and wingers score the most, each player has their own hidden finishing, and the top scorer usually comes from near the top of the table
 - Stops by itself after 5 minutes without a click or key press in VS Code, and carries on when you're back
 - End a career to keep it in Past careers, or reset it to delete it completely, both from one button that explains the difference. **Reset honours** clears the Honours page. Both resets ask again in red

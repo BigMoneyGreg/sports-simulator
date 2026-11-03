@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { allocatePoints, focusAllocation, newCareer, playSeason, type Career } from '../src/core/career';
+import { allocatePoints, focusAllocation, newCareer, playSeason, teamSheet, type Career } from '../src/core/career';
+import { cupFixtures, drawChampionship } from '../src/core/cups';
+import { finishing, streakForm, streakOf } from '../src/core/finishing';
+import { Game } from '../src/extension/game';
+import { buildView, statusText } from '../src/extension/viewModel';
+import { createMatch as createCricket, isFinished as cricketDone, step as cricketStep } from '../src/sports/cricket/match';
+import { generateSquad as cricketSquad, lineup as cricketLineup } from '../src/sports/cricket/squad';
+import { outcome, playMatch } from '../src/sports/football/match';
+import { generateSquad, lineup } from '../src/sports/football/squad';
+import { classified, createMatch as createRace, isFinished as raceDone, step as raceStep } from '../src/sports/grandprix/match';
+import { createMatch as createRugby, isFinished as rugbyDone, outcome as rugbyOutcome, step as rugbyStep } from '../src/sports/rugby/match';
+import { generateSquad as rugbySquad, lineup as rugbyLineup } from '../src/sports/rugby/squad';
 import { rating } from '../src/core/club';
 import { FORMATS, SPORT_IDS } from '../src/core/format';
 import { ladder } from '../src/core/league';
@@ -129,4 +140,156 @@ describe('who leaves in the summer', () => {
     }
     expect(topLeft / (topLeft + stayed)).toBeLessThan((anyLeft / anyone) * 0.6);
   }, 30_000);
+});
+
+describe('World Championship hosts', () => {
+  const cup = () => drawChampionship(FORMATS.football, 4, Array.from({ length: 40 }, (_, i) => i), new Rng(21));
+
+  it('picks a host from those who qualified', () => {
+    const c = cup();
+    expect(c.entrants).toContain(c.host);
+  });
+
+  it('the host plays at home in the group, and other matches stay neutral', () => {
+    const c = cup();
+    for (let stage = 0; stage < c.groups[0].days.length; stage++) {
+      for (const f of cupFixtures(FORMATS.football, c, stage)) {
+        if (f.home === c.host) expect(f.options.neutral).toBe(false);
+        else {
+          expect(f.away).not.toBe(c.host);
+          expect(f.options.neutral).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('a home side in a hosted match scores more than at a neutral ground', () => {
+    const rng = new Rng(4);
+    const sheet = (clubId: number) => ({ clubId, attack: 60, defence: 60, lineup: lineup(generateSquad(new Rng(clubId), clubId * 100, () => 'A Name')) });
+    let hosted = 0;
+    let neutral = 0;
+    for (let i = 0; i < 1500; i++) {
+      hosted += outcome(playMatch(sheet(1), sheet(2), { neutral: false }, rng)).homeGoals;
+      neutral += outcome(playMatch(sheet(1), sheet(2), { neutral: true }, rng)).homeGoals;
+    }
+    expect(hosted).toBeGreaterThan(neutral);
+  });
+});
+
+describe('streaks', () => {
+  it('reads a run of form from the last five', () => {
+    expect(streakOf([])).toBe(0);
+    expect(streakOf(['L', 'L', 'W', 'W', 'W', 'W', 'W'])).toBe(1);
+    expect(streakOf(['W', 'L', 'D', 'L', 'L'])).toBe(-0.4);
+    expect(streakForm({ streak: 1 })).toBeCloseTo(1.05);
+    expect(streakForm({})).toBe(1);
+  });
+
+  it('reaches the team sheet from the table', () => {
+    const c = newCareer({ rating: 50, seed: 3 }, SPORTS.football);
+    const row = c.season.leagues[0].table[0];
+    row.form = ['W', 'W', 'W'];
+    expect(teamSheet(c, row.clubId, SPORTS.football).streak).toBe(1);
+  });
+
+  it('a team on a good run scores a little more', () => {
+    const rng = new Rng(9);
+    const sheet = (clubId: number, streak: number) => ({ clubId, attack: 60, defence: 60, streak, lineup: lineup(generateSquad(new Rng(clubId), clubId * 100, () => 'A Name')) });
+    let hot = 0;
+    let cold = 0;
+    for (let i = 0; i < 2500; i++) {
+      hot += outcome(playMatch(sheet(1, 1), sheet(2, 0), {}, rng)).homeGoals;
+      cold += outcome(playMatch(sheet(1, -1), sheet(2, 0), {}, rng)).homeGoals;
+    }
+    expect(hot).toBeGreaterThan(cold);
+  });
+});
+
+describe('set players', () => {
+  it('a better batter in the same slot makes more runs', () => {
+    const ids = Array.from({ length: 6000 }, (_, i) => i).sort((a, b) => finishing(b) - finishing(a));
+    const [best, worst] = [ids[0], ids[ids.length - 1]];
+    const made = (opener: number) => {
+      const rng = new Rng(7);
+      let runs = 0;
+      for (let i = 0; i < 500; i++) {
+        const squad = cricketSquad(new Rng(1), 7000, () => 'A Name');
+        const line = cricketLineup(squad).map((p, at) => (at === 0 ? { ...p, id: opener } : p));
+        const m = createCricket({ clubId: 1, attack: 60, defence: 60, lineup: line }, { clubId: 2, attack: 60, defence: 60, lineup: cricketLineup(cricketSquad(new Rng(2), 8000, () => 'A Name')) }, {}, rng);
+        while (!cricketDone(m)) cricketStep(m, rng);
+        runs += m.home.runsBy[opener] ?? 0;
+      }
+      return runs;
+    };
+    expect(made(best)).toBeGreaterThan(made(worst));
+  });
+
+  it('counts rugby points for the kickers too, adding up to the score', () => {
+    const rng = new Rng(3);
+    const sheet = (clubId: number) => ({ clubId, attack: 60, defence: 60, lineup: rugbyLineup(rugbySquad(new Rng(clubId), clubId * 100, () => 'A Name')) });
+    let kicker = 0;
+    for (let i = 0; i < 40; i++) {
+      const m = createRugby(sheet(1), sheet(2), {}, rng);
+      while (!rugbyDone(m)) rugbyStep(m, rng);
+      const o = rugbyOutcome(m);
+      expect(o.wicketTakers!.reduce((t, x) => t + x.count, 0)).toBe(o.homeGoals + o.awayGoals);
+      const tries = o.goals.length;
+      if (o.homeGoals + o.awayGoals > tries * 5) kicker++;
+    }
+    expect(kicker).toBeGreaterThan(30);
+    expect(SPORTS.rugby.present.terms.secondTally?.many).toBe('Top points scorers');
+  });
+});
+
+describe('Grand Prix tracks', () => {
+  const field = (speeds: [number, number][]) => {
+    const c = newCareer({ rating: 50, seed: 1 }, SPORTS.grandprix);
+    return c.season.leagues[0].clubIds.map((id, i) => ({ ...teamSheet(c, id, SPORTS.grandprix), attack: speeds[i][0], defence: speeds[i][1], settledLean: 0, streak: 0 }));
+  };
+  const fastest: [number, number][] = [[90, 60], ...Array.from({ length: 9 }, (): [number, number] => [60, 60])];
+  const place = (track: string) => {
+    const rng = new Rng(2);
+    const sheets = field(fastest);
+    let total = 0;
+    for (let i = 0; i < 200; i++) {
+      const m = createRace(sheets[0], sheets[1], { field: sheets, track }, rng);
+      while (!raceDone(m)) raceStep(m, rng);
+      const o = classified(m);
+      total += o.findIndex((x) => x.clubId === sheets[0].clubId) + 1;
+    }
+    return total / 200;
+  };
+
+  it('Monza rewards a fast car more than Monaco does', () => {
+    expect(place('Monza')).toBeLessThan(place('Monaco'));
+  });
+
+  it('every track in the season is a real calendar entry, carried on its race', () => {
+    const c = newCareer({ rating: 50, seed: 3 }, SPORTS.grandprix);
+    expect(c.season.schedule.map((r) => r[0].options.track)).toEqual(FORMATS.grandprix.race!.tracks);
+  });
+
+  it('it rains sometimes, more often at Spa', () => {
+    const rng = new Rng(8);
+    const sheets = field(fastest);
+    const wet = (track: string) => {
+      let n = 0;
+      for (let i = 0; i < 400; i++) if (createRace(sheets[0], sheets[1], { field: sheets, track }, rng).wet) n++;
+      return n;
+    };
+    const spa = wet('Spa');
+    const monza = wet('Monza');
+    expect(monza).toBeGreaterThan(0);
+    expect(spa).toBeGreaterThan(monza);
+  });
+
+  it('names its leagues GP1 to GP3', () => {
+    const game = new Game({ save: () => {}, changed: () => {} }, { setTimeout: () => 0, clearTimeout: () => {} });
+    game.selectSport('grandprix');
+    game.start({ rating: 50, seed: 8, team: 'ITA' });
+    expect(statusText(game)).toMatch(/in GP\d$/);
+    const v = buildView(game);
+    if (v.screen !== 'game') throw new Error('expected a game');
+    expect(v.match!.competition).toMatch(/^GP\d$/);
+  });
 });

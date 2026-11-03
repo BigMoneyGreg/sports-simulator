@@ -1,4 +1,4 @@
-import { finishWeight } from '../../core/finishing';
+import { finishWeight, streakForm } from '../../core/finishing';
 import type { Rng } from '../../core/rng';
 import type { MatchOptions, MatchOutcome, SportModule, TeamSheet } from '../../core/sport';
 
@@ -107,8 +107,8 @@ export function expectedGoals(attack: number, opponentDefence: number, venue: 'h
 
 export function createMatch(home: TeamSheet, away: TeamSheet, options: MatchOptions, rng: Rng): FootballMatch {
   const neutral = options.neutral ?? false;
-  const homeForm = 1 + rng.range(-1, 1) * TUNING.formSpread;
-  const awayForm = 1 + rng.range(-1, 1) * TUNING.formSpread;
+  const homeForm = (1 + rng.range(-1, 1) * TUNING.formSpread) * streakForm(home);
+  const awayForm = (1 + rng.range(-1, 1) * TUNING.formSpread) * streakForm(away);
   const h = effectiveStats(home);
   const a = effectiveStats(away);
   const homeXg = (expectedGoals(h.attack, a.defence, neutral ? 'neutral' : 'home') * homeForm) / Math.sqrt(awayForm);

@@ -1,4 +1,4 @@
-import { finishWeight } from '../../core/finishing';
+import { finishWeight, streakForm } from '../../core/finishing';
 import type { Rng } from '../../core/rng';
 import type { MatchOptions, MatchOutcome, SportModule, TeamSheet } from '../../core/sport';
 import { effectiveStats } from '../football/match';
@@ -78,6 +78,9 @@ const PERIOD_END: Record<Exclude<Period, 'done'>, number> = { first: 40, second:
 const TRY_WEIGHT: Record<string, number> = { BACK3: 5, CEN: 3, LOOSE: 2, HOOK: 1.5, SH: 1.5, FH: 1, LOCK: 1, PROP: 0.8 };
 /** The set scorers, by shirt number: the wings first, then the full-back. */
 const ROLE_TRY_WEIGHT: Record<number, number> = { 11: 6, 14: 6, 24: 6, 15: 3 };
+const TRY_POINTS = 5;
+const CONVERSION_POINTS = 2;
+const KICK_POINTS = 3;
 const CARD_WEIGHT: Record<string, number> = { LOOSE: 3, LOCK: 3, PROP: 2, HOOK: 2, CEN: 2, BACK3: 1, SH: 1, FH: 1 };
 
 function venueFactor(venue: 'home' | 'away' | 'neutral'): number {
@@ -99,8 +102,8 @@ export function expectedScores(mine: Stats, theirs: Stats, venue: 'home' | 'away
 
 export function createMatch(home: TeamSheet, away: TeamSheet, options: MatchOptions, rng: Rng): RugbyMatch {
   const neutral = options.neutral ?? false;
-  const homeForm = 1 + rng.range(-1, 1) * TUNING.formSpread;
-  const awayForm = 1 + rng.range(-1, 1) * TUNING.formSpread;
+  const homeForm = (1 + rng.range(-1, 1) * TUNING.formSpread) * streakForm(home);
+  const awayForm = (1 + rng.range(-1, 1) * TUNING.formSpread) * streakForm(away);
   const h = effectiveStats(home);
   const a = effectiveStats(away);
   const homeExpected = expectedScores(h, a, neutral ? 'neutral' : 'home');
@@ -255,9 +258,22 @@ export function leaguePoints(home: Pick<Side, 'goals' | 'tries'>, away: Pick<Sid
   return [one(home, away), one(away, home)];
 }
 
+/** Every player's points, kicks included: the kickers' tally, beside the tries. */
+function pointsScored(m: RugbyMatch): { playerId: number; count: number }[] {
+  const by = new Map<number, number>();
+  const add = (id: number, points: number) => by.set(id, (by.get(id) ?? 0) + points);
+  for (const e of m.events) {
+    if (e.type === 'try') {
+      add(e.playerId, TRY_POINTS);
+      if (e.converted) add(e.kicker, CONVERSION_POINTS);
+    } else if (e.type === 'penalty' || e.type === 'dropGoal') add(e.playerId, KICK_POINTS);
+  }
+  return [...by].map(([playerId, count]) => ({ playerId, count }));
+}
+
 export function outcome(m: RugbyMatch): MatchOutcome {
   const goals = m.events.flatMap((e) => (e.type === 'try' ? [{ side: e.side, playerId: e.playerId, minute: e.minute, added: 0, ownGoal: false }] : []));
-  const result: MatchOutcome = { homeGoals: m.home.goals, awayGoals: m.away.goals, goals, points: leaguePoints(m.home, m.away) };
+  const result: MatchOutcome = { homeGoals: m.home.goals, awayGoals: m.away.goals, goals, points: leaguePoints(m.home, m.away), wicketTakers: pointsScored(m) };
   const sentOff = m.events.flatMap((e) => (e.type === 'red' ? [{ side: e.side, playerId: e.playerId }] : []));
   if (sentOff.length) result.sentOff = sentOff;
   if (m.knockout) {

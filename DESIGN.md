@@ -27,6 +27,7 @@ Everything else runs by itself: fixtures, matches, commentary, tables, scorers, 
 - **Glanceable, not demanding.** It should never need attention mid-match.
 - **One meaningful decision per season.** The summer question is the whole game, so it has to matter.
 - **History is the reward.** Trophies, records and club history are why people keep it installed.
+- **Real gaps.** The elite are far apart and hard to catch, and the bottom leagues are close enough that anyone can beat anyone.
 - **Nothing happens while you're away.** Closing VS Code pauses everything, and so does leaving it alone for 5 minutes.
 - **Near-zero resource use.** It must never slow the editor.
 - **Small and finishable.** New ideas go to 🔵 LATER, not into version 1.
@@ -671,6 +672,13 @@ In rough priority order:
 | Grand Prix racing is called that, not Formula 1 | "Formula 1" and "F1" are trademarks, and the Marketplace already distrusts the extension's name. Drivers are invented, and circuits are named by place |
 | A race is one fixture holding its whole field (`Fixture.field`, `MatchOptions.field`) | Matches pair two teams and a race has twenty cars, but the other three sports needn't change. `home` is the player's team, so the live view can follow it, and `away` only fills the shared shape. `format.race` marks a sport of races: no pairings, no Nations Cup, and one Race of Nations in place of the World Championship's groups |
 | In a race table `won` is wins, `lost` podiums, `goalsFor` grid places and `goalsAgainst` retirements | The summer needs a separate clue for each stat. Points would mix speed and reliability together, while grid position only shows speed and retirements only reliability |
+| Ratings run on each sport's curve, smoothed from its real ranking points (November 2026; FIFA's lower ranks from September 2025), not in even steps | Real sport has a clear elite and a close bottom. Teams are still shuffled within pools, so careers differ |
+| AI nations return to a level (`levelPull` 45%), which drifts, with golden generations and bad spells | A curve on its own faded by season 5, as the yearly changes flatten any shape. The level holds the shape for decades while still letting nations rise and fade |
+| An AI team's rating moves at most 6 in a summer, league pull included | Teams used to jump more, so promoted sides bounced straight back |
+| Player gains shrink from rating 60 to 95 (`climb`), keeping 10% at most | Without it a player won 11–12 of 20 titles from the bottom, gaps or no gaps. The aim is about 5 in 20 |
+| Teams keep their best finishers and their season's top scorer more often | A top scorer repeated only about a quarter of the time, so nobody became a familiar name |
+| World Championship host, at home all the way; streaks worth up to 5% | Each tournament feels different, and hot and cold runs feel real, at very little cost |
+| Grand Prix tracks reward speed, the driver or a tough car, with rain now and then | Gives a season rhythm and makes the speed-or-reliability choice pay off differently through the year |
 | Stop after 5 minutes with no click or key press | A player came back to find every season finished. VS Code only reports focus and recent use, not whether a window is on screen. Stopping as soon as focus goes would freeze the game beside a browser, and focus alone misses walking away from a focused window. VS Code reports a window as unused about a minute after the last input, too soon to use directly, as people watch a match without touching anything |
 | Status bar goal call-out, rich hover, collapsed-box score and a badge for the summer choice | Most of the time the box is closed: these keep the game noticeable at a glance without a single extra notification |
 | One summer question in four styles (call-ups, assistant coach, formation, training camp), always attack v defence underneath; leavers matched to the loss; loss split 10–90%; Medium boost 7 | Named people give a sense of power without more decisions. More levers (fitness, mentality, home/away…) were rejected: their clues come from half-seasons and would mostly be luck. Leavers alone were no clue at the old 25–75% split; at 10–90% they make the top readable (66% → 76% right). Medium needed +2 to keep its climb on target |

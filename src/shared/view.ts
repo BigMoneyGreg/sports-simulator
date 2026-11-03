@@ -80,6 +80,8 @@ export interface LiveMatchView {
 export interface RaceView {
   /** "Monaco", or the Race of Nations. */
   venue: string;
+  /** What this track rewards, or who's at home. */
+  note?: string;
   rows: { place: number; team: TeamBadge; driver: string; gap: string; moved: number; out: boolean; pit: boolean; mine: boolean; rival: boolean }[];
 }
 
@@ -386,6 +388,7 @@ export interface CupView {
   /** Knockout rounds drawn so far, latest first. */
   rounds: { name: string; ties: CupTieView[] }[];
   winner?: TeamBadge;
+  host?: TeamBadge;
   pastWinners: { season: number; winner: TeamBadge; runnerUp: TeamBadge }[];
 }
 

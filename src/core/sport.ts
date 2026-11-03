@@ -20,6 +20,8 @@ export interface TeamSheet {
   settledLean?: number;
   /** Where the team stands in its league, 0 (bottom) to 1 (top): a team doing well feeds its set scorers. */
   standing?: number;
+  /** Recent results, -1 (all lost) to 1 (all won): hot and cold runs carry over a little. */
+  streak?: number;
   /** Starting line-up: player ids and positions. Matches saved before shirt numbers were added here go by position. */
   lineup: { id: number; position: string; number?: number }[];
 }
@@ -36,6 +38,9 @@ export interface MatchOptions {
   field?: TeamSheet[];
   /** A race with one car per team. */
   oneCar?: boolean;
+  /** A race: where it is, and which nation is at home in it. */
+  track?: string;
+  host?: number;
 }
 
 /** Where every car finished, or is now, best first. */
@@ -138,8 +143,10 @@ export interface SportTerms {
   howTo: [string, string];
   /** Roughly how long a whole season takes at each match length. */
   seasonLabels: Partial<Record<Duration, string>>;
+  /** A second tally beside the main one: cricket's wickets, rugby's points including kicks. */
+  secondTally?: { one: string; many: string };
   /** The words a sport of races uses where a match sport has its own. */
-  race?: { matchTab: string; lostShort: string; lostLong: string; scored: string; conceded: string; matches: string; worldName: string };
+  race?: { tier: string; matchTab: string; lostShort: string; lostLong: string; scored: string; conceded: string; matches: string; worldName: string };
 }
 
 /** The summer question's wording for a sport. */
@@ -195,7 +202,7 @@ export interface SportPresenter<M> {
   /** A sport with a scorecard shows it instead of the match report, latest innings first. */
   scorecard?(match: M, ctx: TimelineContext, teams: [string, string]): InningsCard[];
   /** A sport of races shows its running order. */
-  race?(match: M, ctx: TimelineContext): { rows: RaceRow[] };
+  race?(match: M, ctx: TimelineContext): { rows: RaceRow[]; note?: string };
   /** The full-time card's note ("after extra time") and scorers line. */
   fullTime(match: M, names: [string, string], name: (id: number) => string): { note?: string; scorers: string };
   /** Under a leaver's name: "142 goals", "38 tries", "2,310 runs". */

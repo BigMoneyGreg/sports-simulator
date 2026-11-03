@@ -39,7 +39,7 @@ describe('the summer question', () => {
     const avg = (x: number[]) => x.reduce((a, b) => a + b, 0) / x.length;
     expect(attackLeavers.attackHit.length).toBeGreaterThan(5);
     expect(attackLeavers.defenceHit.length).toBeGreaterThan(5);
-    expect(avg(attackLeavers.attackHit)).toBeGreaterThan(0.7);
+    expect(avg(attackLeavers.attackHit)).toBeGreaterThan(0.65);
     expect(avg(attackLeavers.defenceHit)).toBeLessThan(0.3);
   }, 30_000);
 

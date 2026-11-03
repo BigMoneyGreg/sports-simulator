@@ -144,6 +144,14 @@ function seg(name: string, options: Option[], value: string): string {
     .join('')}</div>`;
 }
 
+/** The short name for leagues in the sport being set up. */
+let tierShort = 'L';
+
+/** A league's name: "League 3", or "GP3" in a sport of races. */
+function tierWord(terms: SportTerms, tier: number): string {
+  return terms.race ? `${terms.race.tier}${tier}` : `League ${tier}`;
+}
+
 function nationMatches(nations: NationOption[]): NationOption[] {
   const q = setup.search.trim().toLowerCase();
   return q ? nations.filter((n) => n.name.toLowerCase().includes(q) || n.code.toLowerCase() === q) : nations;
@@ -155,11 +163,12 @@ function nationList(nations: NationOption[]): string {
   const matches = nationMatches(nations);
   if (!matches.length) return '<p class="muted small">No country matches.</p>';
   const option = (n: NationOption) =>
-    `<button type="button" role="option" class="nation ${n.code === setup.team ? 'on' : ''}" aria-selected="${n.code === setup.team}" data-team="${n.code}">${swatch(n)}<span class="grow">${esc(n.name)}</span><span class="muted small">L${n.tier}</span></button>`;
+    `<button type="button" role="option" class="nation ${n.code === setup.team ? 'on' : ''}" aria-selected="${n.code === setup.team}" data-team="${n.code}">${swatch(n)}<span class="grow">${esc(n.name)}</span><span class="muted small">${tierShort}${n.tier}</span></button>`;
   return matches.map(option).join('');
 }
 
 function renderSetup(v: SetupView): void {
+  tierShort = v.terms.race?.tier ?? 'L';
   if (setup.sport !== v.sport) Object.assign(setup, { sport: v.sport, team: '', search: '', league: Math.min(3, v.leagues), initialised: false });
   if (!setup.initialised) {
     setup.duration = v.duration;
@@ -168,7 +177,7 @@ function renderSetup(v: SetupView): void {
     setup.initialised = true;
   }
   const chosen = v.nations.find((n) => n.code === setup.team);
-  const leagueOptions = Array.from({ length: v.leagues }, (_, i) => i + 1).map((t): Option => [String(t), `L${t}`, chosen?.tier === t ? 'Usual' : undefined]);
+  const leagueOptions = Array.from({ length: v.leagues }, (_, i) => i + 1).map((t): Option => [String(t), `${v.terms.race?.tier ?? 'L'}${t}`, chosen?.tier === t ? 'Usual' : undefined]);
   panel.dataset.mode = 'setup';
   panel.innerHTML = `
   <div class="setup card">
@@ -509,7 +518,7 @@ function headerHtml(v: GameView): string {
   const next = h.durations[(h.durations.indexOf(h.duration) + 1) % h.durations.length];
   return `<header class="head card" data-accent="${esc(h.club.colours[0])}">
     <div class="head-line"><div class="club">${swatch(h.club, 'crest')}<div class="name">${esc(h.club.name)}</div></div><span class="form" role="group" aria-label="Form, latest last">${dots}</span></div>
-    <div class="head-line"><div class="muted small where">${ordinal(h.position)} · L${h.tier} · <span title="League games played">played ${h.played}/${h.games}</span></div>
+    <div class="head-line"><div class="muted small where">${ordinal(h.position)} · ${v.terms.race?.tier ?? 'L'}${h.tier} · <span title="League games played">played ${h.played}/${h.games}</span></div>
       <span class="controls">
         <button type="button" id="speed" class="chip" data-next="${next}" title="Match length: ${DURATION_LABELS[h.duration]} (${(v.terms.seasonLabels[h.duration] ?? '').toLowerCase()}). Click for ${DURATION_LABELS[next]}." aria-label="Match length ${DURATION_LABELS[h.duration]}"><span>⏱</span><span class="wide"> ${DURATION_LABELS[h.duration]}</span></button>
         <button type="button" id="pause" class="chip icon" title="${h.paused ? 'Play' : 'Pause'}" aria-label="${h.paused ? 'Play' : 'Pause'}">${h.paused ? '▶' : '⏸'}</button>
@@ -529,7 +538,7 @@ function panelParts(v: GameView): string[] {
       const chips = `<div class="seg chips">${v.tables
         .map((x) => {
           const mine = x.tier === v.playerTier;
-          return `<button type="button" class="${x.tier === tier ? 'on' : ''} ${mine ? 'mine' : ''}" data-tier="${x.tier}"${mine ? ' title="Your league"' : ''}>L${x.tier}</button>`;
+          return `<button type="button" class="${x.tier === tier ? 'on' : ''} ${mine ? 'mine' : ''}" data-tier="${x.tier}"${mine ? ' title="Your league"' : ''}>${v.terms.race?.tier ?? 'L'}${x.tier}</button>`;
         })
         .join('')}</div>`;
       return [chips, tableHtml(v.tables, tier, v.terms), driversHtml(v.tables[tier - 1]), playoff ? playoffHtml(playoff) : ''];
@@ -575,6 +584,7 @@ function raceHtml(m: LiveMatchView, race: NonNullable<LiveMatchView['race']>): s
     `<tr class="${r.mine ? 'me' : ''} ${r.rival ? 'rival' : ''} ${r.out ? 'out' : ''}"><td class="pos">${r.place}</td><td class="team" title="${esc(r.team.name)}">${swatch(r.team)}${esc(r.team.short)}</td><td class="driver">${esc(r.driver)}${r.pit ? ' <span class="muted small">pit</span>' : ''}</td><td class="gap">${arrow(r.moved)} ${esc(r.gap)}</td></tr>`;
   return `<div class="board card race-board">
       <div class="comp muted small">${m.badge ? `${badgeHtml(m.badge)} ` : ''}${esc(race.venue)}${m.round ? ` · ${esc(m.round)}` : ''}</div>
+      ${race.note ? `<div class="muted small">${esc(race.note)}</div>` : ''}
       <div class="clock-big ${m.finished ? 'ft' : 'live'}">${esc(m.clock)}</div>
       ${m.situation ? `<div class="small situation">${esc(m.situation)}</div>` : ''}
       <table class="running"><tbody>${race.rows.map(row).join('')}</tbody></table>
@@ -672,7 +682,7 @@ function cupParts(v: GameView): string[] {
     .join('')}</div>`;
   const status = `<div class="card cup-status"><div class="small">${esc(c.status)}</div>${c.next ? `<div class="small muted">${esc(c.next)}</div>` : ''}${
     c.winner ? `<div class="small">🏆 Winners: ${swatch(c.winner)}<strong>${esc(c.winner.name)}</strong></div>` : ''
-  }</div>`;
+  }${c.host && (c.groups.length || !c.winner) ? `<div class="small muted">Hosts: ${swatch(c.host)}${esc(c.host.name)}</div>` : ''}</div>`;
   const tie = (t: CupView['rounds'][number]['ties'][number], round?: string) => {
     const side = (b: typeof t.home, won: boolean) => `${swatch(b)}${won ? `<strong>${esc(b.short)}</strong>` : esc(b.short)}`;
     return `<li class="${t.mine ? 'me' : ''}">${round ? `<span class="round-name muted small">${esc(round)}</span>` : ''}<span>${side(t.home, t.winner === 'home')} v ${side(t.away, t.winner === 'away')}</span>
@@ -726,7 +736,7 @@ function seasonEndHtml(e: SeasonEndView, sport: SportId, terms: SportTerms): str
   return `<div class="season-end">
     <div class="card hero ${e.outcome ?? ''}">
       <h2 class="headline">${esc(e.headline)}</h2>
-      <p class="muted small">Season ${e.season} · League ${e.tier}${e.newTier !== e.tier ? ` → League ${e.newTier} next season` : ''}</p>
+      <p class="muted small">Season ${e.season} · ${tierWord(terms, e.tier)}${e.newTier !== e.tier ? ` → ${tierWord(terms, e.newTier)} next season` : ''}</p>
     </div>
 
     <div class="card accent-card">
@@ -762,7 +772,7 @@ function seasonEndHtml(e: SeasonEndView, sport: SportId, terms: SportTerms): str
       <dt>Best run</dt><dd>${esc(r.bestRun)}</dd>
       <dt>Worst run</dt><dd>${esc(r.worstRun)}</dd>
       ${r.topScorer ? `<dt>${esc(terms.topScorer)}</dt><dd>${esc(r.topScorer)}</dd>` : ''}
-      ${r.topWickets ? `<dt>Top wicket taker</dt><dd>${esc(r.topWickets)}</dd>` : ''}
+      ${r.topWickets ? `<dt>${esc(terms.secondTally?.one ?? 'Top wicket taker')}</dt><dd>${esc(r.topWickets)}</dd>` : ''}
       ${r.rival ? `<dt>Your rival</dt><dd>${esc(r.rival)}</dd>` : ''}
       ${r.cups.map((x) => `<dt>${esc(x.name)}</dt><dd>${esc(x.run)}</dd>`).join('')}
     </dl>
@@ -814,7 +824,7 @@ function recordsHtml(r: GameView['club']['records'], terms: SportTerms): string 
     ['Winning run', /^0\b/.test(r.winning) ? null : esc(r.winning)],
     [terms.mostInSeason, r.mostGoals ? esc(r.mostGoals) : null],
     [terms.topScorers, r.topScorers.length ? r.topScorers.map(esc).join('<br>') : null],
-    ['Top wicket takers', r.topWicketTakers?.length ? r.topWicketTakers.map(esc).join('<br>') : null],
+    [terms.secondTally?.many ?? 'Top wicket takers', r.topWicketTakers?.length ? r.topWicketTakers.map(esc).join('<br>') : null],
   ];
   const shown = rows.filter(([, value]) => value !== null);
   return shown.length
@@ -827,7 +837,7 @@ function clubHtml(v: GameView): string {
   const r = c.records;
   const g = c.goals;
   return `<div class="clubcard card" data-accent="${esc(c.colours[0])}">
-    <div class="club">${swatch(c, 'crest')}<div><div class="name">${esc(c.name)}</div><div class="muted small">${esc(c.short)} · League ${c.tier} · Season ${c.season}</div></div></div>
+    <div class="club">${swatch(c, 'crest')}<div><div class="name">${esc(c.name)}</div><div class="muted small">${esc(c.short)} · ${tierWord(v.terms, c.tier)} · Season ${c.season}</div></div></div>
     <p class="expect">Expected to finish <strong>${ordinal(c.expected)}</strong> this season</p>
     <dl class="report">
       <dt>${esc(v.terms.race?.scored ?? 'Scored')}</dt><dd>${esc(g.scoredText)} · ${ordinal(g.scoredRank)} <span class="muted">(league avg ${esc(g.avgForText)})</span></dd>
@@ -846,7 +856,7 @@ function clubHtml(v: GameView): string {
       c.cabinet.titles.length || c.cabinet.promotions || c.cabinet.cups.length || c.cabinet.championships.length
         ? `<ul class="cabinet">${c.cabinet.championships.length ? `<li>🌍 World champions <span class="muted small">× ${c.cabinet.championships.length} (S${c.cabinet.championships.join(', S')})</span></li>` : ''}
            ${c.cabinet.cups.length ? `<li>🏆 Nations Cup winners <span class="muted small">× ${c.cabinet.cups.length} (S${c.cabinet.cups.join(', S')})</span></li>` : ''}
-           ${c.cabinet.titles.map((t) => `<li>🏆 League ${t.tier} champions <span class="muted small">× ${t.seasons.length} (S${t.seasons.join(', S')})</span></li>`).join('')}
+           ${c.cabinet.titles.map((t) => `<li>🏆 ${tierWord(v.terms, t.tier)} champions <span class="muted small">× ${t.seasons.length} (S${t.seasons.join(', S')})</span></li>`).join('')}
            ${c.cabinet.promotions ? `<li>⬆ Promotions <span class="muted small">× ${c.cabinet.promotions}</span></li>` : ''}
            ${c.cabinet.playoffWins ? `<li>🎟 Play-off wins <span class="muted small">× ${c.cabinet.playoffWins}</span></li>` : ''}</ul>`
         : '<p class="muted small">Empty for now. Win something!</p>'

@@ -171,7 +171,7 @@ describe('on screen', () => {
     expect(v.tables[v.playerTier - 1].drivers).toHaveLength(20);
     expect(v.fixtures[0]).toMatchObject({ label: 'R1', venue: 'Melbourne', current: true });
     expect(v.cups.cup).toBeNull();
-    expect(statusText(game)).toMatch(/^🏎  SCO (P\d+|DNF) (P\d+|DNF) L10\/50 · Wk 1\/16 · \d+(st|nd|rd|th) in L\d$/);
+    expect(statusText(game)).toMatch(/^🏎  SCO (P\d+|DNF) (P\d+|DNF) L10\/50 · Wk 1\/16 · \d+(st|nd|rd|th) in GP\d$/);
     expect(tickMs(sport, '90s')).toBe(1800);
   });
 
