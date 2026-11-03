@@ -22,16 +22,16 @@ International football, rugby and cricket sims that live in a small box in your 
 
 ## The sports
 
-| | Football | Rugby | Cricket (T20) |
-|---|---|---|---|
-| Nations | 100 in the world, about 210 to play as | 48 | 30 |
-| Leagues | 5 of 20 | 6 of 8 | 5 of 6 |
-| Up and down | Top 2 up, 3rd–6th play off, bottom 3 down | Top 2 up, bottom 2 down | Top 1 up, bottom 1 down |
-| Table | 3 for a win, 1 for a draw, goal difference | 4 for a win, 2 for a draw, bonus points for four tries and for losing by 7 or fewer, points difference | 2 for a win, net run rate; ties go to a super over |
-| Nations Cup | Top 64 | Top 32 | Top 16 |
-| World Championship | 40 teams | 16 teams | 12 teams |
-| Match lengths | 30 sec, 2, 5, 10 min | 1½, 5, 15, 30 min | 2, 10, 20, 40 min |
-| Season at those lengths | ~25 min, ~1½ hr, ~3¾ hr, ~7½ hr | ~25 min, ~1½ hr, ~4 hr, ~8 hr | ~20 min, ~1¾ hr, ~3½ hr, ~7 hr |
+| | Football | Rugby | Cricket (T20) | Grand Prix |
+|---|---|---|---|---|
+| Nations | 100 in the world, about 210 to play as | 48 | 32 | 30 in the world, about 210 to play as |
+| Leagues | 5 of 20 | 6 of 8 | 4 of 8 | GP1–GP3, 10 teams of two cars each |
+| Up and down | Top 2 up, 3rd–6th play off, bottom 3 down | Top 2 up, bottom 2 down | Top 2 up, bottom 2 down | Top 2 up, bottom 2 down |
+| Table | 3 for a win, 1 for a draw, goal difference | 4 for a win, 2 for a draw, bonus points for four tries and for losing by 7 or fewer, points difference | 2 for a win, net run rate; ties go to a super over | 25-18-15-12-10-8-6-4-2-1 per car, and a drivers' title |
+| Nations Cup | Top 64 | Top 32 | Top 16 | None |
+| World Championship | 40 teams, with a host | 16 teams, with a host | 12 teams, with a host | Race of Nations: one car each from GP1 and GP2 |
+| Match lengths | 30 sec, 2, 5, 10 min | 1½, 5, 15, 30 min | 2, 10, 20, 40 min | 1½, 5, 15, 30 min a race |
+| Season at those lengths | ~25 min, ~1½ hr, ~3¾ hr, ~7½ hr | ~25 min, ~1½ hr, ~4 hr, ~8 hr | ~30 min, ~2½ hr, ~5 hr, ~10 hr | ~25 min, ~1½ hr, ~4 hr, ~8 hr |
 
 Play one sport or all four at once. The box lists them: start or end each one whenever you like, and open one to see it in full while the others show one line and carry on. Pause any of them from its row. Each career keeps its own match length.
 
