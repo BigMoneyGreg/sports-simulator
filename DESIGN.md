@@ -596,7 +596,26 @@ Football's numbers and behaviour are unchanged: whole careers on fixed seeds has
 
 **AI titles, re-measured (31 Oct 2026).** Most titles for one AI side in 40 seasons: rugby median 7, worst 13; cricket median 8, worst 16 (40 of 40 balance targets met). With 8 or 6 sides in a league, an even share of 40 titles is already 5 or nearly 7, so a typical top side is close to what chance alone gives, and the worst cases are rare. No change made.
 
-**Where it stands (1 Nov 2026).** Everything is on `main` and the repo is public: four match lengths per sport with similar seasons, badges for cup, play-off and World matches, and the World Championship as its own mini season after the summer (save version 9). The user has played it across several VS Code windows. The first Marketplace upload is rejected as "suspicious content" and Microsoft support have been emailed: an empty extension and the full game under a neutral name both pass, while the game under a sports name doesn't. Next: publish once Microsoft reply. `npm run test:e2e` clicks through a real VS Code. Unit tests run on Windows, Linux and macOS on GitHub. Not yet tried by a person: a real screen reader and a season on Windows.
+**Where it stands (3 Nov 2026).** Everything is on `main` and pushed; the repo is public. Since 1 November:
+- **Away stop:** the game stops after 5 minutes with no click or key press.
+- **Set scorers:** tied to the league table.
+- **Grand Prix racing:** the fourth sport.
+- **Rankings curve:** ratings follow real ranking gaps; nations hold a drifting level, with golden generations; closing on the elite is harder, though reading the summer still pays.
+- **Hosts, streaks and tracks:** World Championship hosts, streaks, set players in cricket and rugby kickers, and Grand Prix tracks and rain.
+- **Cricket:** 4 leagues of 8.
+- **Shared season:** one match at a time, summers together, staggered World Championships.
+- **Box layout:** a live card on top with one pause, and sport tabs below.
+- **Speed:** one speed for every sport, each match its real length against the others.
+
+The save version is still 9: old saves load, and cricket careers grow to 8-team leagues at their next season start.
+
+The Marketplace upload was rejected as "suspicious content" and Microsoft support have been emailed; publish once they reply. `npm run test:e2e` clicks through a real VS Code; if it hangs, check for a leftover test VS Code on port 9333 (`pgrep -f sports-simulator-e2e`). Unit tests run on Windows, Linux and macOS on GitHub.
+
+Open items:
+- **Promoted sides:** they go straight back about 57% of the time in rugby and cricket, above the targets.
+- **Cricket readers:** relegated about 4 times in 30 seasons.
+- **Cricket first seasons:** finish about 0.9 places below the prediction.
+- **Not yet tried by a person:** a real screen reader, a season on Windows, and the new layout in a long real session.
 
 **Worlds** come from the rankings: men's rugby, July 2026 (an unofficial copy of the World Rugby table); men's T20I, October 2026. Lower down rugby's list some nations rarely play. Only nations in a sport's world can be chosen there, unlike football's 210. Players' names work as in every sport (§10).
 
