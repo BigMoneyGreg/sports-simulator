@@ -14,7 +14,7 @@ import { chooseFocus, newCareer, playSeason } from '../src/core/career';
 import { Game, SAVE_VERSION, type Scheduler } from '../src/extension/game';
 import { SPORTS } from '../src/sports';
 import { buildHonours, buildView, careerSummary, honoursLine, sportRows } from '../src/extension/viewModel';
-import type { SportRowView, View } from '../src/shared/view';
+import type { LiveCardView, SportRowView, View } from '../src/shared/view';
 
 const root = resolve(process.cwd());
 const out = join(root, 'dist', 'preview');
@@ -37,7 +37,7 @@ const run = (n = 1) => {
 const game = new Game({ save: () => {}, changed: () => {} }, manual);
 // Read through a function so TypeScript doesn't narrow the phase across calls that change it.
 const phase = () => game.phase;
-const views: Record<string, { view: View | null; tab?: string; cup?: string; rows?: SportRowView[]; open?: string | null }> = {};
+const views: Record<string, { view: View | null; tab?: string; cup?: string; rows?: SportRowView[]; open?: string | null; live?: LiveCardView | null }> = {};
 const sampleRows: Partial<Record<string, SportRowView>> = {};
 const later: Partial<Record<string, Game>> = {};
 views.setup = { view: buildView(game) };
@@ -138,9 +138,11 @@ for (const entry of Object.values(views)) {
   const sport = v.screen === 'setup' ? v.setup.sport : v.sport;
   entry.open = sport;
   entry.rows = [football, sport === 'rugby' && v.screen === 'setup' ? rugbyNone : rugby, cricketWaiting, grandprix].map((r) => ({ ...r, live: v.screen === 'game' && r.id === sport && !v.seasonEnd }));
+  // The live card: this sport's match, if it has one on.
+  entry.live = v.screen === 'game' && v.match ? { sport, name: SPORTS[sport].present.terms.name, terms: v.terms, match: v.match, fullTime: v.fullTime } : null;
 }
 // Reading another sport's table while football's match is on.
-views.otherLive = { ...views.rugby_table, rows: [{ ...football, live: true }, rugby, cricketWaiting, grandprix] };
+views.otherLive = { ...views.rugby_table, rows: [{ ...football, live: true }, rugby, cricketWaiting, grandprix], live: views.match.live };
 views.list = { view: null, open: null, rows: [{ ...football, paused: true }, rugbyNone, cricketWaiting] };
 // Honours: the football career still running, the other two ended, one honour earned.
 const summary = (g: Game) => careerSummary(g)!;
@@ -225,7 +227,7 @@ writeFileSync(
   window.acquireVsCodeApi = () => ({ postMessage() {}, getState: () => ({ tab: entry.tab || 'match', cup: entry.cup || 'cup' }), setState() {} });
 </script>
 <script src="../webview.js"></script>
-<script>window.postMessage({ type: 'view', rows: entry.rows, honours: entry.honours, open: entry.open, view: entry.view }, '*');</script>
+<script>window.postMessage({ type: 'view', rows: entry.rows, honours: entry.honours, open: entry.open, view: entry.view, live: entry.live ?? null }, '*');</script>
 </body></html>`,
 );
 console.log(`Wrote ${join(out, 'index.html')} (${Object.keys(views).join(', ')})`);

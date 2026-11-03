@@ -451,4 +451,14 @@ export type ToHost =
  * Every sport's row, and the full view of what's open; without `view`, only a
  * minimised sport changed. `honours` is the Honours row's line, with no row until there's something to show.
  */
-export type ToWebview = { type: 'view'; rows: SportRowView[]; honours: string | null; open: PanelId | null; view?: View | null };
+/** The match on, whichever sport it's in: the box's main screen, above the sport tabs. */
+export interface LiveCardView {
+  sport: SportId;
+  name: string;
+  terms: SportTerms;
+  match: LiveMatchView | null;
+  fullTime: FullTimeView | null;
+}
+
+/** `live`: the match on, or null when none is; left out when it hasn't changed. */
+export type ToWebview = { type: 'view'; rows: SportRowView[]; honours: string | null; open: PanelId | null; view?: View | null; live?: LiveCardView | null };

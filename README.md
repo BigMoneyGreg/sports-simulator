@@ -33,7 +33,7 @@ International football, rugby and cricket sims that live in a small box in your 
 | Match lengths | 30 sec, 2, 5, 10 min | 1½, 5, 15, 30 min | 2, 10, 20, 40 min | 1½, 5, 15, 30 min a race |
 | Season at those lengths | ~25 min, ~1½ hr, ~3¾ hr, ~7½ hr | ~25 min, ~1½ hr, ~4 hr, ~8 hr | ~30 min, ~2½ hr, ~5 hr, ~10 hr | ~25 min, ~1½ hr, ~4 hr, ~8 hr |
 
-Play one sport or all four in one shared season. Only one match is on at a time: whichever sport is furthest behind in its season plays next, so they keep in step, and the summers come together at the end of the year. Each sport's World Championship falls in a different year. The box has a tab for each sport, with a dot on the one playing, and follows the live match unless you've gone to look at another sport. Then the live score sits in a line at the top. One pause stops everything. Start a career from its tab; end or reset it from the foot of its Team tab. Each career keeps its own match length.
+Play one sport or all four in one shared season. Only one match is on at a time: whichever sport is furthest behind in its season plays next, so they keep in step, and the summers come together at the end of the year. Each sport's World Championship falls in a different year. The box's main screen is the live match, whichever sport it's in, with one pause for everything; its full report folds away underneath. Below it is a tab for each sport, with a dot on the one playing, for its tables, fixtures, cups and team. Start a career from its tab; end or reset it from the foot of its Team tab. Each career keeps its own match length.
 
 Only want one? Press **Choose sports…** under the list and untick the rest; a hidden career waits where it was until you tick it again.
 

@@ -7,6 +7,7 @@ import {
   type FullTimeView,
   type GameView,
   type HonoursView,
+  type LiveCardView,
   type LiveMatchView,
   type MatchBadge,
   type NationOption,
@@ -41,17 +42,23 @@ overlay.setAttribute('aria-live', 'polite');
 document.body.appendChild(overlay);
 let overlayKey = '';
 
-type Tab = 'match' | 'table' | 'fixtures' | 'cups' | 'club';
+type Tab = 'table' | 'fixtures' | 'cups' | 'club';
 interface UiState {
   tab: Tab;
   tableTier: number | null;
   cup: CupView['id'];
 }
 
-const ui: UiState = { tab: 'match', tableTier: null, cup: 'cup', ...((vscode.getState() as Partial<UiState>) ?? {}) };
+const ui: UiState = { tab: 'table', tableTier: null, cup: 'cup', ...((vscode.getState() as Partial<UiState>) ?? {}) };
+// The match lives in the live card now, not a tab of its own.
+if (!['table', 'fixtures', 'cups', 'club'].includes(ui.tab)) ui.tab = 'table';
 let view: View | null = null;
 let rows: SportRowView[] = [];
 let honours: string | null = null;
+/** The match on, whichever sport it's in. */
+let live: LiveCardView | null = null;
+/** Whether the live card's full report is unfolded, kept between updates. */
+let reportOpen = false;
 /** A question open in the box: red steps can't be done by VS Code's own pop-ups. */
 let ask: { kind: 'career'; step: 'choose' | 'reset' } | { kind: 'honours'; step: 'first' | 'final' } | null = null;
 const askBox = document.createElement('div');
@@ -234,14 +241,14 @@ function fitLine(el: HTMLElement): void {
 }
 
 // Dragging the box wider or narrower changes what fits.
-new ResizeObserver(() => app.querySelectorAll<HTMLElement>('.now-line').forEach(fitLine)).observe(app);
+new ResizeObserver(() => app.querySelectorAll<HTMLElement>('.fit-line').forEach(fitLine)).observe(app);
 
 /** Writes a line only when it changes, so a hover isn't lost every tick. */
 function writeLine(el: HTMLElement | null, line: string): void {
   if (!el || el.textContent === line) return;
   el.textContent = line;
   el.title = line;
-  if (el.classList.contains('now-line')) fitLine(el);
+  if (el.classList.contains('fit-line')) fitLine(el);
 }
 
 /**
@@ -254,7 +261,7 @@ function renderRows(): void {
   // Sports can be hidden in the settings, so the same number of tabs doesn't mean the same tabs.
   if (app.dataset.panels !== panels.join()) {
     app.dataset.panels = panels.join();
-    app.innerHTML = `<nav class="sport-tabs" role="tablist" aria-label="Sports">${panels.map((id) => `<div class="sport" data-sport="${id}"></div>`).join('')}<button type="button" class="tab more" data-choose-sports title="Choose sports…"><span aria-hidden="true">⋯</span><span class="sr-only">Choose sports…</span></button></nav><div id="now"></div>`;
+    app.innerHTML = `<div id="live"></div><nav class="sport-tabs" role="tablist" aria-label="Sports">${panels.map((id) => `<div class="sport" data-sport="${id}"></div>`).join('')}<button type="button" class="tab more" data-choose-sports title="Choose sports…"><span aria-hidden="true">⋯</span><span class="sr-only">Choose sports…</span></button></nav>`;
   }
   for (const r of rows) {
     const section = app.querySelector<HTMLElement>(`.sport-tabs > [data-sport="${r.id}"]`)!;
@@ -269,16 +276,44 @@ function renderRows(): void {
     patch(section, [tabHtml('honours', 'Honours', lineIcon(TROPHY_ICON), open === 'honours')]);
     writeLine(section.querySelector<HTMLElement>('.row-line'), honours);
   }
-  // Looking at another sport: the match on stays in view as one line, a click away.
-  const live = rows.find((r) => r.live && r.id !== open);
-  const now = document.getElementById('now')!;
-  patch(now, [live ? `<button type="button" class="now" data-open="${live.id}" title="Go to the match on">${sportIcon(live.id)}<span class="now-tag">Live</span>${live.badge ? badgeHtml(live.badge) : ''}<span class="now-line muted small"></span></button>` : '']);
-  writeLine(now.querySelector<HTMLElement>('.now-line'), live?.line ?? '');
+  renderLive();
   if (open && panel.parentElement !== app) app.append(askBox, panel);
   if (!open) {
     panel.remove();
     askBox.remove();
   }
+}
+
+/**
+ * The box's main screen: the match on, whichever sport it's in, with the one
+ * pause for everything. Kept short: the scoreboard and the latest few events,
+ * with the rest folded away.
+ */
+function renderLive(): void {
+  const box = document.getElementById('live');
+  if (!box) return;
+  const careers = rows.filter((r) => r.club);
+  renderOverlay(live?.fullTime ?? null);
+  if (!careers.length) {
+    patch(box, ['']);
+    return;
+  }
+  const playing = careers.some((r) => !r.paused);
+  const pause = `<button type="button" id="pause" class="chip icon" title="${playing ? 'Pause every sport' : 'Play'}" aria-label="${playing ? 'Pause every sport' : 'Play'}">${playing ? '⏸' : '▶'}</button>`;
+  const m = live?.match;
+  const head = (icon: string, title: string, sub: string) => `<div class="live-head">${icon}<span class="live-title">${title}</span><span class="muted small fit-line live-sub">${esc(sub)}</span>${pause}</div>`;
+  if (!live || !m) {
+    const waiting = careers.find((r) => r.waiting);
+    const line = !playing ? 'Paused. Press ▶ to carry on.' : waiting ? `${waiting.name}: ${waiting.waitingLine ?? 'season over, decision waiting'}` : 'The next match is about to start…';
+    patch(box, [`<div class="card live-card quiet">${head('', 'Nothing live', '')}<p class="small muted">${esc(line)}</p></div>`]);
+    return;
+  }
+  const where = [m.badge ? `${m.badge.label}${m.stage ? ` · ${m.stage}` : ''}` : (m.race?.venue ?? m.competition), m.round].filter(Boolean).join(' · ');
+  const parts = liveParts(m, live.terms, live.sport);
+  patch(box, [`<div class="card live-card${playing ? '' : ' paused'}">${head(sportIcon(live.sport), esc(live.name), where)}${parts.board}${parts.latest}</div>`, parts.report ? `<details class="fold full-report"${reportOpen ? ' open' : ''}><summary class="small">Full report</summary>${parts.report}</details>` : '']);
+  paintSwatches(box);
+  trackGoals(m, live.terms);
+  showFlash();
 }
 
 // ---------------------------------------------------------------------------
@@ -396,18 +431,16 @@ function focusKey(el: Element): string | null {
 }
 
 function renderGame(v: GameView): void {
-  renderOverlay(v.seasonEnd ? null : v.fullTime);
   if (panel.dataset.mode !== 'game') {
-    // A career has just started, from further down the setup screen.
-    scrollToOpen = true;
+    // A career has just started, from further down the setup screen: its header comes into view, below the live card.
+    scrollToPanel = true;
     panel.innerHTML = '<div id="top"></div><div id="main"></div>';
     panel.dataset.mode = 'game';
   }
   // The narrowest layout shows only the header, except when a summer choice is waiting.
   app.classList.toggle('needs-choice', !!v.seasonEnd || !!v.worldEnd);
-  patch(document.getElementById('top')!, [headerHtml(v), v.header.paused && !v.seasonEnd && !v.worldEnd ? '<p class="notice paused small">Paused. Press ▶ to carry on.</p>' : '']);
+  patch(document.getElementById('top')!, [headerHtml(v)]);
   const tabs: [Tab, string][] = [
-    ['match', v.terms.race?.matchTab ?? 'Match'],
     ['table', 'Table'],
     ['fixtures', 'Fixtures'],
     ['cups', v.cups.cup ? 'Cups' : 'Nations'],
@@ -418,8 +451,6 @@ function renderGame(v: GameView): void {
     .join('')}</nav>`;
   patch(document.getElementById('main')!, v.seasonEnd ? [seasonEndHtml(v.seasonEnd, v.sport, v.terms)] : v.worldEnd ? [worldEndHtml(v.worldEnd, v.fixtures)] : [nav, ...panelParts(v)]);
   paintSwatches();
-  trackGoals(v);
-  showFlash();
   if (scrollFixtures && ui.tab === 'fixtures' && !v.seasonEnd) {
     scrollFixtures = false;
     app.querySelector('.fixtures li.current, .fixtures li:not(.played)')?.scrollIntoView({ block: 'center' });
@@ -462,8 +493,7 @@ function flashRow(r: SportRowView, section: HTMLElement, isOpen: boolean): void 
 }
 
 /** Notices a big moment in the player's match: green when it goes their way, red when it doesn't. */
-function trackGoals(v: GameView): void {
-  const m = v.match;
+function trackGoals(m: LiveMatchView, terms: SportTerms): void {
   if (!m || (!m.home.isPlayer && !m.away.isPlayer)) return;
   const key = `${m.home.name}|${m.away.name}|${m.competition}|${m.round ?? ''}`;
   if (key === lastScore.key) {
@@ -472,7 +502,7 @@ function trackGoals(v: GameView): void {
     if (homeScored || awayScored) {
       const mine = (homeScored && m.home.isPlayer) || (awayScored && m.away.isPlayer);
       Object.assign(flash, { cls: mine ? 'goal-for' : 'goal-against', at: Date.now(), id: flash.id + 1 });
-      announcer.textContent = `${v.terms.alert} ${m.home.name} ${m.score[0]}, ${m.away.name} ${m.score[1]}, ${m.clock}`;
+      announcer.textContent = `${terms.alert} ${m.home.name} ${m.score[0]}, ${m.away.name} ${m.score[1]}, ${m.clock}`;
     }
   }
   Object.assign(lastScore, { key, home: m.alerts[0], away: m.alerts[1] });
@@ -515,7 +545,6 @@ function headerHtml(v: GameView): string {
     <div class="head-line"><div class="muted small where">${turnTag(v)}${ordinal(h.position)} · ${v.terms.race?.tier ?? 'L'}${h.tier} · <span title="League games played">played ${h.played}/${h.games}</span></div>
       <span class="controls">
         <button type="button" id="speed" class="chip" data-next="${next}" title="Match length: ${DURATION_LABELS[h.duration]} (${(v.terms.seasonLabels[h.duration] ?? '').toLowerCase()}). Click for ${DURATION_LABELS[next]}." aria-label="Match length ${DURATION_LABELS[h.duration]}"><span>⏱</span><span class="wide"> ${DURATION_LABELS[h.duration]}</span></button>
-        <button type="button" id="pause" class="chip icon" title="${h.paused ? 'Play' : 'Pause'}" aria-label="${h.paused ? 'Play' : 'Pause'}">${h.paused ? '▶' : '⏸'}</button>
       </span></div>
   </header>`;
 }
@@ -523,8 +552,6 @@ function headerHtml(v: GameView): string {
 /** The active tab's content, split into regions that update independently. */
 function panelParts(v: GameView): string[] {
   switch (ui.tab) {
-    case 'match':
-      return matchParts(v);
     case 'table': {
       // A league picked in a sport with more leagues than this one doesn't apply here.
       const tier = ui.tableTier !== null && ui.tableTier <= v.tables.length ? ui.tableTier : v.playerTier;
@@ -546,15 +573,11 @@ function panelParts(v: GameView): string[] {
   }
 }
 
-function matchParts(v: GameView): string[] {
-  if (v.waiting === 'seasonOver') return [`<p class="notice">The season is over: one decision waiting.</p>`];
-  const m = v.match;
-  if (!m) return [`<p class="muted">${v.header.paused ? 'The next match kicks off when you press ▶.' : 'Next match about to kick off…'}</p>`];
-  // Newest first, so the latest event is always in view.
-  const items = m.timeline;
+/** The live card's scoreboard, its latest few events, and the full report to fold away. */
+function liveParts(m: LiveMatchView, terms: SportTerms, sport: SportId): { board: string; latest: string; report: string } {
   const icon = (t: TimelineView) =>
     t.kind === 'goal'
-      ? `<span class="ball" aria-label="${esc(v.terms.eventName)}">${sportIcon(v.sport)}</span>`
+      ? `<span class="ball" aria-label="${esc(terms.eventName)}">${sportIcon(sport)}</span>`
       : t.kind === 'minor'
         ? '<span class="dot-minor" aria-hidden="true">•</span>'
         : `<span class="card ${t.kind}" aria-label="${t.kind === 'red' ? 'Red' : 'Yellow'} card"></span>`;
@@ -565,14 +588,17 @@ function matchParts(v: GameView): string[] {
     const event = `<span class="who" title="${esc(team.name)}: ${esc(t.text)}">${esc(t.text)}</span><span class="ev-icon">${icon(t)}</span>`;
     return `<li class="${t.kind}${team.isPlayer ? ' mine' : ''}"><div class="ev home">${t.side === 'home' ? event : ''}</div><div class="ev-mid"><span class="min">${esc(t.clock)}</span>${t.score ? `<span class="running">${esc(t.score)}</span>` : ''}</div><div class="ev away">${t.side === 'away' ? event : ''}</div></li>`;
   };
-  if (m.race) return [raceHtml(m, m.race), `<div class="card feed-card">${items.length ? `<ol class="report-feed">${[...items].reverse().map(row).join('')}</ol>` : `<p class="muted small center">${esc(v.terms.noEventsYet)}</p>`}</div>`];
-  const teams = `<div class="feed-teams"><span>${swatch(m.home)}${esc(m.home.short)}</span><span>${esc(m.away.short)}${swatch(m.away)}</span></div>`;
-  if (m.scorecard) return [scoreboard(m, v.terms), ...m.scorecard.map(inningsHtml)];
-  return [scoreboard(m, v.terms), `<div class="card feed-card">${items.length ? `${teams}<ol class="report-feed">${[...items].reverse().map(row).join('')}</ol>` : `<p class="muted small center">${esc(v.terms.noEventsYet)}</p>`}</div>`];
+  // Newest first, so the latest event is always in view.
+  const newest = [...m.timeline].reverse();
+  const feed = (items: TimelineView[]) => (items.length ? `<ol class="report-feed">${items.map(row).join('')}</ol>` : `<p class="muted small center">${esc(terms.noEventsYet)}</p>`);
+  const latest = `<div class="live-latest">${feed(newest.slice(0, 3))}</div>`;
+  if (m.race) return { board: raceHtml(m, m.race, 4), latest: `<div class="live-latest">${feed(newest.slice(0, 2))}</div>`, report: `${raceHtml(m, m.race)}<div class="card feed-card">${feed(newest)}</div>` };
+  if (m.scorecard) return { board: scoreboard(m, terms), latest: '', report: m.scorecard.map(inningsHtml).join('') };
+  return { board: scoreboard(m, terms), latest, report: newest.length > 3 ? `<div class="card feed-card">${feed(newest)}</div>` : '' };
 }
 
 /** The running order, in place of a scoreboard: everyone's on one track. */
-function raceHtml(m: LiveMatchView, race: NonNullable<LiveMatchView['race']>): string {
+function raceHtml(m: LiveMatchView, race: NonNullable<LiveMatchView['race']>, top?: number): string {
   const arrow = (moved: number) => (moved ? `<span class="move ${moved > 0 ? 'up' : 'down'}">${moved > 0 ? '▲' : '▼'}</span>` : '');
   const row = (r: NonNullable<LiveMatchView['race']>['rows'][number]) =>
     `<tr class="${r.mine ? 'me' : ''} ${r.rival ? 'rival' : ''} ${r.out ? 'out' : ''}"><td class="pos">${r.place}</td><td class="team" title="${esc(r.team.name)}">${swatch(r.team)}${esc(r.team.short)}</td><td class="driver">${esc(r.driver)}${r.pit ? ' <span class="muted small">pit</span>' : ''}</td><td class="gap">${arrow(r.moved)} ${esc(r.gap)}</td></tr>`;
@@ -581,7 +607,7 @@ function raceHtml(m: LiveMatchView, race: NonNullable<LiveMatchView['race']>): s
       ${race.note ? `<div class="muted small">${esc(race.note)}</div>` : ''}
       <div class="clock-big ${m.finished ? 'ft' : 'live'}">${esc(m.clock)}</div>
       ${m.situation ? `<div class="small situation">${esc(m.situation)}</div>` : ''}
-      <table class="running"><tbody>${race.rows.map(row).join('')}</tbody></table>
+      <table class="running"><tbody>${race.rows.filter((r) => !top || r.place <= top || r.mine).map(row).join('')}</tbody></table>
     </div>`;
 }
 
@@ -891,13 +917,17 @@ function clubHtml(v: GameView): string {
 
 /** Set when something new opens: the box is often short, and its top is what should be in view. */
 let scrollToOpen = false;
+/** Set when a career starts: its own header, rather than the top, should be in view. */
+let scrollToPanel = false;
 
 function render(): void {
   renderRows();
   renderPanel();
   renderAsk();
-  if (scrollToOpen && open) window.scrollTo({ top: 0 });
+  if (scrollToPanel) panel.scrollIntoView({ block: 'start' });
+  else if (scrollToOpen && open) window.scrollTo({ top: 0 });
   scrollToOpen = false;
+  scrollToPanel = false;
 }
 
 function renderPanel(): void {
@@ -1043,6 +1073,7 @@ app.addEventListener(
   'toggle',
   (e) => {
     if ((e.target as HTMLElement).classList.contains('howto')) summer.howTo = (e.target as HTMLDetailsElement).open;
+    if ((e.target as HTMLElement).classList.contains('full-report')) reportOpen = (e.target as HTMLDetailsElement).open;
   },
   true,
 );
@@ -1068,6 +1099,7 @@ window.addEventListener('message', (event: MessageEvent<ToWebview>) => {
   if (message.type === 'view') {
     ({ rows, honours, open } = message);
     if (message.view !== undefined) view = message.view;
+    if (message.live !== undefined) live = message.live;
     render();
   }
 });

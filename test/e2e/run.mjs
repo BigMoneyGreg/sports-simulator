@@ -167,7 +167,7 @@ try {
   await shot(main, 'world-end');
   passed('The report has no summer question', await box.run(inBox(`return !d.querySelector('[data-focus]') && /World/.test(d.querySelector('.headline').textContent);`)));
   await click('#continueSeason');
-  await until('the league', () => box.run(inBox(`return !d.getElementById('continueSeason') && !!d.getElementById('pause');`)));
+  await until('the league', () => box.run(inBox(`return !d.getElementById('continueSeason') && !!d.querySelector('#panel .head');`)));
   passed('Carrying on starts the league', true);
   // End and Reset live at the foot of the Team tab.
   await click('[data-tab="club"]');
@@ -215,7 +215,7 @@ try {
 
   // The real Reset career, both steps.
   await click('[data-sport="rugby"] .row-main');
-  await until('rugby open', () => box.run(inBox(`return !!d.getElementById('pause');`)));
+  await until('rugby open', () => box.run(inBox(`return /Wales/.test(d.querySelector('#panel .head .name')?.textContent ?? '');`)));
   // End and Reset live at the foot of the Team tab.
   await click('[data-tab="club"]');
   await click('[data-ask-career]');

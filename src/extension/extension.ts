@@ -4,7 +4,7 @@ import { SPORT_IDS, type SportId } from '../core/format';
 import { startRating } from '../core/league';
 import { Rng } from '../core/rng';
 import { newFeats, FEAT_TITLES, type CareerSummary } from '../core/honours';
-import { DURATIONS, type Duration, type PanelId, type ToHost } from '../shared/view';
+import { DURATIONS, type Duration, type LiveCardView, type PanelId, type ToHost } from '../shared/view';
 import { Game } from './game';
 import { Ownership, POLL_MS } from './ownership';
 import { SidebarProvider } from './sidebar';
@@ -79,6 +79,9 @@ export function activate(context: vscode.ExtensionContext): void {
     return { at: 0, ...boxStatus(listed(), followed, false, cycledSport(listed(), followed)) };
   };
 
+  /** The sport whose match the box last showed as live. */
+  let shownLive: SportId | null = null;
+
   /** `from`: the sport that changed. A minimised sport's tick only needs the rows, not the open sport's whole view again. */
   const refresh = (from?: SportId) => {
     // What was open may just have been hidden in the settings.
@@ -86,7 +89,11 @@ export function activate(context: vscode.ExtensionContext): void {
     if (sidebar.visible) {
       const full = !from || from === open;
       const view = full ? { view: openView() } : {};
-      sidebar.post({ type: 'view', rows: sportRows(listed()).map((r) => (r.id === turn ? { ...r, live: true } : r)), honours: showHonours() ? honoursLine(all(), storage.archives().length, storage.feats().length) : null, open, ...view });
+      const playing = liveSport();
+      // Sent when the match on changes, or when its sport has: the other sports' ticks leave it alone.
+      const live = !from || from === playing || playing !== shownLive ? { live: playing ? liveCard(games[playing]) : null } : {};
+      shownLive = playing;
+      sidebar.post({ type: 'view', rows: sportRows(listed()).map((r) => (r.id === playing ? { ...r, live: true } : r)), honours: showHonours() ? honoursLine(all(), storage.archives().length, storage.feats().length) : null, open, ...view, ...live });
     }
     updateOutside();
   };
@@ -106,6 +113,17 @@ export function activate(context: vscode.ExtensionContext): void {
   /** A small message that goes by itself; the badge, bell and pinned line stay until the player acts. */
   function toast(text: string): void {
     void vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: text }, () => new Promise<void>((done) => setTimeout(done, TOAST_MS)));
+  }
+
+  /** The sport whose match is on. A window not running the game goes by the saves: whichever has a match under way. */
+  function liveSport(): SportId | null {
+    return turn ?? listed().find((g) => g.live)?.sportId ?? null;
+  }
+
+  function liveCard(game: Game): LiveCardView {
+    const v = buildView(game, { fullTimeOverlay: config().get('fullTimeOverlay', true), language: vscode.env.language });
+    const shown = v.screen === 'game' ? v : null;
+    return { sport: game.sportId, name: game.sport.present.terms.name, terms: game.sport.present.terms, match: shown?.match ?? null, fullTime: shown?.fullTime ?? null };
   }
 
   function openView() {
