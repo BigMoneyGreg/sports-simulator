@@ -1105,12 +1105,13 @@ export function honoursLine(games: Game[], pastCareers: number, feats: number): 
 }
 
 /** The status bar and collapsed box: the live score of a lone career, or where the sport `showing` stands among several, a bell if another is waiting on the player, and every career on hover. The collapsed box stays on the sport followed. */
-export function boxStatus(games: Game[], followed: SportId, goal = false, showing = followed): { text: string | null; tooltip: string; description?: string; sport: SportId } {
+/** `live`: `showing` is the sport whose match is on, so its score shows even with several careers. */
+export function boxStatus(games: Game[], followed: SportId, goal = false, showing = followed, live = false): { text: string | null; tooltip: string; description?: string; sport: SportId } {
   const game = statusGame(games, showing);
   const careers = games.filter((g) => g.career);
   const name = (g: Game) => g.sport.present.terms.name;
   const waitingElsewhere = careers.some((g) => g !== game && waitingOnPlayer(g));
-  let text = careers.length > 1 ? standingText(game) : statusText(game, goal);
+  let text = careers.length > 1 && !live ? standingText(game) : statusText(game, goal);
   if (waitingElsewhere) text = text ? `${text} $(bell)` : `$(bell) ${SEASON_OVER}`;
   const tooltip = careers.length > 1 ? `${careers.map((g) => `${name(g)}: ${careerLines(g).join('\n\n')}`).join('\n\n---\n\n')}\n\nClick to open` : statusTooltip(game);
   return { text, tooltip, description: collapsedText(statusGame(games, followed)), sport: game.sportId };

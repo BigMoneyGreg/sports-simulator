@@ -61,11 +61,12 @@ export function activate(context: vscode.ExtensionContext): void {
    */
   const outside = (): LiveStatus => {
     if (owner.owning) {
-      const showing = cycledSport(listed(), followed);
+      // The match on, if there is one; otherwise every career in turn.
+      const showing = turn ?? cycledSport(listed(), followed);
       const shown = statusGame(listed(), showing);
       // Every sport's watch keeps up, so going back to one doesn't call out a goal from earlier.
       const fresh = all().map((g) => goals[g.sportId].check(g));
-      const live = { at: Date.now(), ...boxStatus(listed(), followed, fresh[all().indexOf(shown)], showing) };
+      const live = { at: Date.now(), ...boxStatus(listed(), followed, fresh[all().indexOf(shown)], showing, turn !== null) };
       const key = JSON.stringify({ ...live, at: 0 });
       if (key !== lastLive) {
         lastLive = key;
@@ -81,11 +82,11 @@ export function activate(context: vscode.ExtensionContext): void {
   /** `from`: the sport that changed. A minimised sport's tick only needs the rows, not the open sport's whole view again. */
   const refresh = (from?: SportId) => {
     // What was open may just have been hidden in the settings.
-    if (open === 'honours' ? !showHonours() : open && !shownSports().includes(open)) open = statusGame(listed(), followed).sportId;
+    if (open === 'honours' ? !showHonours() : !open || !shownSports().includes(open)) open = turn ?? statusGame(listed(), followed).sportId;
     if (sidebar.visible) {
       const full = !from || from === open;
       const view = full ? { view: openView() } : {};
-      sidebar.post({ type: 'view', rows: sportRows(listed()), honours: showHonours() ? honoursLine(all(), storage.archives().length, storage.feats().length) : null, open, ...view });
+      sidebar.post({ type: 'view', rows: sportRows(listed()).map((r) => (r.id === turn ? { ...r, live: true } : r)), honours: showHonours() ? honoursLine(all(), storage.archives().length, storage.feats().length) : null, open, ...view });
     }
     updateOutside();
   };
@@ -226,8 +227,21 @@ export function activate(context: vscode.ExtensionContext): void {
   function takeTurns(free?: Game): void {
     const next = pickTurn(free);
     if (next === turn) return;
+    // The box moves with the match, unless the player has gone to look at another sport.
+    if (next && (open === turn || open === null)) {
+      open = next;
+      followed = next;
+      storage.setActiveSport(next);
+    }
     turn = next;
     holdClocks(owner.owning);
+  }
+
+  /** One pause for everything: if any sport is playing, all stop; otherwise all play again. */
+  function pauseAll(): void {
+    const careers = listed().filter((g) => g.career);
+    const pause = careers.some((g) => !g.paused);
+    for (const game of careers) game.setPaused(pause);
   }
   holdClocks(false);
   // Shown straight away; the clocks only run once this window owns the game.
@@ -302,7 +316,7 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
       case 'togglePause':
-        owner.whenOwner(() => games[message.sport].togglePause());
+        owner.whenOwner(pauseAll);
         return;
       case 'setDuration':
         if (DURATIONS.includes(message.duration)) owner.whenOwner(() => games[message.sport].setDuration(message.duration));
@@ -345,11 +359,6 @@ export function activate(context: vscode.ExtensionContext): void {
       storage.setActiveSport(panel);
     }
     refresh();
-  }
-
-  /** The sport the commands act on: the one open, or else the one the corner shows. */
-  function currentGame(): Game {
-    return open && open !== 'honours' && games[open].career ? games[open] : statusGame(listed(), cycledSport(listed(), followed));
   }
 
   /** The box has already asked. Keeps the career in Past careers. */
@@ -432,7 +441,7 @@ export function activate(context: vscode.ExtensionContext): void {
       await config().update('sports', Object.fromEntries(SPORT_IDS.map((id) => [id, on.has(id)])), vscode.ConfigurationTarget.Global);
       await config().update('showHonours', on.has('honours'), vscode.ConfigurationTarget.Global);
     }),
-    vscode.commands.registerCommand('sportsSimulator.togglePause', () => owner.whenOwner(() => currentGame().togglePause())),
+    vscode.commands.registerCommand('sportsSimulator.togglePause', () => owner.whenOwner(pauseAll)),
     // The window you're working in runs the game; the others stand by.
     vscode.window.onDidChangeWindowState((state) => {
       if (state.focused || state.active) used();

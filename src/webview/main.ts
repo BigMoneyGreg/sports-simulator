@@ -202,44 +202,26 @@ function renderSetup(v: SetupView): void {
 // ---------------------------------------------------------------------------
 // The list of sports
 
-/** A row's parts that rarely change; its line changes every tick and is written on its own. */
-function rowHtml(r: SportRowView, isOpen: boolean): string {
-  const control = isOpen
-    ? r.club
-      ? `<button type="button" class="chip" data-ask-career title="End or reset this career">End…</button>`
-      : ''
-    : !r.club
-      ? `<button type="button" class="chip" data-open="${r.id}">Start</button>`
-      : r.waiting
-        ? ''
-        : `<button type="button" class="chip icon" data-pause="${r.id}" title="${r.paused ? 'Play' : 'Pause'}" aria-label="${r.paused ? 'Play' : 'Pause'} ${esc(r.name)}">${r.paused ? '▶' : '⏸'}</button>`;
-  return `<div class="sport-row${isOpen ? ' open' : ''}${r.waiting ? ' waiting' : ''}">
-    <button type="button" class="row-main" data-open="${r.id}" aria-expanded="${isOpen}">
-      <span class="chevron" aria-hidden="true"></span>${sportIcon(r.id)}
-      <span class="row-text"><span class="row-name">${esc(r.name)}${r.club ? `<span class="muted"> · ${esc(r.club)}</span>` : ''}</span><span class="row-sub">${r.badge && !isOpen && !r.waiting ? badgeHtml(r.badge) : ''}<span class="row-line muted small"></span></span></span>
-    </button>${control}${r.club ? '<span class="row-progress" aria-hidden="true"><span></span></span>' : ''}
-  </div>`;
+/** Shorter names where a sport's own won't fit a tab. */
+const TAB_NAMES: Partial<Record<PanelId, string>> = { grandprix: 'GP' };
+
+/** A sport's tab: its icon and name, the live mark, and everything a screen reader or a hover needs in a hidden line. */
+function tabHtml(id: PanelId, name: string, icon: string, isOpen: boolean, r?: SportRowView): string {
+  const state = r?.waiting ? (r.waitingLine ?? 'Season over: decision waiting') : r?.live ? 'Live now' : r?.club ? '' : r ? 'Not started' : '';
+  return `<button type="button" class="row-main tab${isOpen ? ' on' : ''}${r?.live ? ' live' : ''}${r?.waiting ? ' needs-you' : ''}" role="tab" aria-selected="${isOpen}" data-open="${id}" title="${esc([name, r?.club, state || r?.line].filter(Boolean).join(' · '))}">
+    ${icon}<span class="tab-name">${esc(TAB_NAMES[id] ?? name)}</span>${r?.live ? '<span class="live-dot" aria-hidden="true"></span>' : ''}${r?.waiting ? '<span class="wait-dot" aria-hidden="true"></span>' : ''}
+    <span class="sr-only">${r?.club ? ` · ${esc(r.club)}` : ''}${state ? ` · ${esc(state)}` : ''} · <span class="row-line"></span></span>
+  </button>`;
 }
 
 function badgeHtml(b: MatchBadge): string {
   return `<span class="badge ${b.kind}">${b.label}</span>`;
 }
 
-function writeRow(section: HTMLElement, html: string, line: string): void {
-  patch(section.querySelector<HTMLElement>('.row-slot')!, [html]);
-  const lineEl = section.querySelector<HTMLElement>('.row-line')!;
-  if (lineEl.textContent !== line) {
-    lineEl.textContent = line;
-    // If it still can't fit, hovering shows all of it.
-    lineEl.title = line;
-    fitLine(lineEl);
-  }
-}
-
-/** The smallest a row's line goes to fit, in pixels: any smaller is hard to read, so it's cut off instead. */
+/** The smallest a line goes to fit, in pixels: any smaller is hard to read, so it's cut off instead. */
 const MIN_LINE_PX = 9;
 
-/** Shrinks a row's line just enough to fit its width, as a cricket score needs more room than a football one. */
+/** Shrinks a line just enough to fit its width, as a cricket score needs more room than a football one. */
 function fitLine(el: HTMLElement): void {
   el.style.fontSize = '';
   if (!el.clientWidth || el.scrollWidth <= el.clientWidth) return;
@@ -252,42 +234,47 @@ function fitLine(el: HTMLElement): void {
 }
 
 // Dragging the box wider or narrower changes what fits.
-new ResizeObserver(() => app.querySelectorAll<HTMLElement>('.row-line').forEach(fitLine)).observe(app);
+new ResizeObserver(() => app.querySelectorAll<HTMLElement>('.now-line').forEach(fitLine)).observe(app);
+
+/** Writes a line only when it changes, so a hover isn't lost every tick. */
+function writeLine(el: HTMLElement | null, line: string): void {
+  if (!el || el.textContent === line) return;
+  el.textContent = line;
+  el.title = line;
+  if (el.classList.contains('now-line')) fitLine(el);
+}
 
 /**
- * The rows stay in place and only their lines change: a button replaced between
- * mouse-down and mouse-up would swallow the click.
+ * One row of sport tabs, then the sport open: the box stays short, so it can sit
+ * in a corner. The tabs stay in place and only their lines change: a button
+ * replaced between mouse-down and mouse-up would swallow the click.
  */
 function renderRows(): void {
   const panels: PanelId[] = [...rows.map((r) => r.id), ...(honours ? (['honours'] as const) : [])];
-  // Sports can be hidden in the settings, so the same number of rows doesn't mean the same rows.
-  if (Array.from(app.querySelectorAll<HTMLElement>(':scope > .sport'), (s) => s.dataset.sport).join() !== panels.join()) {
-    app.innerHTML = `<div id="pins"></div>${panels.map((id) => `<section class="sport" data-sport="${id}"><div class="row-slot"></div></section>`).join('')}<p class="small choose-sports"><button type="button" class="link" data-choose-sports>Choose sports…</button></p>`;
+  // Sports can be hidden in the settings, so the same number of tabs doesn't mean the same tabs.
+  if (app.dataset.panels !== panels.join()) {
+    app.dataset.panels = panels.join();
+    app.innerHTML = `<nav class="sport-tabs" role="tablist" aria-label="Sports">${panels.map((id) => `<div class="sport" data-sport="${id}"></div>`).join('')}<button type="button" class="tab more" data-choose-sports title="Choose sports…"><span aria-hidden="true">⋯</span><span class="sr-only">Choose sports…</span></button></nav><div id="now"></div>`;
   }
-  // A long open page can push the other rows out of sight, so a decision waiting stays pinned at the top.
-  const pins = document.getElementById('pins')!;
-  const waiting = open ? rows.filter((r) => r.waiting && r.id !== open) : [];
-  patch(pins, waiting.map((r) => `<button type="button" class="pin" data-open="${r.id}">${esc(r.name)}: ${esc(r.waitingLine ?? 'season over, decision waiting')}</button>`));
-  app.style.setProperty('--pin-h', `${pins.offsetHeight}px`);
   for (const r of rows) {
-    const section = app.querySelector<HTMLElement>(`:scope > [data-sport="${r.id}"]`)!;
+    const section = app.querySelector<HTMLElement>(`.sport-tabs > [data-sport="${r.id}"]`)!;
     const isOpen = open === r.id;
-    section.classList.toggle('needs-you', r.waiting && !isOpen);
     section.classList.toggle('world', !!r.world);
-    writeRow(section, rowHtml(r, isOpen), isOpen ? '' : r.waiting ? (r.waitingLine ?? 'Season over: decision waiting') : r.club ? (r.line ?? '') : 'Not started');
-    // Inline styles are blocked by the CSP, so the width goes through the CSSOM.
-    const bar = section.querySelector<HTMLElement>('.row-progress span');
-    if (bar) bar.style.width = `${(r.progress ?? 0) * 100}%`;
-    if (isOpen && panel.parentElement !== section) section.append(askBox, panel);
+    patch(section, [tabHtml(r.id, r.name, sportIcon(r.id), isOpen, r)]);
+    writeLine(section.querySelector<HTMLElement>('.row-line'), r.club ? (r.line ?? '') : 'Not started');
     flashRow(r, section, isOpen);
   }
   if (honours) {
-    const section = app.querySelector<HTMLElement>(':scope > [data-sport="honours"]')!;
-    const isOpen = open === 'honours';
-    const html = `<div class="sport-row${isOpen ? ' open' : ''}"><button type="button" class="row-main" data-open="honours" aria-expanded="${isOpen}"><span class="chevron" aria-hidden="true"></span>${lineIcon(TROPHY_ICON)}<span class="row-text"><span class="row-name">Honours</span><span class="row-line muted small"></span></span></button></div>`;
-    writeRow(section, html, isOpen ? '' : honours);
-    if (isOpen && panel.parentElement !== section) section.append(askBox, panel);
+    const section = app.querySelector<HTMLElement>('.sport-tabs > [data-sport="honours"]')!;
+    patch(section, [tabHtml('honours', 'Honours', lineIcon(TROPHY_ICON), open === 'honours')]);
+    writeLine(section.querySelector<HTMLElement>('.row-line'), honours);
   }
+  // Looking at another sport: the match on stays in view as one line, a click away.
+  const live = rows.find((r) => r.live && r.id !== open);
+  const now = document.getElementById('now')!;
+  patch(now, [live ? `<button type="button" class="now" data-open="${live.id}" title="Go to the match on">${sportIcon(live.id)}<span class="now-tag">Live</span>${live.badge ? badgeHtml(live.badge) : ''}<span class="now-line muted small"></span></button>` : '']);
+  writeLine(now.querySelector<HTMLElement>('.now-line'), live?.line ?? '');
+  if (open && panel.parentElement !== app) app.append(askBox, panel);
   if (!open) {
     panel.remove();
     askBox.remove();
@@ -471,7 +458,7 @@ function flashRow(r: SportRowView, section: HTMLElement, isOpen: boolean): void 
     if (mine || r.moments.theirs > seen.moments.theirs) Object.assign(rowFlash, { cls: mine ? 'goal-for' : 'goal-against', at: Date.now(), id: rowFlash.id + 1 });
   }
   rowFlashes.set(r.id, { moments: r.moments, flash: rowFlash });
-  if (!isOpen && !r.waiting) applyFlash(section.querySelectorAll<HTMLElement>('.sport-row'), rowFlash);
+  if (!isOpen && !r.waiting) applyFlash(section.querySelectorAll<HTMLElement>('.tab'), rowFlash);
 }
 
 /** Notices a big moment in the player's match: green when it goes their way, red when it doesn't. */
@@ -512,13 +499,20 @@ function applyFlash(elements: NodeListOf<HTMLElement>, { cls, at, id }: Flash): 
   });
 }
 
+/** Whether this sport's match is the one on, or it's waiting for the one that is. */
+function turnTag(v: GameView): string {
+  const live = rows.find((r) => r.live);
+  if (!live || v.header.paused || v.seasonEnd || v.worldEnd) return '';
+  return live.id === v.sport ? '<span class="turn-tag">Live</span> · ' : 'Up later · ';
+}
+
 function headerHtml(v: GameView): string {
   const h = v.header;
   const dots = h.form.map((f) => `<span class="dot ${f.result}" title="${esc(f.title)}">${esc(f.label ?? f.result)}</span>`).join('');
   const next = h.durations[(h.durations.indexOf(h.duration) + 1) % h.durations.length];
   return `<header class="head card" data-accent="${esc(h.club.colours[0])}">
     <div class="head-line"><div class="club">${swatch(h.club, 'crest')}<div class="name">${esc(h.club.name)}</div></div><span class="form" role="group" aria-label="Form, latest last">${dots}</span></div>
-    <div class="head-line"><div class="muted small where">${ordinal(h.position)} · ${v.terms.race?.tier ?? 'L'}${h.tier} · <span title="League games played">played ${h.played}/${h.games}</span></div>
+    <div class="head-line"><div class="muted small where">${turnTag(v)}${ordinal(h.position)} · ${v.terms.race?.tier ?? 'L'}${h.tier} · <span title="League games played">played ${h.played}/${h.games}</span></div>
       <span class="controls">
         <button type="button" id="speed" class="chip" data-next="${next}" title="Match length: ${DURATION_LABELS[h.duration]} (${(v.terms.seasonLabels[h.duration] ?? '').toLowerCase()}). Click for ${DURATION_LABELS[next]}." aria-label="Match length ${DURATION_LABELS[h.duration]}"><span>⏱</span><span class="wide"> ${DURATION_LABELS[h.duration]}</span></button>
         <button type="button" id="pause" class="chip icon" title="${h.paused ? 'Play' : 'Pause'}" aria-label="${h.paused ? 'Play' : 'Pause'}">${h.paused ? '▶' : '⏸'}</button>
@@ -888,6 +882,7 @@ function clubHtml(v: GameView): string {
         : '<p class="muted small">Your first season is under way.</p>'
     }
   </div>
+  <p class="small"><button type="button" class="link" data-ask-career>End or reset this career…</button></p>
 `;
 }
 
@@ -901,7 +896,7 @@ function render(): void {
   renderRows();
   renderPanel();
   renderAsk();
-  if (scrollToOpen && open) app.querySelector(`:scope > [data-sport="${open}"]`)?.scrollIntoView({ block: 'start' });
+  if (scrollToOpen && open) window.scrollTo({ top: 0 });
   scrollToOpen = false;
 }
 
@@ -943,7 +938,8 @@ app.addEventListener('click', (e) => {
   if (!button) return;
   if (button.dataset.open) {
     // Only one opens at a time; clicking the open one minimises it.
-    send({ type: 'openPanel', panel: button.dataset.open === open ? null : (button.dataset.open as PanelId) });
+    // One sport is always open: clicking its tab again leaves it there.
+    if (button.dataset.open !== open) send({ type: 'openPanel', panel: button.dataset.open as PanelId });
   } else if ('chooseSports' in button.dataset) {
     send({ type: 'chooseSports' });
   } else if ('askCareer' in button.dataset) {
@@ -973,8 +969,6 @@ app.addEventListener('click', (e) => {
     ask = null;
     render();
     send({ type: 'resetHonours' });
-  } else if (button.dataset.pause) {
-    send({ type: 'togglePause', sport: button.dataset.pause as SportId });
   } else if (button.dataset.tab) {
     ui.tab = button.dataset.tab as Tab;
     scrollFixtures = true;
@@ -1005,7 +999,7 @@ app.addEventListener('click', (e) => {
   } else if (button.id === 'speed') {
     send({ type: 'setDuration', sport: openSport(), duration: button.dataset.next as Duration });
   } else if (button.id === 'pause') {
-    send({ type: 'togglePause', sport: openSport() });
+    send({ type: 'togglePause' });
   } else if (button.id === 'start' && setup.team) {
     send({ type: 'startCareer', sport: openSport(), team: setup.team, league: setup.league, duration: setup.duration });
   } else if (button.dataset.team && view?.screen === 'setup') {

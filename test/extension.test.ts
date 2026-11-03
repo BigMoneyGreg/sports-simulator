@@ -76,7 +76,7 @@ describe('the extension, played through its messages', () => {
     writeFileSync(join(dir, 'career.json'), JSON.stringify({ version: SAVE_VERSION, career: c, live: null, paused: false, duration: '30s' }));
     launch();
     expect(fake.toasts[0]).toMatch(/^Football: the World Championship begins\. Brazil are in Group [A-Z]\.( Brazil are the hosts\.| Hosted by [A-Za-z .'-]+\.)$/);
-    open(null);
+    open('rugby');
     run(30 * 60_000);
     expect(fake.toasts[1]).toMatch(/^Football: .*World Championship/);
     expect(fake.status.text).toBe('$(bell) World Championship over');
@@ -122,7 +122,8 @@ describe('the extension, played through its messages', () => {
 
   it('says when a season ends if that sport is not open, waits for the answer, then carries on', () => {
     start('rugby', 'WAL', '90s');
-    open(null);
+    // Another sport open: the live one isn't on screen, so its season end gets a message.
+    open('cricket');
     run(50 * 60_000);
     expect(fake.toasts).toEqual([expect.stringMatching(/^Rugby season 1 finished: .*Decision waiting\.$/)]);
     expect(fake.status.text).toMatch(/\$\(bell\)/);
@@ -208,15 +209,22 @@ describe('the extension, played through its messages', () => {
       expect(Math.abs(row('football').progress - row('rugby').progress)).toBeLessThan(0.2);
     });
 
-    it('a paused sport steps aside, and the others carry on', () => {
+    it('one pause stops every sport, and play starts them all again', () => {
       start();
       start('rugby', 'WAL', '90s');
-      fake.send({ type: 'togglePause', sport: 'football' });
-      const before = row('rugby').progress;
+      run(60_000);
+      fake.send({ type: 'togglePause' });
+      fake.send({ type: 'ready' });
+      const before = [row('football').progress, row('rugby').progress];
       run(10 * 60_000);
       fake.send({ type: 'ready' });
-      expect(row('rugby').progress).toBeGreaterThan(before + 0.1);
+      expect([row('football').progress, row('rugby').progress]).toEqual(before);
       expect(row('football').line).toMatch(/^⏸/);
+      expect(row('rugby').line).toMatch(/^⏸/);
+      fake.send({ type: 'togglePause' });
+      run(10 * 60_000);
+      fake.send({ type: 'ready' });
+      expect(row('football').progress + row('rugby').progress).toBeGreaterThan(before[0] + before[1]);
     });
   });
 

@@ -107,7 +107,8 @@ for (const [sport, team, seed] of [['rugby', 'WAL', 7], ['cricket', 'SRI', 7], [
   if (sport === 'grandprix') sampleRows.grandprix = sportRows([g])[0];
   for (let season = 0; season < 3; season++) {
     g.chooseFocus(season % 2 ? 'attack' : 'defence');
-    while (at() !== 'seasonOver') run();
+    // Each sport's World Championship falls in its own years: carry on past its report.
+    while (at() !== 'seasonOver') (at() === 'worldOver' ? g.continueSeason() : run());
   }
   g.chooseFocus('attack');
   views[`${sport}_championship`] = { view: buildView(g), tab: 'cups', cup: 'championship' };
@@ -136,8 +137,10 @@ for (const entry of Object.values(views)) {
   const v = entry.view as Exclude<View, { screen: 'honours' }>;
   const sport = v.screen === 'setup' ? v.setup.sport : v.sport;
   entry.open = sport;
-  entry.rows = [football, sport === 'rugby' && v.screen === 'setup' ? rugbyNone : rugby, cricketWaiting, grandprix];
+  entry.rows = [football, sport === 'rugby' && v.screen === 'setup' ? rugbyNone : rugby, cricketWaiting, grandprix].map((r) => ({ ...r, live: v.screen === 'game' && r.id === sport && !v.seasonEnd }));
 }
+// Reading another sport's table while football's match is on.
+views.otherLive = { ...views.rugby_table, rows: [{ ...football, live: true }, rugby, cricketWaiting, grandprix] };
 views.list = { view: null, open: null, rows: [{ ...football, paused: true }, rugbyNone, cricketWaiting] };
 // Honours: the football career still running, the other two ended, one honour earned.
 const summary = (g: Game) => careerSummary(g)!;

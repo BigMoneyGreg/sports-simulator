@@ -167,8 +167,10 @@ try {
   await shot(main, 'world-end');
   passed('The report has no summer question', await box.run(inBox(`return !d.querySelector('[data-focus]') && /World/.test(d.querySelector('.headline').textContent);`)));
   await click('#continueSeason');
-  await until('the league', () => box.run(inBox(`return !d.getElementById('continueSeason') && !!d.querySelector('[data-ask-career]');`)));
+  await until('the league', () => box.run(inBox(`return !d.getElementById('continueSeason') && !!d.getElementById('pause');`)));
   passed('Carrying on starts the league', true);
+  // End and Reset live at the foot of the Team tab.
+  await click('[data-tab="club"]');
   await click('[data-ask-career]');
   await until('the question', () => box.run(inBox(`return !!d.querySelector('[data-ask-reset]');`)));
   await click('[data-ask-reset]');
@@ -198,10 +200,12 @@ try {
   passed('The status bar cycles through the careers', true, seen.join(', '));
   await shot(main, 'two-careers');
 
-  // Pause, from the row, and the real End.
-  await click('[data-pause="rugby"]');
+  // One pause for every sport, and the real End.
+  await click('#pause');
   await until('the pause', async () => /⏸/.test((await box.run(inBox(`return d.querySelector('[data-sport="rugby"] .row-line').textContent;`))) ?? ''));
-  passed('Pause works from a row', true);
+  passed('One pause stops every sport', true);
+  // End and Reset live at the foot of the Team tab.
+  await click('[data-tab="club"]');
   await click('[data-ask-career]');
   await until('the End question', () => box.run(inBox(`return !!d.querySelector('[data-do-end]');`)));
   await shot(main, 'end-question');
@@ -211,7 +215,9 @@ try {
 
   // The real Reset career, both steps.
   await click('[data-sport="rugby"] .row-main');
-  await until('rugby open', () => box.run(inBox(`return !!d.querySelector('[data-ask-career]');`)));
+  await until('rugby open', () => box.run(inBox(`return !!d.getElementById('pause');`)));
+  // End and Reset live at the foot of the Team tab.
+  await click('[data-tab="club"]');
   await click('[data-ask-career]');
   await until('the question', () => box.run(inBox(`return !!d.querySelector('[data-ask-reset]');`)));
   await click('[data-ask-reset]');
@@ -235,7 +241,7 @@ try {
 
   // A career again, then a second window on the same saves.
   await click('[data-sport="football"] .row-main');
-  await until('setup again', () => box.run(inBox(`return !!d.getElementById('search');`)));
+  await until('setup again', () => box.run(inBox(`return !!d.getElementById('search') && /football/i.test(d.querySelector('.setup h2').textContent);`)));
   await box.run(inBox(`const s = d.getElementById('search'); s.value = 'Scotland'; s.dispatchEvent(new Event('input', { bubbles: true })); return true;`));
   await click('#nations .nation');
   await click('#start');
@@ -259,8 +265,8 @@ try {
     // The handover a player sets off by using the box in another window. Focus itself can't be given to a second copy from here.
     await openBox(two);
     const boxTwo = await findBox(SECOND);
-    await until('the row in the second window', () => boxTwo.run(inBox(`return !!d.querySelector('#pause, [data-pause="football"]');`)));
-    await boxTwo.run(inBox(`d.querySelector('#pause, [data-pause="football"]').click(); return true;`));
+    await until('the row in the second window', () => boxTwo.run(inBox(`return !!d.querySelector('#pause');`)));
+    await boxTwo.run(inBox(`d.querySelector('#pause').click(); return true;`));
     const claimed = await until('the second window taking the game', async () => owner() !== ownerOne, 15_000).catch(() => false);
     passed('Using the box in the second window hands the game over', !!claimed);
     const paused = await until('the pause arriving', async () => /⏸/.test((await statusOf(two)) ?? ''), 10_000).catch(() => false);

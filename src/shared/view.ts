@@ -245,6 +245,8 @@ export interface SportRowView {
   waitingLine?: string;
   /** A World Championship is on. */
   world?: boolean;
+  /** This sport's match is the one on: only one plays at a time. */
+  live?: boolean;
 }
 
 export interface NationOption {
@@ -429,7 +431,8 @@ export type PanelId = SportId | 'honours';
 export type ToHost =
   | { type: 'ready' }
   | { type: 'startCareer'; sport: SportId; team: string; league: number; duration: Duration }
-  | { type: 'togglePause'; sport: SportId }
+  /** Pauses every sport, or plays them all again. */
+  | { type: 'togglePause' }
   | { type: 'setDuration'; sport: SportId; duration: Duration }
   /** Opens this in the list, closing whichever was open; null minimises them all. */
   | { type: 'openPanel'; panel: PanelId | null }

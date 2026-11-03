@@ -1389,121 +1389,6 @@ body.vscode-light .focus.defence strong {
   --sport: var(--vscode-charts-yellow, #d4a72c);
 }
 
-.choose-sports {
-  margin: 2px 0 0 4px;
-}
-
-.sport {
-  scroll-margin-top: var(--pin-h, 0);
-  margin-bottom: 5px;
-  border: 1px solid color-mix(in srgb, var(--sport) 60%, transparent);
-  border-left: 3px solid var(--sport);
-  border-radius: var(--radius);
-  background: var(--surface);
-}
-
-.sport.needs-you {
-  background: color-mix(in srgb, var(--sport) 22%, transparent);
-}
-
-.sport-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding-right: 5px;
-}
-
-/* How far through the league season: a thin line along the bottom of the row. */
-.row-progress {
-  position: absolute;
-  right: 5px;
-  bottom: 0;
-  left: 6px;
-  height: 2px;
-  border-radius: 1px;
-  background: color-mix(in srgb, var(--sport) 18%, transparent);
-}
-
-.row-progress span {
-  display: block;
-  height: 100%;
-  border-radius: 1px;
-  background: var(--sport);
-  transition: width 0.4s ease-out;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .row-progress span {
-    transition: none;
-  }
-}
-
-.row-main {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  padding: 4px 0 4px 6px;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.chevron {
-  flex: none;
-  width: 0;
-  height: 0;
-  border-top: 4px solid transparent;
-  border-bottom: 4px solid transparent;
-  border-left: 5px solid currentColor;
-  opacity: 0.7;
-}
-
-.open .chevron {
-  transform: rotate(90deg);
-}
-
-.row-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.row-name,
-.row-line {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.row-name {
-  font-weight: 600;
-}
-
-.row-name .muted {
-  font-weight: 400;
-}
-
-.row-line:empty {
-  display: none;
-}
-
-.row-sub {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-}
-
-.row-sub .row-line {
-  min-width: 0;
-}
-
 /* A word on a solid colour: readable in any theme, and not only by its colour. */
 .badge {
   flex: none;
@@ -1525,19 +1410,6 @@ body.vscode-light .focus.defence strong {
 
 .badge.playoff {
   background: #79b8ff;
-}
-
-.waiting .row-line {
-  color: var(--vscode-foreground);
-  font-weight: 600;
-}
-
-.row-main .sport-icon {
-  color: var(--sport);
-}
-
-.sport-row .chip {
-  flex: none;
 }
 
 #panel,
@@ -1674,29 +1546,6 @@ body.vscode-light .focus.defence strong {
   color: var(--loss);
 }
 
-#pins {
-  position: sticky;
-  top: 0;
-  z-index: 6;
-  margin: 0 calc(-1 * var(--pad-x));
-  padding: 0 var(--pad-x);
-  background: var(--vscode-sideBar-background, var(--vscode-editor-background));
-}
-
-.pin {
-  display: block;
-  width: 100%;
-  margin-bottom: 6px;
-  padding: 4px 8px;
-  border: 1px solid var(--sport);
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--sport) 16%, transparent);
-  color: inherit;
-  font: inherit;
-  font-size: 0.9em;
-  text-align: left;
-  cursor: pointer;
-}
 
 /* Header stays in view while the table or fixtures scroll underneath. */
 #top {
@@ -1918,12 +1767,12 @@ body.vscode-high-contrast .badge {
 }
 
 body.vscode-high-contrast .chip,
-body.vscode-high-contrast .pin {
+body.vscode-high-contrast .tab {
   border-color: var(--vscode-contrastBorder, currentColor);
 }
 
 /* The World Championship is rare enough to make a fuss of. */
-.sport.world {
+.sport.world .tab {
   --sport: #e3b341;
 }
 
@@ -1989,4 +1838,155 @@ body.vscode-high-contrast .pin {
 /* "Reliability" needs more room than "Attack". */
 .clue.wide .clue-row {
   grid-template-columns: 74px 36px 1fr;
+}
+
+/* One row of sport tabs: the box stays short, so it can sit in a corner and still be read. */
+.sport-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  display: flex;
+  gap: 2px;
+  margin: 0 calc(-1 * var(--pad-x)) 4px;
+  padding: 0 var(--pad-x) 3px;
+  border-bottom: 1px solid var(--line);
+  background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+}
+
+.sport-tabs .sport {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  padding: 4px 4px 5px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.tab:hover {
+  background: var(--surface);
+  color: var(--vscode-foreground);
+}
+
+.tab.on {
+  border-bottom-color: var(--sport);
+  background: var(--surface-2);
+  color: var(--vscode-foreground);
+  font-weight: 600;
+}
+
+.tab .sport-icon {
+  flex: none;
+  color: var(--sport);
+}
+
+.tab-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The sport whose match is on, and one waiting on the player. */
+.live-dot,
+.wait-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.live-dot {
+  background: var(--win);
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+
+.wait-dot {
+  background: var(--sport);
+  box-shadow: 0 0 0 2px var(--vscode-sideBar-background, var(--vscode-editor-background));
+}
+
+.tab.needs-you {
+  color: var(--vscode-foreground);
+}
+
+@keyframes live-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-dot {
+    animation: none;
+  }
+}
+
+.tab.more {
+  flex: none;
+  width: auto;
+  padding: 4px 6px;
+}
+
+/* Names go before icons do: below this the tabs are icons alone, as five names won't fit. */
+@media (max-width: 460px) {
+  .tab-name {
+    display: none;
+  }
+}
+
+/* Looking at another sport: the match on, as one line. */
+.now {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.now .sport-icon {
+  flex: none;
+  color: var(--sport);
+}
+
+.now-tag {
+  flex: none;
+  color: var(--win);
+  font-size: 0.8em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.now-line {
+  overflow: hidden;
+  min-width: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.turn-tag {
+  color: var(--win);
+  font-weight: 600;
 }
